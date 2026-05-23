@@ -391,6 +391,28 @@ async function carregarEstatisticas() {
   document.getElementById('ev-melhora').textContent = ev.melhora       ?? '0';
   document.getElementById('ev-sem').textContent     = ev.sem_alteracao ?? '0';
   document.getElementById('ev-piora').textContent   = ev.piora         ?? '0';
+
+  /* Sessões recentes (últimas 5) */
+  var recentes = d.sessoes_recentes || [];
+  var cont = document.getElementById('lista-recentes');
+  if(!recentes.length) {
+    cont.innerHTML = '<div style="text-align:center;color:var(--mut);padding:16px;">Sem sessões registadas este mês</div>';
+  } else {
+    cont.innerHTML = '<div style="display:flex;flex-direction:column;">' +
+      recentes.slice(0,5).map(function(s){
+        return '<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--bd);">'+
+          '<div style="flex:1;min-width:0;">'+
+            '<div style="font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+esc(s.nome_doente||'—')+'</div>'+
+            '<div style="font-size:11px;color:var(--mut);margin-top:1px;">'+esc(s.tipo_terapia||'—')+'</div>'+
+          '</div>'+
+          '<div style="display:flex;gap:8px;align-items:center;">'+
+            badgeEvolucao(s.evolucao)+
+            '<span style="font-family:var(--fm);font-size:11px;color:var(--mut);">'+esc(s.data_sessao||s.data||'—')+'</span>'+
+          '</div>'+
+        '</div>';
+      }).join('') +
+    '</div>';
+  }
 }
 
 /* ─── Carregar lista de doentes ──────────────────────────── */
@@ -421,7 +443,14 @@ async function carregarDoentes() {
 
 /* ─── Carregar lista de sessões ──────────────────────────── */
 async function carregarSessoes() {
-  var r = await api('GET', '/api/fisio/sessoes');
+  var ini = document.getElementById('sess-filtro-inicio').value;
+  var fim = document.getElementById('sess-filtro-fim').value;
+  var url = '/api/fisio/sessoes';
+  var p = [];
+  if(ini) p.push('inicio='+ini);
+  if(fim) p.push('fim='+fim);
+  if(p.length) url += '?'+p.join('&');
+  var r = await api('GET', url);
   if(!r) return;
   var tbody = document.getElementById('tabela-sessoes');
   if(!r.dados || !r.dados.length) {

@@ -3,3 +3,4 @@ __pycache__/
 *.pyo
 hospital_app/data/hospital.db
 hospital_app/exports/
+hospital_prenda_app.zip

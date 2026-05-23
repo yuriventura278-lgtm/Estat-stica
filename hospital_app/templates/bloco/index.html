@@ -333,7 +333,7 @@
 {% block scripts %}
 <script>
 /* ─── Estado da página ────────────────────────────────────── */
-var dataActual = new Date().toISOString().split('T')[0];
+var dataActual = '{{ hoje }}';
 
 /* ─── Escapar HTML para evitar XSS ──────────────────────── */
 function esc(s) {
