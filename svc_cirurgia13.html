@@ -203,15 +203,30 @@ select.finp option{background:#fff;color:var(--txt);}
   box-shadow:0 -2px 12px rgba(0,0,0,0.06);}
 .sinfo{font-family:var(--fh);font-size:10px;color:var(--mut);}
 .sinfo strong{color:var(--acc);}
-/* TOAST */
-#toast{position:fixed;bottom:58px;left:50%;transform:translateX(-50%) translateY(16px);
-  background:#fff;color:var(--acc);padding:10px 22px;border-radius:9px;
-  font-family:var(--fh);font-size:12px;font-weight:700;letter-spacing:.3px;
-  border:1px solid var(--bda);box-shadow:0 8px 24px rgba(0,0,0,0.1);
-  opacity:0;transition:all .28s;z-index:9999;pointer-events:none;}
-#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
-#toast.ok{background:rgba(5,150,105,0.08);color:#059669;border-color:rgba(5,150,105,0.25);}
-#toast.err{background:rgba(220,38,38,0.07);color:#DC2626;border-color:rgba(220,38,38,0.22);}
+/* TOAST STACK */
+#toast-stack{position:fixed;bottom:68px;right:18px;display:flex;flex-direction:column-reverse;
+  gap:8px;z-index:9999;pointer-events:none;max-width:320px;}
+.tk{display:flex;align-items:flex-start;gap:10px;padding:11px 14px 8px;border-radius:10px;
+  background:#fff;border:1px solid var(--bd);box-shadow:0 4px 20px rgba(0,0,0,0.12);
+  pointer-events:all;cursor:pointer;overflow:hidden;position:relative;
+  animation:tkIn .22s ease;min-width:220px;}
+@keyframes tkIn{from{opacity:0;transform:translateX(28px)}to{opacity:1;transform:translateX(0)}}
+.tk-icon{font-size:18px;line-height:1;flex-shrink:0;margin-top:1px;}
+.tk-body{flex:1;min-width:0;}
+.tk-title{font-family:var(--fh);font-size:12px;font-weight:700;line-height:1.2;}
+.tk-msg{font-family:var(--fh);font-size:11px;font-weight:400;color:var(--mut);margin-top:2px;line-height:1.3;}
+.tk-bar{position:absolute;bottom:0;left:0;height:3px;border-radius:0 0 10px 10px;
+  animation:tkBar var(--tk-dur,3s) linear forwards;}
+@keyframes tkBar{from{width:100%}to{width:0%}}
+.tk-ok{border-color:rgba(5,150,105,.25);}.tk-ok .tk-title{color:#059669;}.tk-ok .tk-bar{background:#059669;}
+.tk-err{border-color:rgba(220,38,38,.25);}.tk-err .tk-title{color:#DC2626;}.tk-err .tk-bar{background:#DC2626;}
+.tk-warn{border-color:rgba(217,119,6,.25);}.tk-warn .tk-title{color:#D97706;}.tk-warn .tk-bar{background:#D97706;}
+.tk-save{border-color:rgba(26,86,219,.25);}.tk-save .tk-title{color:var(--acc);}.tk-save .tk-bar{background:var(--acc);}
+.tk-del{border-color:rgba(124,58,237,.25);}.tk-del .tk-title{color:#7C3AED;}.tk-del .tk-bar{background:#7C3AED;}
+.tk-edit{border-color:rgba(6,182,212,.25);}.tk-edit .tk-title{color:#0891B2;}.tk-edit .tk-bar{background:#0891B2;}
+.tk-info{border-color:var(--bda);}.tk-info .tk-title{color:var(--acc);}.tk-info .tk-bar{background:var(--acc);}
+/* keyboard nav focus ring on table rows */
+tr.kb-focus{outline:2px solid var(--acc);outline-offset:-2px;background:rgba(26,86,219,0.06)!important;}
 /* SC GRID */
 .scgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:14px;}
 .sc{border-radius:10px;padding:12px;text-align:center;}
@@ -807,7 +822,7 @@ select.finp option{background:#fff;color:var(--txt);}
 </main>
 </div><!-- /shell -->
 
-<div id="toast"></div>
+<div id="toast-stack"></div>
 <div class="sbar">
   <div class="sinfo">🔪 Cirurgia Geral <strong>(CIR)</strong> · <span id="sbar-date">—</span> · <span id="sbar-p" style="color:rgba(77,142,245,.6);">0 doentes</span> · <span id="sbar-o" style="color:rgba(239,68,68,.5);">0 óbitos</span></div>
   <div style="display:flex;gap:7px;"><button class="bs" onclick="savePats()">💾 Guardar</button><button class="brpdf" onclick="pdfMovDia()">📄 PDF Dia</button></div>
@@ -1150,7 +1165,7 @@ function addHospital(h) {
   const list=getHospitais();
   if(!list.includes(h)){list.push(h);localStorage.setItem(SK_HOSP,JSON.stringify(list));}
   rebuildHospSelects();
-  toast(`🏥 Hospital "${h}" adicionado`,'ok');
+  toast(`Hospital "${h}" adicionado com sucesso`,'save');
 }
 function allHospitais() { return [...HOSPITAIS_BASE,...getHospitais()]; }
 function rebuildHospSelects() {
@@ -1172,10 +1187,38 @@ function handleHospSelect(selectId) {
     else el.value='';
   }
 }
+// ── Multi-toast notification system ───────────────────────
+const _TK={
+  ok:   {icon:'✅',title:'Concluído',   cls:'tk-ok',  dur:3000},
+  save: {icon:'💾',title:'Guardado',    cls:'tk-save',dur:3000},
+  del:  {icon:'🗑️',title:'Eliminado',   cls:'tk-del', dur:3000},
+  edit: {icon:'✏️',title:'Actualizado', cls:'tk-edit',dur:3000},
+  err:  {icon:'❌',title:'Erro',        cls:'tk-err', dur:5000},
+  warn: {icon:'⚠️',title:'Atenção',     cls:'tk-warn',dur:4000},
+  info: {icon:'ℹ️',title:'Info',        cls:'tk-info',dur:3000},
+  pdf:  {icon:'📄',title:'PDF Gerado',  cls:'tk-ok',  dur:3000},
+  sync: {icon:'☁️',title:'Sincronizado',cls:'tk-save',dur:3500},
+};
 function toast(msg,type=''){
-  const t=document.getElementById('toast');
-  t.textContent=msg;t.className='show'+(type?' '+type:'');
-  clearTimeout(window._tt);window._tt=setTimeout(()=>t.className='',2800);
+  const cfg=_TK[type]||_TK.info;
+  const stack=document.getElementById('toast-stack');
+  if(!stack)return;
+  // max 4 visible
+  const existing=stack.querySelectorAll('.tk');
+  if(existing.length>=4)existing[existing.length-1].remove();
+  const el=document.createElement('div');
+  el.className='tk '+cfg.cls;
+  el.style.setProperty('--tk-dur',cfg.dur+'ms');
+  el.innerHTML=`<span class="tk-icon">${cfg.icon}</span><div class="tk-body"><div class="tk-title">${cfg.title}</div><div class="tk-msg">${msg}</div></div><div class="tk-bar"></div>`;
+  el.addEventListener('click',()=>_dismissToast(el));
+  stack.prepend(el);
+  setTimeout(()=>_dismissToast(el),cfg.dur+200);
+}
+function _dismissToast(el){
+  if(!el.parentNode)return;
+  el.style.transition='opacity .2s,transform .2s';
+  el.style.opacity='0';el.style.transform='translateX(28px)';
+  setTimeout(()=>el.remove(),220);
 }
 
 // ══ STORAGE ═════════════════════════════════════════════
@@ -1187,7 +1230,7 @@ function savePats() {
   const sl=document.getElementById('syncLbl');
   if(sl)sl.textContent='Guardado '+new Date().toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'});
   syncMov();
-  toast('💾 Guardado localmente!','ok');
+  toast('Dados guardados com sucesso','save');
   // Sync to Google Sheets if configured
   if(getGSUrl()) syncToGSheets(true);
 }
@@ -1413,11 +1456,11 @@ function pTipoEnt(t){
   if(svcRow)svcRow.style.display=t==='transf_servico'?'block':'none';
 }
 function savePat(){
-  const nome=g('p-nome');if(!nome){toast('⚠️ Campo obrigatório: Nome','err');return;}
+  const nome=g('p-nome');if(!nome){toast('Campo obrigatório: Nome','err');return;}
   const sexo=document.querySelector('input[name="p-sexo"]:checked')?.value||'';
-  if(!sexo){toast('⚠️ Campo obrigatório: Sexo','err');return;}
-  const nup=g('p-nup');if(!nup){toast('⚠️ Campo obrigatório: NUP','err');return;}
-  const ent=g('p-ent')||curDate;if(!ent){toast('⚠️ Campo obrigatório: Data de Entrada','err');return;}
+  if(!sexo){toast('Campo obrigatório: Sexo','err');return;}
+  const nup=g('p-nup');if(!nup){toast('Campo obrigatório: NUP','err');return;}
+  const ent=g('p-ent')||curDate;if(!ent){toast('Campo obrigatório: Data de Entrada','err');return;}
   const tipo=document.querySelector('input[name="p-tipo"]:checked')?.value||'direto';
   if(tipo==='transf_hospital'&&g('p-hosp-ent')==='__add__'){handleHospSelect('p-hosp-ent');return;}
   const internado=document.getElementById('p-internado')?.checked??true;
@@ -1435,19 +1478,19 @@ function savePat(){
   };
   if(editPatId){const i=patients.findIndex(x=>x.id===editPatId);if(i>=0)patients[i]={...patients[i],...pat};}
   else patients.push(pat);
-  savePats();updateAll();closePat();toast('✅ Doente registado!','ok');
+  savePats();updateAll();closePat();toast('Doente registado com sucesso','save');
 }
 function delPat(id){
   if(!confirm('Eliminar este doente?'))return;
-  patients=patients.filter(p=>p.id!==id);savePats();updateAll();toast('🗑️ Eliminado','');
+  patients=patients.filter(p=>p.id!==id);savePats();updateAll();toast('Registo eliminado','del');
 }
 
 // ══ ALTA MODAL ══════════════════════════════════════════
 let editAltaId=null;
 function openAltaModal(patId) {
-  if (!patId) { toast('⚠️ Pesquise e clique em "📂 Abrir Processo" primeiro', 'err'); return; }
+  if (!patId) { toast('Pesquise e seleccione um processo primeiro','warn'); return; }
   const p = patients.find(x => x.id === patId);
-  if (!p) { toast('⚠️ Doente não encontrado', 'err'); return; }
+  if (!p) { toast('Doente não encontrado', 'err'); return; }
   editAltaId = patId;
   st('alta-title', 'Alta — ' + p.nome);
   document.getElementById('a-id').value = patId;
@@ -1491,14 +1534,14 @@ function aModo(m){
   document.getElementById('a-dest-hosp-row').style.display=m==='transf_hospital'?'block':'none';
 }
 function saveAlta(){
-  const nome=g('a-nome');if(!nome){toast('⚠️ Campo obrigatório: Nome','err');return;}
+  const nome=g('a-nome');if(!nome){toast('Campo obrigatório: Nome','err');return;}
   const sexo=document.querySelector('input[name="a-sexo"]:checked')?.value||'';
-  if(!sexo){toast('⚠️ Campo obrigatório: Sexo','err');return;}
-  const nup=g('a-nup');if(!nup){toast('⚠️ Campo obrigatório: NUP','err');return;}
+  if(!sexo){toast('Campo obrigatório: Sexo','err');return;}
+  const nup=g('a-nup');if(!nup){toast('Campo obrigatório: NUP','err');return;}
   const modo=document.querySelector('input[name="a-modo"]:checked')?.value||'';
-  if(!modo){toast('⚠️ Campo obrigatório: Modo de Saída','err');return;}
-  const saida=g('a-saida');if(!saida){toast('⚠️ Campo obrigatório: Data de Alta','err');return;}
-  const diag_fim=g('a-df');if(!diag_fim){toast('⚠️ Campo obrigatório: Diagnóstico Final','err');return;}
+  if(!modo){toast('Campo obrigatório: Modo de Saída','err');return;}
+  const saida=g('a-saida');if(!saida){toast('Campo obrigatório: Data de Alta','err');return;}
+  const diag_fim=g('a-df');if(!diag_fim){toast('Campo obrigatório: Diagnóstico Final','err');return;}
   // Handle add hospital
   if(modo==='transf_hospital'&&g('a-dest-hosp')==='__add__'){handleHospSelect('a-dest-hosp');return;}
   const updates={nome,idade:Number(g('a-idade'))||0,sexo,nup,
@@ -1519,15 +1562,15 @@ function saveAlta(){
     if(existing){const i=patients.indexOf(existing);patients[i]={...existing,...updates};}
     else patients.push({id:uid(),...updates,internado:false,created:new Date().toISOString()});
   }
-  savePats();updateAll();closeAlta();toast('✅ Alta registada!','ok');
+  savePats();updateAll();closeAlta();toast('Alta registada com sucesso','save');
 }
 
 // ══ ÓBITO MODAL ═════════════════════════════════════════
 let editObId=null;
 function openObModal(patId) {
-  if (!patId) { toast('⚠️ Pesquise e clique em "📂 Abrir Processo" primeiro', 'err'); return; }
+  if (!patId) { toast('Pesquise e seleccione um processo primeiro','warn'); return; }
   const p = patients.find(x => x.id === patId);
-  if (!p) { toast('⚠️ Doente não encontrado', 'err'); return; }
+  if (!p) { toast('Doente não encontrado', 'err'); return; }
   editObId = null;
   document.getElementById('o-id').value = '';
   document.getElementById('o-pat-id').value = patId;
@@ -1584,12 +1627,12 @@ function oProv(v){
   document.getElementById('o-hosp-row').style.display=v==='hospital'?'block':'none';
 }
 function saveOb(){
-  const nome=g('o-nome');if(!nome){toast('⚠️ Campo obrigatório: Nome','err');return;}
+  const nome=g('o-nome');if(!nome){toast('Campo obrigatório: Nome','err');return;}
   const sexo=document.querySelector('input[name="o-sexo"]:checked')?.value||'';
-  if(!sexo){toast('⚠️ Campo obrigatório: Sexo','err');return;}
-  const nup=g('o-nup');if(!nup){toast('⚠️ Campo obrigatório: NUP','err');return;}
-  const data_ob=g('o-ob');if(!data_ob){toast('⚠️ Campo obrigatório: Data do Óbito','err');return;}
-  const diag_fim=g('o-df');if(!diag_fim){toast('⚠️ Campo obrigatório: Diagnóstico Final','err');return;}
+  if(!sexo){toast('Campo obrigatório: Sexo','err');return;}
+  const nup=g('o-nup');if(!nup){toast('Campo obrigatório: NUP','err');return;}
+  const data_ob=g('o-ob');if(!data_ob){toast('Campo obrigatório: Data do Óbito','err');return;}
+  const diag_fim=g('o-df');if(!diag_fim){toast('Campo obrigatório: Diagnóstico Final','err');return;}
   const ent=g('o-ent');
   const prov=document.querySelector('input[name="o-prov"]:checked')?.value||'BU';
   if(prov==='hospital'&&g('o-prov-hosp')==='__add__'){handleHospSelect('o-prov-hosp');return;}
@@ -1616,11 +1659,11 @@ function saveOb(){
       savePats();
     }
   }
-  saveObs();updateAll();closeOb();toast('✅ Óbito registado!','ok');
+  saveObs();updateAll();closeOb();toast('Óbito registado com sucesso','save');
 }
 function delOb(id){
   if(!confirm('Eliminar este registo de óbito?'))return;
-  obitos=obitos.filter(o=>o.id!==id);saveObs();updateAll();toast('🗑️ Eliminado','');
+  obitos=obitos.filter(o=>o.id!==id);saveObs();updateAll();toast('Registo eliminado','del');
 }
 
 // ══ SEARCH / DROPDOWN ════════════════════════════════════
@@ -1940,7 +1983,7 @@ function aggPeriod(dates){
     io,me,camas_reais,ir,is_val,mb,ml,dias_estadia,altas_tot};
 }
 function loadMov(){
-  const dates=getMPDates();if(!dates.length){toast('⚠️ Seleccione um período','err');return;}
+  const dates=getMPDates();if(!dates.length){toast('Seleccione um período','warn');return;}
   mpDates=dates;const a=aggPeriod(dates);
   const el=document.getElementById('mov-out');
   if(a.days===0&&a.tent===0&&a.ex===0){el.innerHTML='<div class="no-data"><span>📭</span>Sem dados para este período.</div>';return;}
@@ -2061,7 +2104,7 @@ function loadMov(){
 // ══ PDF FUNCTIONS ════════════════════════════════════════
 function pdfAltas(){
   const rows=patients.filter(p=>p.saida);
-  if(!rows.length){toast('⚠️ Sem altas registadas','err');return;}
+  if(!rows.length){toast('Sem altas registadas','warn');return;}
   const{jsPDF}=window.jspdf;const doc=new jsPDF({orientation:'landscape'});
   try{doc.addImage(LOGO_B64,'JPEG',14,8,16,16);}catch(e){}
   doc.setFont('helvetica','bold');doc.setFontSize(12);doc.setTextColor(10,22,40);
@@ -2080,10 +2123,10 @@ function pdfAltas(){
   });
   doc.setFontSize(7);doc.setTextColor(160,160,160);
   doc.text('Hospital do Prenda · Luanda · Angola · Ministério da Saúde',14,doc.internal.pageSize.height-8);
-  doc.save('altas_cir_'+curDate+'.pdf');toast('📄 PDF exportado!','ok');
+  doc.save('altas_cir_'+curDate+'.pdf');toast('Ficheiro PDF exportado','pdf');
 }
 function pdfObitos(){
-  if(!obitos.length){toast('⚠️ Sem óbitos registados','err');return;}
+  if(!obitos.length){toast('Sem óbitos registados','warn');return;}
   const{jsPDF}=window.jspdf;const doc=new jsPDF({orientation:'landscape'});
   try{doc.addImage(LOGO_B64,'JPEG',14,8,16,16);}catch(e){}
   doc.setFont('helvetica','bold');doc.setFontSize(12);doc.setTextColor(10,22,40);
@@ -2104,10 +2147,10 @@ function pdfObitos(){
   });
   doc.setFontSize(7);doc.setTextColor(160,160,160);
   doc.text('Hospital do Prenda · Luanda · Angola · Ministério da Saúde',14,doc.internal.pageSize.height-8);
-  doc.save('obitos_cir_'+curDate+'.pdf');toast('📄 PDF exportado!','ok');
+  doc.save('obitos_cir_'+curDate+'.pdf');toast('Ficheiro PDF exportado','pdf');
 }
 function pdfMov(){
-  if(!mpDates.length){toast('⚠️ Carregue primeiro','err');return;}
+  if(!mpDates.length){toast('Carregue primeiro os dados','warn');return;}
   const a=aggPeriod(mpDates);
   const{jsPDF}=window.jspdf;const doc=new jsPDF({orientation:'landscape'});
   try{doc.addImage(LOGO_B64,'JPEG',14,8,16,16);}catch(e){}
@@ -2128,7 +2171,7 @@ function pdfMov(){
   });
   doc.setFontSize(7);doc.setTextColor(160,160,160);
   doc.text('Hospital do Prenda · Luanda · Angola · Ministério da Saúde',14,doc.internal.pageSize.height-8);
-  doc.save('mov_cir_'+mpDates[0]+'.pdf');toast('📄 PDF exportado!','ok');
+  doc.save('mov_cir_'+mpDates[0]+'.pdf');toast('Ficheiro PDF exportado','pdf');
 }
 function pdfMovDia(){
   const mv=calcMovDia(curDate);
@@ -2150,7 +2193,7 @@ function pdfMovDia(){
   });
   doc.setFontSize(7);doc.setTextColor(160,160,160);
   doc.text('Hospital do Prenda · Luanda · Angola · Cirurgia Geral (CIR)',14,doc.internal.pageSize.height-8);
-  doc.save('cir_dia_'+curDate+'.pdf');toast('📄 PDF gerado!','ok');
+  doc.save('cir_dia_'+curDate+'.pdf');toast('Ficheiro PDF gerado','pdf');
 }
 function pdfFolha(){
   const{jsPDF}=window.jspdf;const doc=new jsPDF({orientation:'landscape'});
@@ -2172,7 +2215,7 @@ function pdfFolha(){
   doc.text('Visto Chefe Enfermagem: ___________________________    Visto Director Serviço: ___________________________',14,fy+5);
   doc.setFontSize(7);doc.setTextColor(160,160,160);
   doc.text('Hospital do Prenda · Luanda · Angola · Ministério da Saúde',14,doc.internal.pageSize.height-8);
-  doc.save('folha_cir_'+fMes+'.pdf');toast('📄 Folha exportada!','ok');
+  doc.save('folha_cir_'+fMes+'.pdf');toast('Folha mensal exportada','pdf');
 }
 
 // ══ INTERNADOS POR DATA ═════════════════════════════════
@@ -2208,7 +2251,7 @@ function loadInternadosPorData(){
 function pdfInternados(){
   const date=document.getElementById('int-date')?.value||curDate;
   const list=patients.filter(p=>p.ent&&p.ent<=date&&(!p.saida||p.saida>date));
-  if(!list.length){toast('⚠️ Sem internados nesta data','err');return;}
+  if(!list.length){toast('Sem internados nesta data','warn');return;}
   const{jsPDF}=window.jspdf;const doc=new jsPDF({orientation:'landscape'});
   try{doc.addImage(LOGO_B64,'JPEG',14,8,16,16);}catch(e){}
   doc.setFont('helvetica','bold');doc.setFontSize(12);doc.setTextColor(10,22,40);
@@ -2225,7 +2268,7 @@ function pdfInternados(){
   });
   doc.setFontSize(7);doc.setTextColor(160,160,160);
   doc.text('Hospital do Prenda · Luanda · Angola · Ministério da Saúde',14,doc.internal.pageSize.height-8);
-  doc.save('internados_cir_'+date+'.pdf');toast('📄 PDF exportado!','ok');
+  doc.save('internados_cir_'+date+'.pdf');toast('Ficheiro PDF exportado','pdf');
 }
 
 // ══ SEGURANÇA PÚBLICA ═══════════════════════════════════════
@@ -2256,7 +2299,7 @@ function getSPDates(){
 
 function loadSegPub(){
   const dates=getSPDates();
-  if(!dates.length){toast('⚠️ Seleccione um período','err');return;}
+  if(!dates.length){toast('Seleccione um período','warn');return;}
   const a=aggPeriod(dates);
   document.getElementById('sp-kpis').style.display='block';
 
@@ -2324,7 +2367,7 @@ function loadSegPub(){
 
 function pdfSegPub(){
   const dates=getSPDates();
-  if(!dates.length){toast('⚠️ Carregue primeiro os dados','err');return;}
+  if(!dates.length){toast('Carregue primeiro os dados','warn');return;}
   const a=aggPeriod(dates);
   const{jsPDF}=window.jspdf;const doc=new jsPDF({orientation:'portrait'});
   try{doc.addImage(LOGO_B64,'JPEG',14,8,16,16);}catch(e){}
@@ -2374,7 +2417,7 @@ function pdfSegPub(){
   });
   doc.setFontSize(7);doc.setTextColor(160,160,160);
   doc.text('Hospital do Prenda · Luanda · Angola · Ministério da Saúde',14,doc.internal.pageSize.height-8);
-  doc.save('segpub_cir_'+dates[0]+'.pdf');toast('📄 PDF exportado!','ok');
+  doc.save('segpub_cir_'+dates[0]+'.pdf');toast('Ficheiro PDF exportado','pdf');
 }
 
 // ══ GOOGLE SHEETS INTEGRATION ════════════════════════════════
@@ -2394,13 +2437,13 @@ function closeGConfig(){ document.getElementById('gcfg-modal').classList.remove(
 
 function saveGConfig(){
   const url=document.getElementById('gs-url').value.trim();
-  if(!url){toast('⚠️ Introduza o URL do Apps Script','err');return;}
+  if(!url){toast('Introduza o URL do Apps Script','err');return;}
   if(!url.startsWith('https://script.google.com')){
-    toast('⚠️ URL inválido. Deve começar com https://script.google.com','err');return;
+    toast('URL inválido. Deve começar com https://script.google.com','err');return;
   }
   localStorage.setItem(SK_GS_URL,url);
   updateGSyncUI('configured');
-  toast('✅ URL guardado!','ok');
+  toast('URL do Apps Script guardado','save');
   closeGConfig();
 }
 
@@ -2467,7 +2510,7 @@ function restoreCamas(camas){
 async function syncToGSheets(silent=false){
   const url=getGSUrl();
   if(!url){
-    if(!silent)toast('⚠️ Configure primeiro o Google Sheets','err');
+    if(!silent)toast('Configure primeiro o Google Sheets','warn');
     return;
   }
   updateGSyncUI('syncing');
@@ -2493,7 +2536,7 @@ async function syncToGSheets(silent=false){
       st('gs-last-sync',new Date(now).toLocaleString('pt-PT'));
       st('gs-count-pats',d.counts?.patients??patients.length);
       st('gs-count-obs',d.counts?.obitos??obitos.length);
-      if(!silent)toast('☁️ Sincronizado com Google Sheets!','ok');
+      if(!silent)toast('Sincronizado com Google Sheets','sync');
       // Reset to normal after 3s
       setTimeout(()=>updateGSyncUI(getGSUrl()?'configured':''),3000);
     } else {
@@ -2508,7 +2551,7 @@ async function syncToGSheets(silent=false){
 
 async function syncFromGSheets(){
   const url=getGSUrl();
-  if(!url){toast('⚠️ Configure primeiro o Google Sheets','err');return;}
+  if(!url){toast('Configure primeiro o Google Sheets','warn');return;}
   if(!confirm('Isto vai substituir os dados locais pelos do Google Sheets. Continuar?'))return;
   updateGSyncUI('syncing');
   showTestResult('🔄 A carregar dados do Google Sheets…',true);
@@ -2538,7 +2581,7 @@ async function syncFromGSheets(){
       if(data.lastSaved){
         st('gs-last-sync',new Date(data.lastSaved).toLocaleString('pt-PT'));
       }
-      toast('☁️ Dados carregados do Google Sheets!','ok');
+      toast('Dados carregados do Google Sheets','sync');
       setTimeout(()=>updateGSyncUI(getGSUrl()?'configured':''),3000);
     } else {
       throw new Error(d.message||'Sem dados');
@@ -2653,6 +2696,101 @@ function showTabAnimated(tab) {
   showTabLoader(tab, '🔄 ' + (LABELS[tab]||tab) + '…', () => _origShowTab(tab));
 }
 
+// ══ KEYBOARD NAVIGATION ═════════════════════════════════
+function initKeyboardNav(){
+  // Enable copy/paste everywhere — remove any user-select:none from inputs
+  document.querySelectorAll('input,textarea,select').forEach(el=>{
+    el.style.userSelect='text';el.style.webkitUserSelect='text';
+  });
+  // Observe future inputs added dynamically
+  new MutationObserver(muts=>{
+    muts.forEach(m=>m.addedNodes.forEach(n=>{
+      if(n.nodeType!==1)return;
+      n.querySelectorAll&&n.querySelectorAll('input,textarea,select').forEach(el=>{
+        el.style.userSelect='text';el.style.webkitUserSelect='text';
+      });
+    }));
+  }).observe(document.body,{childList:true,subtree:true});
+
+  // Apply tabindex to table rows and observe future tables
+  function applyTabRows(root){
+    (root||document).querySelectorAll('table tbody tr').forEach((tr,i)=>{
+      if(!tr.dataset.kbInit){tr.setAttribute('tabindex','0');tr.dataset.kbInit='1';}
+    });
+  }
+  applyTabRows();
+  new MutationObserver(()=>applyTabRows()).observe(document.body,{childList:true,subtree:true});
+
+  // Global keydown handler
+  document.addEventListener('keydown',e=>{
+    const tag=document.activeElement&&document.activeElement.tagName;
+    const inField=tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT';
+
+    // Ctrl+S → save (only when not in a field that needs default behaviour)
+    if((e.ctrlKey||e.metaKey)&&e.key==='s'){
+      e.preventDefault();
+      // find visible save button in active modal or sidebar
+      const modal=document.querySelector('.modal[style*="flex"],.modal[style*="block"]');
+      if(modal){const btn=modal.querySelector('button[onclick*="save"],button[onclick*="Save"],button[onclick*="Alta"],button[onclick*="Ob"]');if(btn)btn.click();}
+      else savePats();
+      return;
+    }
+
+    // Escape → close topmost open modal
+    if(e.key==='Escape'){
+      const modals=[...document.querySelectorAll('.modal')].filter(m=>m.style.display==='flex'||m.style.display==='block');
+      if(modals.length){e.preventDefault();const last=modals[modals.length-1];const cls=last.querySelector('button[onclick*="close"],button[onclick*="Close"]');if(cls)cls.click();else last.style.display='none';}
+      return;
+    }
+
+    // Arrow nav on table rows
+    if(!inField&&(e.key==='ArrowUp'||e.key==='ArrowDown')){
+      const tr=document.activeElement;
+      if(tr&&tr.tagName==='TR'){
+        e.preventDefault();
+        const rows=[...tr.closest('tbody').querySelectorAll('tr[tabindex]')];
+        const idx=rows.indexOf(tr);
+        const next=e.key==='ArrowDown'?rows[idx+1]:rows[idx-1];
+        if(next){next.focus();_highlightRow(rows,next);}
+      }
+      return;
+    }
+
+    // Enter on focused row → simulate dblclick
+    if(!inField&&e.key==='Enter'){
+      const tr=document.activeElement;
+      if(tr&&tr.tagName==='TR'){e.preventDefault();tr.dispatchEvent(new MouseEvent('dblclick',{bubbles:true}));tr.click();}
+      return;
+    }
+
+    // Delete key on focused row → find delete button in row
+    if(!inField&&(e.key==='Delete'||e.key==='Backspace')){
+      const tr=document.activeElement;
+      if(tr&&tr.tagName==='TR'){
+        e.preventDefault();
+        const btn=tr.querySelector('button[onclick*="delet"],button[onclick*="remov"],button[title*="Elimin"],button[title*="Apagar"]');
+        if(btn)btn.click();
+      }
+      return;
+    }
+
+    // Ctrl+C on focused row → copy row text to clipboard
+    if((e.ctrlKey||e.metaKey)&&e.key==='c'&&!inField){
+      const tr=document.activeElement;
+      if(tr&&tr.tagName==='TR'){
+        e.preventDefault();
+        const txt=[...tr.querySelectorAll('td')].map(td=>td.textContent.trim()).filter(Boolean).join('\t');
+        navigator.clipboard&&navigator.clipboard.writeText(txt).then(()=>toast('Linha copiada para a área de transferência','info'));
+      }
+      return;
+    }
+  });
+}
+function _highlightRow(rows,active){
+  rows.forEach(r=>r.classList.remove('kb-focus'));
+  active.classList.add('kb-focus');
+}
+
 // ══ INIT ════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded',()=>{
   // ── Run splash screen ──────────────────────────────────────
@@ -2684,6 +2822,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   // Google Sheets UI state
   if(getGSUrl()) updateGSyncUI('configured');
   setInterval(()=>{const c=document.getElementById('clock');if(c)c.textContent=new Date().toLocaleTimeString('pt-PT');},1000);
+  initKeyboardNav();
 });
 </script>
 </body>
