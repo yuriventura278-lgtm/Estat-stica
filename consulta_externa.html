@@ -4,8 +4,112 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Hospital do Prenda — Consulta Externa</title>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js">// ── Multi-toast notification system ──────────────────────
+const _TK={
+  ok:   {icon:'✅',title:'Concluído',   cls:'tk-ok',  dur:3000},
+  save: {icon:'💾',title:'Guardado',    cls:'tk-save',dur:3000},
+  del:  {icon:'🗑️',title:'Eliminado',   cls:'tk-del', dur:3000},
+  edit: {icon:'✏️',title:'Actualizado', cls:'tk-edit',dur:3000},
+  err:  {icon:'❌',title:'Erro',        cls:'tk-err', dur:5000},
+  warn: {icon:'⚠️',title:'Atenção',     cls:'tk-warn',dur:4000},
+  info: {icon:'ℹ️',title:'Info',        cls:'tk-info',dur:3000},
+  pdf:  {icon:'📄',title:'PDF Gerado',  cls:'tk-ok',  dur:3000},
+  sync: {icon:'☁️',title:'Sincronizado',cls:'tk-save',dur:3500},
+};
+function toast(msg,type){
+  if(type===undefined)type='info';
+  const cfg=_TK[type]||_TK.info;
+  let stack=document.getElementById('toast-stack');
+  if(!stack){stack=document.createElement('div');stack.id='toast-stack';document.body.appendChild(stack);}
+  const existing=stack.querySelectorAll('.tk');
+  if(existing.length>=4)existing[existing.length-1].remove();
+  const el=document.createElement('div');
+  el.className='tk '+cfg.cls;
+  el.style.setProperty('--tk-dur',cfg.dur+'ms');
+  el.innerHTML='<span class="tk-icon">'+cfg.icon+'</span><div class="tk-body"><div class="tk-title">'+cfg.title+'</div><div class="tk-msg">'+msg+'</div></div><div class="tk-bar"></div>';
+  el.addEventListener('click',function(){_dismissToast(el);});
+  stack.prepend(el);
+  setTimeout(function(){_dismissToast(el);},cfg.dur+200);
+}
+function showToast(msg,type){toast(msg,type||'info');}
+function _dismissToast(el){
+  if(!el.parentNode)return;
+  el.style.transition='opacity .2s,transform .2s';
+  el.style.opacity='0';el.style.transform='translateX(28px)';
+  setTimeout(function(){el.remove();},220);
+}
+
+// ── Keyboard Navigation ──────────────────────────────────
+function initKeyboardNav(){
+  document.querySelectorAll('input,textarea,select').forEach(function(el){
+    el.style.userSelect='text';el.style.webkitUserSelect='text';
+  });
+  new MutationObserver(function(muts){
+    muts.forEach(function(m){m.addedNodes.forEach(function(n){
+      if(n.nodeType!==1)return;
+      if(n.querySelectorAll)n.querySelectorAll('input,textarea,select').forEach(function(el){
+        el.style.userSelect='text';el.style.webkitUserSelect='text';
+      });
+    });});
+  }).observe(document.body,{childList:true,subtree:true});
+  function applyTabRows(root){
+    (root||document).querySelectorAll('table tbody tr').forEach(function(tr){
+      if(!tr.dataset.kbInit){tr.setAttribute('tabindex','0');tr.dataset.kbInit='1';}
+    });
+  }
+  applyTabRows();
+  new MutationObserver(function(){applyTabRows();}).observe(document.body,{childList:true,subtree:true});
+  document.addEventListener('keydown',function(e){
+    var tag=document.activeElement&&document.activeElement.tagName;
+    var inField=(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT');
+    if((e.ctrlKey||e.metaKey)&&e.key==='s'){
+      e.preventDefault();
+      var modal=document.querySelector('.modal[style*="flex"],.modal[style*="block"]');
+      if(modal){var btn=modal.querySelector('button[onclick*="save"],button[onclick*="Save"],button[onclick*="guardar"],button[onclick*="Guardar"]');if(btn){btn.click();return;}}
+      var sb=document.querySelector('button[onclick*="saveAll"],button[onclick*="savePats"],button[onclick*="guardar"]');
+      if(sb)sb.click();
+      return;
+    }
+    if(e.key==='Escape'){
+      var modals=[].slice.call(document.querySelectorAll('.modal')).filter(function(m){return m.style.display==='flex'||m.style.display==='block';});
+      if(modals.length){e.preventDefault();var last=modals[modals.length-1];var cls=last.querySelector('button[onclick*="close"],button[onclick*="Close"],button[onclick*="fechar"]');if(cls)cls.click();else last.style.display='none';}
+      return;
+    }
+    if(!inField&&(e.key==='ArrowUp'||e.key==='ArrowDown')){
+      var tr=document.activeElement;
+      if(tr&&tr.tagName==='TR'){
+        e.preventDefault();
+        var rows=[].slice.call(tr.closest('tbody').querySelectorAll('tr[tabindex]'));
+        var idx=rows.indexOf(tr);
+        var next=e.key==='ArrowDown'?rows[idx+1]:rows[idx-1];
+        if(next){next.focus();rows.forEach(function(r){r.classList.remove('kb-focus');});next.classList.add('kb-focus');}
+      }
+      return;
+    }
+    if(!inField&&e.key==='Enter'){
+      var tr=document.activeElement;
+      if(tr&&tr.tagName==='TR'){e.preventDefault();tr.dispatchEvent(new MouseEvent('dblclick',{bubbles:true}));tr.click();}
+      return;
+    }
+    if(!inField&&(e.key==='Delete'||e.key==='Backspace')){
+      var tr=document.activeElement;
+      if(tr&&tr.tagName==='TR'){e.preventDefault();var btn=tr.querySelector('button[onclick*="delet"],button[onclick*="remov"],button[title*="Elimin"],button[title*="Apagar"]');if(btn)btn.click();}
+      return;
+    }
+    if((e.ctrlKey||e.metaKey)&&e.key==='c'&&!inField){
+      var tr=document.activeElement;
+      if(tr&&tr.tagName==='TR'){
+        e.preventDefault();
+        var txt=[].slice.call(tr.querySelectorAll('td')).map(function(td){return td.textContent.trim();}).filter(Boolean).join('\t');
+        if(navigator.clipboard)navigator.clipboard.writeText(txt).then(function(){toast('Linha copiada para a área de transferência','info');});
+      }
+      return;
+    }
+  });
+}
+
+</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <!-- Base de Dados Cross-Device: IndexedDB + Firebase (hprenda-db.js v4) -->
 <script src="hprenda-db.js"></script>
@@ -14,41 +118,37 @@
 
 <style>
 :root {
-  --navy: #0a1628;
-  --navy2: #122040;
-  --blue: #1854a8;
-  --blue2: #2369d4;
+  --bg: #F0F2F5;
+  --surface: #FFFFFF;
+  --surface2: #F8F9FB;
+  --navy: #FFFFFF;
+  --navy2: #F8F9FB;
+  --navy3: #F0F2F5;
+  --blue: #1a56db;
+  --blue2: #1447c0;
   --blue3: #3b82f6;
-  --blue-glow: rgba(59,130,246,0.15);
-  --blue-pale: #eff6ff;
-  --cyan: #06b6d4;
+  --cyan: #0891b2;
   --green: #059669;
   --green2: #10b981;
-  --green-pale: #ecfdf5;
   --amber: #d97706;
-  --amber-pale: #fffbeb;
   --red: #dc2626;
-  --red-pale: #fef2f2;
+  --red2: #ef4444;
   --purple: #7c3aed;
-  --border: rgba(255,255,255,0.08);
-  --border-light: #e2e8f0;
-  --text: #0f172a;
-  --text-muted: #64748b;
-  --surface: #ffffff;
-  --surface2: #f8fafc;
-  --sidebar-bg: #0a1628;
+  --border: rgba(0,0,0,0.08);
+  --border2: rgba(0,0,0,0.14);
+  --text: #1A1A2E;
+  --text-muted: #6B7280;
   --radius: 12px;
   --radius-sm: 8px;
-  --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.04);
-  --shadow-md: 0 4px 24px rgba(0,0,0,0.10);
-  --shadow-lg: 0 12px 48px rgba(0,0,0,0.14);
+  --shadow: 0 1px 4px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.10);
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
   font-family: 'Inter', sans-serif;
-  background: #f0f4f8;
+  background: var(--bg);
   color: var(--text);
   min-height: 100vh;
   font-size: 14px;
@@ -59,8 +159,8 @@ body {
    TOPBAR
 ══════════════════════════════════ */
 .topbar {
-  background: var(--navy);
-  color: white;
+  background: #fff;
+  color: var(--text);
   padding: 0 28px;
   display: flex;
   align-items: center;
@@ -69,8 +169,8 @@ body {
   position: sticky;
   top: 0;
   z-index: 200;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
-  box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+  box-shadow: 0 1px 8px rgba(0,0,0,0.06);
 }
 
 .topbar-brand { display: flex; align-items: center; gap: 14px; }
@@ -84,17 +184,17 @@ body {
   flex-shrink: 0;
 }
 
-.topbar-name { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; letter-spacing: 0.02em; }
-.topbar-sub { font-size: 11px; color: rgba(147,197,253,0.8); font-weight: 400; margin-top: 1px; }
+.topbar-name { font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 700; letter-spacing: 0.02em; }
+.topbar-sub { font-size: 11px; color: var(--text-muted); font-weight: 400; margin-top: 1px; }
 
 .topbar-right { display: flex; align-items: center; gap: 10px; }
 
 .topbar-time {
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 12px; color: rgba(147,197,253,0.9);
-  background: rgba(255,255,255,0.06);
+  font-family: 'Roboto Mono', monospace;
+  font-size: 12px; color: #1a56db;
+  background: rgba(26,86,219,0.06);
   padding: 6px 12px; border-radius: 6px;
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 1px solid rgba(26,86,219,0.12);
 }
 
 /* ══════════════════════════════════
@@ -104,8 +204,8 @@ body {
 
 .sidebar {
   width: 240px; flex-shrink: 0;
-  background: var(--sidebar-bg);
-  border-right: 1px solid rgba(255,255,255,0.05);
+  background: #fff;
+  border-right: 1px solid rgba(0,0,0,0.08);
   padding: 24px 0 24px;
   position: sticky; top: 62px;
   height: calc(100vh - 62px);
@@ -115,19 +215,19 @@ body {
 
 .sidebar-logo-area {
   padding: 0 20px 20px;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  border-bottom: 1px solid rgba(0,0,0,0.08);
   margin-bottom: 16px;
 }
 
 .sidebar-hospital-name {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 13px; font-weight: 700;
-  color: white; letter-spacing: 0.05em;
+  color: var(--text); letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 
 .sidebar-hospital-sub {
-  font-size: 11px; color: rgba(147,197,253,0.6);
+  font-size: 11px; color: var(--text-muted);
   margin-top: 2px;
 }
 
@@ -135,7 +235,7 @@ body {
 
 .sidebar-label {
   font-size: 9px; font-weight: 700;
-  letter-spacing: 0.12em; color: rgba(147,197,253,0.4);
+  letter-spacing: 0.12em; color: var(--text-muted);
   text-transform: uppercase; padding: 12px 8px 6px;
 }
 
@@ -143,30 +243,30 @@ body {
   display: flex; align-items: center; gap: 10px;
   padding: 10px 12px; border-radius: var(--radius-sm);
   cursor: pointer; transition: all 0.15s;
-  font-weight: 400; color: rgba(255,255,255,0.5); font-size: 13px;
+  font-weight: 400; color: var(--text-muted); font-size: 13px;
   border: none; background: none; width: 100%; text-align: left;
   position: relative;
 }
 
-.nav-item:hover { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.85); }
+.nav-item:hover { background: rgba(26,86,219,0.04); color: var(--text); }
 
 .nav-item.active {
-  background: linear-gradient(90deg, rgba(59,130,246,0.2), rgba(59,130,246,0.05));
-  color: #93c5fd; font-weight: 500;
-  border-left: 2px solid var(--blue3);
+  background: rgba(26,86,219,0.07);
+  color: #1a56db; font-weight: 500;
+  border-left: 3px solid #1a56db;
   padding-left: 10px;
 }
 
 .nav-icon { font-size: 15px; flex-shrink: 0; width: 20px; text-align: center; }
 
-.sidebar-divider { height: 1px; background: rgba(255,255,255,0.05); margin: 8px 12px; }
+.sidebar-divider { height: 1px; background: rgba(0,0,0,0.06); margin: 8px 12px; }
 
 .sidebar-footer {
   margin-top: auto; padding: 16px 20px 0;
-  border-top: 1px solid rgba(255,255,255,0.05);
+  border-top: 1px solid rgba(0,0,0,0.06);
 }
 
-.sidebar-footer-text { font-size: 11px; color: rgba(147,197,253,0.4); line-height: 1.6; }
+.sidebar-footer-text { font-size: 11px; color: var(--text-muted); line-height: 1.6; }
 
 .main { flex: 1; padding: 28px; overflow-x: hidden; }
 
@@ -179,8 +279,8 @@ body {
 }
 
 .page-title {
-  font-family: 'Syne', sans-serif;
-  font-size: 22px; font-weight: 700; color: var(--navy);
+  font-family: 'Inter', sans-serif;
+  font-size: 22px; font-weight: 700; color: var(--text);
   letter-spacing: -0.01em;
 }
 
@@ -221,7 +321,7 @@ body {
 
 .kpi-icon { font-size: 22px; margin-bottom: 10px; display: block; }
 .kpi-label { font-size: 10px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 6px; }
-.kpi-value { font-family: 'IBM Plex Mono', monospace; font-size: 28px; font-weight: 600; color: var(--navy); line-height: 1; }
+.kpi-value { font-family: 'Roboto Mono', monospace; font-size: 28px; font-weight: 600; color: #1a56db; line-height: 1; }
 .kpi.green .kpi-value { color: var(--green); }
 .kpi.amber .kpi-value { color: var(--amber); }
 .kpi.red .kpi-value { color: var(--red); }
@@ -242,19 +342,20 @@ body {
 }
 
 .card-header {
-  background: var(--navy);
-  color: white; padding: 16px 22px;
+  background: #F8F9FB;
+  color: var(--text); padding: 16px 22px;
   display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid rgba(0,0,0,0.08);
 }
 
 .card-title {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 14px; font-weight: 600;
   display: flex; align-items: center; gap: 8px;
   letter-spacing: 0.01em;
 }
 
-.card-subtitle { font-size: 11px; color: rgba(147,197,253,0.7); margin-top: 2px; }
+.card-subtitle { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
 .card-body { padding: 0; }
 
 /* ══════════════════════════════════
@@ -280,8 +381,8 @@ body {
 }
 
 .date-bar input:focus, .date-bar select:focus {
-  outline: none; border-color: var(--blue3);
-  box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+  outline: none; border-color: #1a56db;
+  box-shadow: 0 0 0 3px rgba(26,86,219,0.1);
 }
 
 .resp-input {
@@ -292,7 +393,7 @@ body {
   min-width: 220px; transition: border-color 0.15s, box-shadow 0.15s;
 }
 
-.resp-input:focus { outline: none; border-color: var(--blue3); box-shadow: 0 0 0 3px rgba(59,130,246,0.12); }
+.resp-input:focus { outline: none; border-color: #1a56db; box-shadow: 0 0 0 3px rgba(26,86,219,0.1); }
 
 /* ══════════════════════════════════
    TABLES
@@ -301,7 +402,7 @@ body {
 
 table { width: 100%; border-collapse: collapse; min-width: 640px; }
 
-thead tr { background: var(--navy); }
+thead tr { background: #1a56db; }
 
 thead th {
   color: white; font-size: 10px; font-weight: 600;
@@ -313,21 +414,21 @@ thead th {
 thead th:first-child { text-align: left; padding-left: 22px; }
 
 tbody tr { border-bottom: 1px solid #f1f5f9; transition: background 0.1s; }
-tbody tr:hover { background: #f8faff; }
+tbody tr:hover { background: rgba(26,86,219,0.04); }
 tbody tr:nth-child(even) { background: #fafcff; }
 tbody tr:nth-child(even):hover { background: #f0f6ff; }
 
 tbody td { padding: 10px 13px; text-align: center; font-size: 13px; }
-tbody td:first-child { text-align: left; font-weight: 600; padding-left: 22px; color: var(--navy2); }
+tbody td:first-child { text-align: left; font-weight: 600; padding-left: 22px; color: var(--text); }
 
-.num-cell { font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 500; }
-.pct-cell { font-family: 'IBM Plex Mono', monospace; font-size: 12px; }
+.num-cell { font-family: 'Roboto Mono', monospace; font-size: 13px; font-weight: 500; }
+.pct-cell { font-family: 'Roboto Mono', monospace; font-size: 12px; }
 
 .green-cell { background: var(--green-pale) !important; color: var(--green); font-weight: 600; }
 .orange-cell { background: var(--amber-pale) !important; color: var(--amber); font-weight: 600; }
 .blue-cell { background: var(--blue-pale) !important; color: var(--blue2); font-weight: 600; }
 
-.total-row { background: var(--navy) !important; }
+.total-row { background: #1a56db !important; }
 .total-row td { color: white !important; font-weight: 700; font-size: 13px; }
 .total-row td:first-child { color: white !important; }
 
@@ -337,14 +438,14 @@ tbody td:first-child { text-align: left; font-weight: 600; padding-left: 22px; c
 input[type="number"].cell-input {
   width: 76px; border: 1px solid #e2e8f0;
   border-radius: 6px; padding: 5px 8px;
-  font-family: 'IBM Plex Mono', monospace; font-size: 13px;
+  font-family: 'Roboto Mono', monospace; font-size: 13px;
   text-align: center; background: white;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 
 input[type="number"].cell-input:focus {
-  outline: none; border-color: var(--blue3);
-  box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+  outline: none; border-color: #1a56db;
+  box-shadow: 0 0 0 3px rgba(26,86,219,0.1);
 }
 
 input[type="number"] { -moz-appearance: textfield; }
@@ -362,8 +463,8 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
   white-space: nowrap;
 }
 
-.btn-primary { background: var(--blue2); color: white; box-shadow: 0 2px 8px rgba(35,105,212,0.3); }
-.btn-primary:hover { background: var(--blue3); box-shadow: 0 4px 16px rgba(59,130,246,0.35); }
+.btn-primary { background: #1a56db; color: #fff; box-shadow: 0 2px 8px rgba(26,86,219,0.25); }
+.btn-primary:hover { background: #1447c0; box-shadow: 0 4px 16px rgba(26,86,219,0.35); }
 
 .btn-success { background: var(--green); color: white; box-shadow: 0 2px 8px rgba(5,150,105,0.3); }
 .btn-success:hover { background: var(--green2); }
@@ -377,8 +478,8 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
 .btn-amber { background: var(--amber); color: white; box-shadow: 0 2px 8px rgba(217,119,6,0.3); }
 .btn-amber:hover { background: #b45309; }
 
-.btn-navy { background: var(--navy); color: white; }
-.btn-navy:hover { background: var(--navy2); }
+.btn-navy { background: #1a56db; color: white; }
+.btn-navy:hover { background: #1447c0; }
 
 .btn-ghost { background: transparent; color: white; border: 1px solid rgba(255,255,255,0.2); }
 .btn-ghost:hover { background: rgba(255,255,255,0.08); }
@@ -429,7 +530,7 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
 }
 
 .chart-title {
-  font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 600;
+  font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600;
   color: var(--navy); margin-bottom: 16px;
   display: flex; align-items: center; gap: 8px;
 }
@@ -454,8 +555,8 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
 .bar-fill.green { background: linear-gradient(90deg, var(--green), var(--green2)); }
 .bar-fill.amber { background: linear-gradient(90deg, #b45309, var(--amber)); }
 
-.bar-val { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: white; font-weight: 600; }
-.bar-val-out { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text-muted); margin-left: 8px; min-width: 32px; }
+.bar-val { font-family: 'Roboto Mono', monospace; font-size: 11px; color: white; font-weight: 600; }
+.bar-val-out { font-family: 'Roboto Mono', monospace; font-size: 11px; color: var(--text-muted); margin-left: 8px; min-width: 32px; }
 
 /* Trend chart */
 .trend-chart { position: relative; height: 160px; }
@@ -499,7 +600,7 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
 
 .progress-ring-label { font-size: 11px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
 
-.ring-val { font-family: 'IBM Plex Mono', monospace; font-size: 15px; font-weight: 700; }
+.ring-val { font-family: 'Roboto Mono', monospace; font-size: 15px; font-weight: 700; }
 
 /* ══════════════════════════════════
    HISTORY
@@ -516,7 +617,7 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
 .history-item:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
 
 .history-date {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-weight: 600; color: var(--navy); font-size: 13px;
 }
 
@@ -554,7 +655,7 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
 .export-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
 
 .export-icon { font-size: 40px; margin-bottom: 12px; display: block; }
-.export-card h3 { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; color: var(--navy); margin-bottom: 8px; }
+.export-card h3 { font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 700; color: var(--navy); margin-bottom: 8px; }
 .export-card p { font-size: 12px; color: var(--text-muted); margin-bottom: 16px; line-height: 1.6; }
 
 /* ══════════════════════════════════
@@ -601,7 +702,7 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
 }
 
 .section-divider-label {
-  font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 700;
+  font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 700;
   color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em;
   white-space: nowrap;
 }
@@ -616,7 +717,7 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
 }
 
 .empty-state-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.4; }
-.empty-state-title { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; color: var(--text-muted); margin-bottom: 8px; }
+.empty-state-title { font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 700; color: var(--text-muted); margin-bottom: 8px; }
 .empty-state-text { font-size: 13px; color: var(--text-muted); }
 
 /* ══════════════════════════════════
@@ -655,10 +756,42 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
 ══════════════════════════════════ */
 .sidebar::-webkit-scrollbar { width: 4px; }
 .sidebar::-webkit-scrollbar-track { background: transparent; }
-.sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+.sidebar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 2px; }
+/* TOAST STACK */
+#toast-stack{position:fixed;bottom:68px;right:18px;display:flex;flex-direction:column-reverse;
+  gap:8px;z-index:9999;pointer-events:none;max-width:320px;}
+.tk{display:flex;align-items:flex-start;gap:10px;padding:11px 14px 8px;border-radius:10px;
+  background:#fff;border:1px solid rgba(0,0,0,0.08);box-shadow:0 4px 20px rgba(0,0,0,0.12);
+  pointer-events:all;cursor:pointer;overflow:hidden;position:relative;
+  animation:tkIn .22s ease;min-width:220px;}
+@keyframes tkIn{from{opacity:0;transform:translateX(28px)}to{opacity:1;transform:translateX(0)}}
+.tk-icon{font-size:18px;line-height:1;flex-shrink:0;margin-top:1px;}
+.tk-body{flex:1;min-width:0;}
+.tk-title{font-family:inherit;font-size:12px;font-weight:700;line-height:1.2;}
+.tk-msg{font-family:inherit;font-size:11px;font-weight:400;color:#6B7280;margin-top:2px;line-height:1.3;}
+.tk-bar{position:absolute;bottom:0;left:0;height:3px;border-radius:0 0 10px 10px;
+  animation:tkBar var(--tk-dur,3s) linear forwards;}
+@keyframes tkBar{from{width:100%}to{width:0%}}
+.tk-ok{border-color:rgba(5,150,105,.25);}.tk-ok .tk-title{color:#059669;}.tk-ok .tk-bar{background:#059669;}
+.tk-err{border-color:rgba(220,38,38,.25);}.tk-err .tk-title{color:#DC2626;}.tk-err .tk-bar{background:#DC2626;}
+.tk-warn{border-color:rgba(217,119,6,.25);}.tk-warn .tk-title{color:#D97706;}.tk-warn .tk-bar{background:#D97706;}
+.tk-save{border-color:rgba(26,86,219,.25);}.tk-save .tk-title{color:#1a56db;}.tk-save .tk-bar{background:#1a56db;}
+.tk-del{border-color:rgba(124,58,237,.25);}.tk-del .tk-title{color:#7C3AED;}.tk-del .tk-bar{background:#7C3AED;}
+.tk-edit{border-color:rgba(6,182,212,.25);}.tk-edit .tk-title{color:#0891B2;}.tk-edit .tk-bar{background:#0891B2;}
+.tk-info{border-color:rgba(26,86,219,.18);}.tk-info .tk-title{color:#1a56db;}.tk-info .tk-bar{background:#1a56db;}
+tr.kb-focus{outline:2px solid #1a56db;outline-offset:-2px;background:rgba(26,86,219,0.06)!important;}
 </style>
   <link rel="stylesheet" href="hprenda-theme.css">
   <script src="hprenda-mail.js" defer></script>
+<script>
+if(!window._fbReady) window._fbReady = false;
+if(!window._fb) window._fb = {
+  ref:function(){return {};},
+  set:function(){return Promise.resolve();},
+  get:function(){return Promise.resolve({exists:function(){return false;},val:function(){return null;}});},
+  onValue:function(){return function(){};}
+};
+</script>
 </head>
 <body>
 
@@ -1118,6 +1251,9 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
 <div class="toast-container" id="toasts"></div>
 
 <script>
+function safeGet(k){try{return localStorage.getItem(k);}catch(e){return null;}}
+function safeSet(k,v){try{localStorage.setItem(k,v);return true;}catch(e){console.warn('localStorage full');return false;}}
+function safeRemove(k){try{localStorage.removeItem(k);}catch(e){}}
 // ═══════════════════════════════════════════════════════════════
 // DATA DEFINITIONS
 // ═══════════════════════════════════════════════════════════════
@@ -1204,7 +1340,7 @@ function closeMobileSidebar() {
 function buildConsultasTable() {
   const tbody = document.getElementById('tbody-consultas');
   const today = todayKey();
-  const saved = JSON.parse(localStorage.getItem(storageKey('consultas', today)) || '{}');
+  const saved = JSON.parse(safeGet(storageKey('consultas', today)) || '{}');
   tbody.innerHTML = '';
   ESPECIALIDADES.forEach((esp, i) => {
     const d = saved[esp] || {ag:0,re:0,ca:0,m15:0,M15:0};
@@ -1244,7 +1380,7 @@ function buildConsultasTable() {
 function calcConsultas() {
   let tAg=0,tRe=0,tCa=0,tm15=0,tM15=0;
   ESPECIALIDADES.forEach((esp, i) => {
-    const get = f => parseInt(document.querySelector(`[data-esp="${i}"][data-field="${f}"]`)?.value)||0;
+    const get = f => parseInt(document.querySelector(`[data-esp="${i}"][data-field="${f}"]`)?.value,10)||0;
     const ag=get('ag'),re=get('re'),ca=get('ca'),m15=get('m15'),M15=get('M15');
     const tot = m15+M15;
     document.getElementById(`ctot-${i}`).textContent = tot;
@@ -1255,8 +1391,8 @@ function calcConsultas() {
   const gtot = tm15+tM15;
   // Update % do Total for each row now that we have gtot
   ESPECIALIDADES.forEach((esp, i) => {
-    const m15 = parseInt(document.querySelector(`[data-esp="${i}"][data-field="m15"]`)?.value)||0;
-    const M15 = parseInt(document.querySelector(`[data-esp="${i}"][data-field="M15"]`)?.value)||0;
+    const m15 = parseInt(document.querySelector(`[data-esp="${i}"][data-field="m15"]`)?.value,10)||0;
+    const M15 = parseInt(document.querySelector(`[data-esp="${i}"][data-field="M15"]`)?.value,10)||0;
     const tot = m15+M15;
     const el = document.getElementById(`cptot-${i}`);
     if (el) el.textContent = gtot>0?(tot/gtot*100).toFixed(1)+'%':'—';
@@ -1276,7 +1412,7 @@ function calcConsultas() {
 function buildProcTable() {
   const tbody = document.getElementById('tbody-proc');
   const today = todayKey();
-  const saved = JSON.parse(localStorage.getItem(storageKey('proc', today)) || '{}');
+  const saved = JSON.parse(safeGet(storageKey('proc', today)) || '{}');
   tbody.innerHTML = '';
   PROCEDIMENTOS.forEach((proc, i) => {
     const d = saved[proc] || {manha:0,tarde:0};
@@ -1300,7 +1436,7 @@ function buildProcTable() {
 function calcProc() {
   let tmanha=0,ttarde=0;
   PROCEDIMENTOS.forEach((p,i) => {
-    const get = f => parseInt(document.querySelector(`[data-p="${i}"][data-f="${f}"]`)?.value)||0;
+    const get = f => parseInt(document.querySelector(`[data-p="${i}"][data-f="${f}"]`)?.value,10)||0;
     const manha=get('manha'), tarde=get('tarde');
     document.getElementById(`ptot-${i}`).textContent=manha+tarde;
     tmanha+=manha; ttarde+=tarde;
@@ -1310,7 +1446,7 @@ function calcProc() {
   document.getElementById('pttarde').textContent=ttarde;
   document.getElementById('pttot').textContent=gtot;
   PROCEDIMENTOS.forEach((p,i)=>{
-    const tot=parseInt(document.getElementById(`ptot-${i}`).textContent)||0;
+    const tot=parseInt(document.getElementById(`ptot-${i}`).textContent,10)||0;
     document.getElementById(`ppct-${i}`).textContent=gtot>0?(tot/gtot*100).toFixed(1)+'%':'—';
   });
   updateDashboard();
@@ -1319,7 +1455,7 @@ function calcProc() {
 function buildMatTable() {
   const tbody = document.getElementById('tbody-mat');
   const today = todayKey();
-  const saved = JSON.parse(localStorage.getItem(storageKey('mat', today)) || '{}');
+  const saved = JSON.parse(safeGet(storageKey('mat', today)) || '{}');
   tbody.innerHTML = '';
   MATERIAIS.forEach((mat, i) => {
     const d = saved[mat.nome] || {stock:0,usado:0};
@@ -1344,7 +1480,7 @@ function buildMatTable() {
 function calcMat() {
   let tstock=0,tusado=0;
   MATERIAIS.forEach((m,i)=>{
-    const get=f=>parseInt(document.querySelector(`[data-m="${i}"][data-mf="${f}"]`)?.value)||0;
+    const get=f=>parseInt(document.querySelector(`[data-m="${i}"][data-mf="${f}"]`)?.value,10)||0;
     const stock=get('stock'),usado=get('usado');
     const final=Math.max(0,stock-usado);
     document.getElementById(`mfinal-${i}`).textContent=final;
@@ -1365,12 +1501,12 @@ function updateDashboard() {
   document.getElementById('dash-date-badge').textContent = formatDate(today);
   let tAg=0,tRe=0,tCa=0,tm15=0,tM15=0;
   ESPECIALIDADES.forEach((esp,i)=>{
-    const get=f=>parseInt(document.querySelector(`[data-esp="${i}"][data-field="${f}"]`)?.value)||0;
+    const get=f=>parseInt(document.querySelector(`[data-esp="${i}"][data-field="${f}"]`)?.value,10)||0;
     tAg+=get('ag'); tRe+=get('re'); tCa+=get('ca'); tm15+=get('m15'); tM15+=get('M15');
   });
   let tProc=0;
   PROCEDIMENTOS.forEach((p,i)=>{
-    const get=f=>parseInt(document.querySelector(`[data-p="${i}"][data-f="${f}"]`)?.value)||0;
+    const get=f=>parseInt(document.querySelector(`[data-p="${i}"][data-f="${f}"]`)?.value,10)||0;
     tProc+=get('manha')+get('tarde');
   });
   document.getElementById('kpi-agendadas').textContent=tAg;
@@ -1388,7 +1524,7 @@ function renderDashboardCharts() {
   // Especialidades bar chart
   const espData = [];
   ESPECIALIDADES.forEach((esp,i)=>{
-    const get=f=>parseInt(document.querySelector(`[data-esp="${i}"][data-field="${f}"]`)?.value)||0;
+    const get=f=>parseInt(document.querySelector(`[data-esp="${i}"][data-field="${f}"]`)?.value,10)||0;
     espData.push({label: esp, value: get('re')});
   });
   espData.sort((a,b)=>b.value-a.value);
@@ -1398,7 +1534,7 @@ function renderDashboardCharts() {
   // Proc bar chart
   const procData = [];
   PROCEDIMENTOS.forEach((p,i)=>{
-    const get=f=>parseInt(document.querySelector(`[data-p="${i}"][data-f="${f}"]`)?.value)||0;
+    const get=f=>parseInt(document.querySelector(`[data-p="${i}"][data-f="${f}"]`)?.value,10)||0;
     procData.push({label: p, value: get('manha')+get('tarde')});
   });
   procData.sort((a,b)=>b.value-a.value);
@@ -1476,7 +1612,7 @@ function renderTrendChart(containerId, labels, values, color='#2369d4') {
 function getConsultasData() {
   const data = {};
   ESPECIALIDADES.forEach((esp,i)=>{
-    const get=f=>parseInt(document.querySelector(`[data-esp="${i}"][data-field="${f}"]`)?.value)||0;
+    const get=f=>parseInt(document.querySelector(`[data-esp="${i}"][data-field="${f}"]`)?.value,10)||0;
     data[esp]={ag:get('ag'),re:get('re'),ca:get('ca'),m15:get('m15'),M15:get('M15')};
   });
   return data;
@@ -1484,7 +1620,7 @@ function getConsultasData() {
 function getProcData() {
   const data={};
   PROCEDIMENTOS.forEach((p,i)=>{
-    const get=f=>parseInt(document.querySelector(`[data-p="${i}"][data-f="${f}"]`)?.value)||0;
+    const get=f=>parseInt(document.querySelector(`[data-p="${i}"][data-f="${f}"]`)?.value,10)||0;
     data[p]={manha:get('manha'),tarde:get('tarde')};
   });
   return data;
@@ -1492,7 +1628,7 @@ function getProcData() {
 function getMatData() {
   const data={};
   MATERIAIS.forEach((m,i)=>{
-    const get=f=>parseInt(document.querySelector(`[data-m="${i}"][data-mf="${f}"]`)?.value)||0;
+    const get=f=>parseInt(document.querySelector(`[data-m="${i}"][data-mf="${f}"]`)?.value,10)||0;
     data[m.nome]={stock:get('stock'),usado:get('usado')};
   });
   return data;
@@ -1500,17 +1636,18 @@ function getMatData() {
 
 async function saveAllData() {
   const today = todayKey();
+  if(!today){ toast('Seleccione uma data','error'); return; }
   const cData = getConsultasData();
   const pData = getProcData();
   const mData = getMatData();
-  const metaData = { date: today, resp: document.getElementById('resp-consultas').value, savedAt: new Date().toISOString() };
+  const metaData = { date: today, resp: document.getElementById('resp-consultas')?.value, savedAt: new Date().toISOString() };
   // localStorage fallback
-  localStorage.setItem(storageKey('consultas',today), JSON.stringify(cData));
-  localStorage.setItem(storageKey('proc',today), JSON.stringify(pData));
-  localStorage.setItem(storageKey('mat',today), JSON.stringify(mData));
-  localStorage.setItem(storageKey('meta',today), JSON.stringify(metaData));
-  let dates = JSON.parse(localStorage.getItem('prenda_saved_dates') || '[]');
-  if (!dates.includes(today)) { dates.push(today); dates.sort(); localStorage.setItem('prenda_saved_dates', JSON.stringify(dates)); }
+  safeSet(storageKey('consultas',today), JSON.stringify(cData));
+  safeSet(storageKey('proc',today), JSON.stringify(pData));
+  safeSet(storageKey('mat',today), JSON.stringify(mData));
+  safeSet(storageKey('meta',today), JSON.stringify(metaData));
+  let dates = JSON.parse(safeGet('prenda_saved_dates') || '[]');
+  if (!dates.includes(today)) { dates.push(today); dates.sort(); safeSet('prenda_saved_dates', JSON.stringify(dates)); }
   // Firebase sync
   if (window._fbReady) {
     try {
@@ -1540,7 +1677,7 @@ function newDay() {
 }
 
 function loadDay(date) {
-  const c=JSON.parse(localStorage.getItem(storageKey('consultas',date))||'{}');
+  const c=JSON.parse(safeGet(storageKey('consultas',date))||'{}');
   ESPECIALIDADES.forEach((esp,i)=>{
     const d=c[esp]||{ag:0,re:0,ca:0,m15:0,M15:0};
     ['ag','re','ca','m15','M15'].forEach(f=>{
@@ -1548,7 +1685,7 @@ function loadDay(date) {
       if(el) el.value=d[f]||0;
     });
   });
-  const p=JSON.parse(localStorage.getItem(storageKey('proc',date))||'{}');
+  const p=JSON.parse(safeGet(storageKey('proc',date))||'{}');
   PROCEDIMENTOS.forEach((proc,i)=>{
     const d=p[proc]||{manha:0,tarde:0};
     ['manha','tarde'].forEach(f=>{
@@ -1556,7 +1693,7 @@ function loadDay(date) {
       if(el) el.value=d[f]||0;
     });
   });
-  const m=JSON.parse(localStorage.getItem(storageKey('mat',date))||'{}');
+  const m=JSON.parse(safeGet(storageKey('mat',date))||'{}');
   MATERIAIS.forEach((mat,i)=>{
     const d=m[mat.nome]||{stock:0,usado:0};
     ['stock','usado'].forEach(f=>{
@@ -1588,7 +1725,7 @@ function weekOf(d) {
 function monthOf(d) { return d.slice(0,7); }
 
 function renderHistory(mode) {
-  const dates=JSON.parse(localStorage.getItem('prenda_saved_dates')||'[]').slice().reverse();
+  const dates=JSON.parse(safeGet('prenda_saved_dates')||'[]').slice().reverse();
   const list=document.getElementById('history-list');
   list.innerHTML='';
   if(dates.length===0){
@@ -1604,7 +1741,7 @@ function renderHistory(mode) {
   Object.entries(groups).sort((a,b)=>b[0].localeCompare(a[0])).forEach(([grp,ds])=>{
     let tAg=0,tRe=0,tCa=0;
     ds.forEach(d=>{
-      const c=JSON.parse(localStorage.getItem(storageKey('consultas',d))||'{}');
+      const c=JSON.parse(safeGet(storageKey('consultas',d))||'{}');
       Object.values(c).forEach(v=>{tAg+=v.ag||0;tRe+=v.re||0;tCa+=v.ca||0;});
     });
     const pct=tAg>0?(tRe/tAg*100).toFixed(0)+'%':'—';
@@ -1634,7 +1771,7 @@ function switchHistoryTab(mode,el) {
 function clearHistory() {
   if(!confirm('Apagar todo o histórico guardado? Esta acção não pode ser desfeita.')) return;
   const keys=Object.keys(localStorage).filter(k=>k.startsWith('prenda_'));
-  keys.forEach(k=>localStorage.removeItem(k));
+  keys.forEach(k=>safeRemove(k));
   renderHistory('dia');
   toast('🗑 Histórico apagado', '');
 }
@@ -1660,7 +1797,7 @@ function aggConsultas(dates) {
   const agg={};
   ESPECIALIDADES.forEach(e=>{agg[e]={ag:0,re:0,ca:0,m15:0,M15:0};});
   dates.forEach(d=>{
-    const c=JSON.parse(localStorage.getItem(storageKey('consultas',d))||'{}');
+    const c=JSON.parse(safeGet(storageKey('consultas',d))||'{}');
     ESPECIALIDADES.forEach(e=>{
       if(c[e]){['ag','re','ca','m15','M15'].forEach(f=>{agg[e][f]+=(c[e][f]||0);});}
     });
@@ -1672,7 +1809,7 @@ function aggProc(dates) {
   const agg={};
   PROCEDIMENTOS.forEach(p=>{agg[p]={manha:0,tarde:0};});
   dates.forEach(d=>{
-    const p=JSON.parse(localStorage.getItem(storageKey('proc',d))||'{}');
+    const p=JSON.parse(safeGet(storageKey('proc',d))||'{}');
     PROCEDIMENTOS.forEach(pr=>{if(p[pr]){['manha','tarde'].forEach(f=>{agg[pr][f]+=(p[pr][f]||0);});}});
   });
   return agg;
@@ -1682,7 +1819,7 @@ function aggMat(dates) {
   const agg={};
   MATERIAIS.forEach(m=>{agg[m.nome]={stock:0,usado:0};});
   dates.forEach(d=>{
-    const m=JSON.parse(localStorage.getItem(storageKey('mat',d))||'{}');
+    const m=JSON.parse(safeGet(storageKey('mat',d))||'{}');
     MATERIAIS.forEach(mat=>{if(m[mat.nome]){['stock','usado'].forEach(f=>{agg[mat.nome][f]+=(m[mat.nome][f]||0);});}});
   });
   return agg;
@@ -1751,7 +1888,7 @@ function renderMonitorTable(tableId, cAgg) {
 
 function renderMonitorPeriod(mode) {
   const today = todayKey();
-  const allDates = JSON.parse(localStorage.getItem('prenda_saved_dates')||'[]');
+  const allDates = JSON.parse(safeGet('prenda_saved_dates')||'[]');
 
   let dates = [];
   let periodLabel = '';
@@ -1826,7 +1963,7 @@ function renderMonitorPeriod(mode) {
     // Daily trend
     const tLabels = dates.map(d=>d.slice(8,10)+'/'+d.slice(5,7));
     const tValues = dates.map(d=>{
-      const c=JSON.parse(localStorage.getItem(storageKey('consultas',d))||'{}');
+      const c=JSON.parse(safeGet(storageKey('consultas',d))||'{}');
       return Object.values(c).reduce((s,v)=>s+(v.re||0),0);
     });
     renderTrendChart('mon-trend-semana', tLabels, tValues, '#2369d4');
@@ -1850,7 +1987,7 @@ function renderMonitorPeriod(mode) {
     const tValues = wkKeys.map(wk=>{
       let tot=0;
       weekGroups[wk].forEach(d=>{
-        const c=JSON.parse(localStorage.getItem(storageKey('consultas',d))||'{}');
+        const c=JSON.parse(safeGet(storageKey('consultas',d))||'{}');
         Object.values(c).forEach(v=>{tot+=v.re||0;});
       });
       return tot;
@@ -1869,7 +2006,7 @@ function renderMonitorPeriod(mode) {
 // ═══════════════════════════════════════════════════════════════
 function getDatesForPeriod(period) {
   const today=todayKey();
-  const allDates=JSON.parse(localStorage.getItem('prenda_saved_dates')||'[]');
+  const allDates=JSON.parse(safeGet('prenda_saved_dates')||'[]');
   if(period==='dia') return [today];
   if(period==='semana') {
     const mon=weekOf(today);
@@ -1881,8 +2018,8 @@ function getDatesForPeriod(period) {
     return allDates.filter(d=>d.startsWith(m));
   }
   if(period==='custom') {
-    const s=document.getElementById('range-start').value;
-    const e=document.getElementById('range-end').value;
+    const s=document.getElementById('range-start')?.value;
+    const e=document.getElementById('range-end')?.value;
     return allDates.filter(d=>d>=s&&d<=e);
   }
   return [today];
@@ -1896,12 +2033,12 @@ async function generatePDF(dates, period) {
   const {jsPDF}=window.jspdf;
   const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
   const W=210, margin=14;
-  const navy=[10,22,40], blue=[35,105,212], lightBlue=[239,246,255];
+  const navy=[26,86,219], blue=[26,86,219], lightBlue=[239,246,255];
   const green=[5,150,105], greenLight=[212,244,228];
   const amber=[217,119,6], amberLight=[255,251,235];
   const grey=[100,116,139], lightGrey=[248,250,252];
   const today=todayKey();
-  const meta=JSON.parse(localStorage.getItem(storageKey('meta',dates[0]))||'{}');
+  const meta=JSON.parse(safeGet(storageKey('meta',dates[0]))||'{}');
   const periodLabel=period==='dia'?'Relatório Diário':period==='semana'?'Relatório Semanal':'Relatório Mensal';
   const dateRange=dates.length===1?formatDate(dates[0]):`${formatDate(dates[0])} — ${formatDate(dates[dates.length-1])}`;
   const {cAgg,pAgg,mAgg}=buildPDFData(dates);
@@ -1985,12 +2122,12 @@ async function generatePDF(dates, period) {
   doc.autoTable({startY:y,head:[['Material','Unidade','Stock Inicial','Qtd. Utilizada','Stock Final','% Consumo']],body:mRows,margin:{left:margin,right:margin},styles:{fontSize:8,cellPadding:2},headStyles:{fillColor:blue,textColor:255,fontStyle:'bold'},alternateRowStyles:{fillColor:[248,250,252]},columnStyles:{0:{cellWidth:45},2:{halign:'center'},3:{halign:'center'},4:{halign:'center',fontStyle:'bold'},5:{halign:'center'}},didParseCell:(d)=>{if(d.row.index===MATERIAIS.length){d.cell.styles.fillColor=navy;d.cell.styles.textColor=255;d.cell.styles.fontStyle='bold';}}});
 
   // Footer
-  const pageCount=doc.getNumberOfPages();
+  const pageCount=doc.internal.getNumberOfPages();
   for(let i=1;i<=pageCount;i++){
     doc.setPage(i);
-    doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(...grey);
-    doc.text('Hospital do Prenda · Serviço de Consulta Externa · Documento gerado automaticamente',margin,290);
-    doc.text(`Página ${i} de ${pageCount}`,W-margin,290,{align:'right'});
+    doc.setFontSize(8);doc.setTextColor(150,150,150);
+    doc.text('Hospital do Prenda · Luanda · Angola',15,doc.internal.pageSize.height-8);
+    doc.text('Pág. '+i+'/'+pageCount,195,doc.internal.pageSize.height-8,{align:'right'});
   }
   return doc;
 }
@@ -2001,8 +2138,22 @@ async function generatePDFForDate(date) {
   toast('📄 PDF gerado com sucesso!','success');
 }
 
+
+function clearOldData(daysToKeep=365){
+  const cutoff=new Date();cutoff.setDate(cutoff.getDate()-daysToKeep);
+  const cutoffStr=cutoff.toISOString().slice(0,10);
+  let removed=0;
+  try{
+    const keys=Object.keys(localStorage).filter(k=>k.startsWith('prenda_'));
+    keys.forEach(k=>{
+      const datepart=k.replace('prenda_','');
+      if(datepart<cutoffStr){safeRemove(k);removed++;}
+    });
+  }catch(e){}
+  return removed;
+}
 async function exportPDF(mode) {
-  const period=document.getElementById('export-period').value;
+  const period=document.getElementById('export-period')?.value;
   const dates=getDatesForPeriod(period);
   if(dates.length===0&&period!=='dia'){toast('⚠ Nenhum dado guardado para o período.','');return;}
   const actualDates=dates.length>0?dates:[todayKey()];
@@ -2015,7 +2166,7 @@ async function exportPDF(mode) {
     setTimeout(()=>{
       const subj=encodeURIComponent(`Relatório ${periodLabel} — Consulta Externa Hospital do Prenda — ${formatDate(todayKey())}`);
       const body=encodeURIComponent(`Exmo(a) Sr(a),\n\nEm anexo segue o relatório ${periodLabel} do Serviço de Consulta Externa do Hospital do Prenda.\n\nFicheiro: ${fname}\n\nCom os melhores cumprimentos,\nServiço de Estatística — Hospital do Prenda`);
-      window.open(`mailto:${document.getElementById('email-dest').value||''}?subject=${subj}&body=${body}`);
+      window.open(`mailto:${document.getElementById('email-dest')?.value||''}?subject=${subj}&body=${body}`);
       toast('✉ PDF descarregado. Annexe no email.','success');
     },400);
   } else if(mode==='drive'){
@@ -2032,10 +2183,7 @@ async function exportPDF(mode) {
 // ═══════════════════════════════════════════════════════════════
 // UTILS
 // ═══════════════════════════════════════════════════════════════
-function toast(msg, type='') {
-  const c=document.getElementById('toasts');
-  const t=document.createElement('div');
-  t.className=`toast${type?' '+type:''}`;
+`;
   t.textContent=msg;
   c.appendChild(t);
   setTimeout(()=>t.remove(),3800);
@@ -2052,8 +2200,8 @@ const today=todayKey();
   const el=document.getElementById(id); if(el) el.value=today;
 });
 const [ry,rm,rd]=today.split('-');
-document.getElementById('range-start').value=`${ry}-${rm}-01`;
-document.getElementById('range-end').value=today;
+const rsEl=document.getElementById('range-start'); if(rsEl) rsEl.value=`${ry}-${rm}-01`;
+const reEl=document.getElementById('range-end'); if(reEl) reEl.value=today;
 
 // Build tables and dashboard
 buildConsultasTable();
@@ -2062,7 +2210,7 @@ buildMatTable();
 updateDashboard();
 
 // Load today's saved data if exists
-if(localStorage.getItem(storageKey('consultas',today))) loadDay(today);
+if(safeGet(storageKey('consultas',today))) loadDay(today);
 
 // --- Firebase init and real-time listener ---
 async function initFirebase() {
@@ -2072,9 +2220,9 @@ async function initFirebase() {
     const s = await window._fb.get(fbRef('saved_dates'));
     if (s.exists()) {
       const fd = s.val();
-      const ld = JSON.parse(localStorage.getItem('prenda_saved_dates') || '[]');
+      const ld = JSON.parse(safeGet('prenda_saved_dates') || '[]');
       const merged = [...new Set([...ld, ...fd])].sort();
-      localStorage.setItem('prenda_saved_dates', JSON.stringify(merged));
+      safeSet('prenda_saved_dates', JSON.stringify(merged));
     }
   } catch(e) {}
   // Load today from Firebase
@@ -2082,9 +2230,9 @@ async function initFirebase() {
     const s = await window._fb.get(fbRef('dados/' + today));
     if (s.exists()) {
       const v = s.val();
-      if (v.consultas) localStorage.setItem(storageKey('consultas',today), JSON.stringify(v.consultas));
-      if (v.proc) localStorage.setItem(storageKey('proc',today), JSON.stringify(v.proc));
-      if (v.mat) localStorage.setItem(storageKey('mat',today), JSON.stringify(v.mat));
+      if (v.consultas) safeSet(storageKey('consultas',today), JSON.stringify(v.consultas));
+      if (v.proc) safeSet(storageKey('proc',today), JSON.stringify(v.proc));
+      if (v.mat) safeSet(storageKey('mat',today), JSON.stringify(v.mat));
       await loadDay(today);
     }
   } catch(e) {}
@@ -2102,5 +2250,6 @@ async function initFirebase() {
 if (window._fbReady) { initFirebase(); }
 else { window.addEventListener('firebaseReady', initFirebase, { once: true }); }
 </script>
+<div id="toast-stack"></div>
 </body>
 </html>

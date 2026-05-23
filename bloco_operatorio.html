@@ -4,30 +4,143 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Bloco Operatório — Registo Diário</title>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js">// ── Multi-toast notification system ──────────────────────
+const _TK={
+  ok:   {icon:'✅',title:'Concluído',   cls:'tk-ok',  dur:3000},
+  save: {icon:'💾',title:'Guardado',    cls:'tk-save',dur:3000},
+  del:  {icon:'🗑️',title:'Eliminado',   cls:'tk-del', dur:3000},
+  edit: {icon:'✏️',title:'Actualizado', cls:'tk-edit',dur:3000},
+  err:  {icon:'❌',title:'Erro',        cls:'tk-err', dur:5000},
+  warn: {icon:'⚠️',title:'Atenção',     cls:'tk-warn',dur:4000},
+  info: {icon:'ℹ️',title:'Info',        cls:'tk-info',dur:3000},
+  pdf:  {icon:'📄',title:'PDF Gerado',  cls:'tk-ok',  dur:3000},
+  sync: {icon:'☁️',title:'Sincronizado',cls:'tk-save',dur:3500},
+};
+function toast(msg,type){
+  if(type===undefined)type='info';
+  const cfg=_TK[type]||_TK.info;
+  let stack=document.getElementById('toast-stack');
+  if(!stack){stack=document.createElement('div');stack.id='toast-stack';document.body.appendChild(stack);}
+  const existing=stack.querySelectorAll('.tk');
+  if(existing.length>=4)existing[existing.length-1].remove();
+  const el=document.createElement('div');
+  el.className='tk '+cfg.cls;
+  el.style.setProperty('--tk-dur',cfg.dur+'ms');
+  el.innerHTML='<span class="tk-icon">'+cfg.icon+'</span><div class="tk-body"><div class="tk-title">'+cfg.title+'</div><div class="tk-msg">'+msg+'</div></div><div class="tk-bar"></div>';
+  el.addEventListener('click',function(){_dismissToast(el);});
+  stack.prepend(el);
+  setTimeout(function(){_dismissToast(el);},cfg.dur+200);
+}
+function showToast(msg,type){toast(msg,type||'info');}
+function _dismissToast(el){
+  if(!el.parentNode)return;
+  el.style.transition='opacity .2s,transform .2s';
+  el.style.opacity='0';el.style.transform='translateX(28px)';
+  setTimeout(function(){el.remove();},220);
+}
+
+// ── Keyboard Navigation ──────────────────────────────────
+function initKeyboardNav(){
+  document.querySelectorAll('input,textarea,select').forEach(function(el){
+    el.style.userSelect='text';el.style.webkitUserSelect='text';
+  });
+  new MutationObserver(function(muts){
+    muts.forEach(function(m){m.addedNodes.forEach(function(n){
+      if(n.nodeType!==1)return;
+      if(n.querySelectorAll)n.querySelectorAll('input,textarea,select').forEach(function(el){
+        el.style.userSelect='text';el.style.webkitUserSelect='text';
+      });
+    });});
+  }).observe(document.body,{childList:true,subtree:true});
+  function applyTabRows(root){
+    (root||document).querySelectorAll('table tbody tr').forEach(function(tr){
+      if(!tr.dataset.kbInit){tr.setAttribute('tabindex','0');tr.dataset.kbInit='1';}
+    });
+  }
+  applyTabRows();
+  new MutationObserver(function(){applyTabRows();}).observe(document.body,{childList:true,subtree:true});
+  document.addEventListener('keydown',function(e){
+    var tag=document.activeElement&&document.activeElement.tagName;
+    var inField=(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT');
+    if((e.ctrlKey||e.metaKey)&&e.key==='s'){
+      e.preventDefault();
+      var modal=document.querySelector('.modal[style*="flex"],.modal[style*="block"]');
+      if(modal){var btn=modal.querySelector('button[onclick*="save"],button[onclick*="Save"],button[onclick*="guardar"],button[onclick*="Guardar"]');if(btn){btn.click();return;}}
+      var sb=document.querySelector('button[onclick*="saveAll"],button[onclick*="savePats"],button[onclick*="guardar"]');
+      if(sb)sb.click();
+      return;
+    }
+    if(e.key==='Escape'){
+      var modals=[].slice.call(document.querySelectorAll('.modal')).filter(function(m){return m.style.display==='flex'||m.style.display==='block';});
+      if(modals.length){e.preventDefault();var last=modals[modals.length-1];var cls=last.querySelector('button[onclick*="close"],button[onclick*="Close"],button[onclick*="fechar"]');if(cls)cls.click();else last.style.display='none';}
+      return;
+    }
+    if(!inField&&(e.key==='ArrowUp'||e.key==='ArrowDown')){
+      var tr=document.activeElement;
+      if(tr&&tr.tagName==='TR'){
+        e.preventDefault();
+        var rows=[].slice.call(tr.closest('tbody').querySelectorAll('tr[tabindex]'));
+        var idx=rows.indexOf(tr);
+        var next=e.key==='ArrowDown'?rows[idx+1]:rows[idx-1];
+        if(next){next.focus();rows.forEach(function(r){r.classList.remove('kb-focus');});next.classList.add('kb-focus');}
+      }
+      return;
+    }
+    if(!inField&&e.key==='Enter'){
+      var tr=document.activeElement;
+      if(tr&&tr.tagName==='TR'){e.preventDefault();tr.dispatchEvent(new MouseEvent('dblclick',{bubbles:true}));tr.click();}
+      return;
+    }
+    if(!inField&&(e.key==='Delete'||e.key==='Backspace')){
+      var tr=document.activeElement;
+      if(tr&&tr.tagName==='TR'){e.preventDefault();var btn=tr.querySelector('button[onclick*="delet"],button[onclick*="remov"],button[title*="Elimin"],button[title*="Apagar"]');if(btn)btn.click();}
+      return;
+    }
+    if((e.ctrlKey||e.metaKey)&&e.key==='c'&&!inField){
+      var tr=document.activeElement;
+      if(tr&&tr.tagName==='TR'){
+        e.preventDefault();
+        var txt=[].slice.call(tr.querySelectorAll('td')).map(function(td){return td.textContent.trim();}).filter(Boolean).join('\t');
+        if(navigator.clipboard)navigator.clipboard.writeText(txt).then(function(){toast('Linha copiada para a área de transferência','info');});
+      }
+      return;
+    }
+  });
+}
+
+</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <style>
   :root {
-    --bg: #0a0f1e;
-    --surface: #111827;
-    --surface2: #1a2235;
-    --border: #1e2d45;
-    --accent: #00d4aa;
-    --accent2: #0088ff;
-    --urgent: #ff4d6d;
-    --elective: #00b4d8;
-    --anest: #a78bfa;
-    --suspended: #fb923c;
-    --obtain: #4ade80;
+    --bg: #F0F2F5;
+    --surface: #FFFFFF;
+    --surface2: #F8F9FB;
+    --navy: #FFFFFF;
+    --navy2: #F8F9FB;
+    --navy3: #F0F2F5;
+    --blue: #1a56db;
+    --blue2: #1447c0;
+    --blue3: #3b82f6;
+    --border: rgba(0,0,0,0.08);
+    --border2: rgba(0,0,0,0.14);
+    --accent: #1a56db;
+    --accent2: #0891b2;
+    --urgent: #dc2626;
+    --elective: #0891b2;
+    --anest: #7c3aed;
+    --suspended: #d97706;
+    --obtain: #059669;
     --deceased: #ef4444;
     --transfer: #f59e0b;
-    --text: #e2e8f0;
-    --muted: #64748b;
+    --text: #1A1A2E;
+    --muted: #6B7280;
     --sidebar-w: 220px;
     --header-h: 64px;
-    --font-head: 'Syne', sans-serif;
-    --font-body: 'DM Mono', monospace;
+    --font-head: 'Inter', sans-serif;
+    --font-body: 'Roboto Mono', monospace;
+    --shadow: 0 1px 4px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,0.10);
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
@@ -37,59 +150,49 @@
     min-height: 100vh;
     overflow-x: hidden;
   }
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background-image:
-      linear-gradient(rgba(0,212,170,0.025) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(0,212,170,0.025) 1px, transparent 1px);
-    background-size: 40px 40px;
-    pointer-events: none;
-    z-index: 0;
-  }
+  body::before { display: none; }
 
   /* ── HEADER ── */
   header {
     position: fixed; top: 0; left: 0; right: 0;
     height: var(--header-h); z-index: 200;
     padding: 0 20px 0 16px;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid rgba(0,0,0,0.08);
     display: flex; align-items: center; justify-content: space-between;
-    backdrop-filter: blur(12px);
-    background: rgba(10,15,30,0.95);
+    background: #fff;
+    box-shadow: 0 1px 8px rgba(0,0,0,0.06);
     gap: 12px;
   }
   .logo-area { display: flex; align-items: center; gap: 12px; }
   .hospital-logo { width: 36px; height: 36px; border-radius: 7px; object-fit: cover; }
-  .logo-text h1 { font-family: var(--font-head); font-size: 1.1rem; font-weight: 800; letter-spacing: -0.3px; color: var(--accent); }
+  .logo-text h1 { font-family: var(--font-head); font-size: 1.1rem; font-weight: 800; letter-spacing: -0.3px; color: #1a56db; }
   .logo-text p { font-size: 0.58rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1.5px; margin-top: 1px; }
-  .creator-tag { font-size: 0.52rem; color: rgba(0,212,170,0.4); letter-spacing: 1px; text-transform: uppercase; display: block; margin-top: 1px; }
+  .creator-tag { font-size: 0.52rem; color: rgba(26,86,219,0.4); letter-spacing: 1px; text-transform: uppercase; display: block; margin-top: 1px; }
   .header-right { display: flex; align-items: center; gap: 10px; flex-wrap: nowrap; }
   .date-badge { display: flex; align-items: center; gap: 8px; }
   .date-badge label { font-size: 0.58rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); }
   .date-badge input[type="date"] {
-    background: var(--surface2); border: 1px solid var(--border);
+    background: var(--surface2); border: 1px solid rgba(0,0,0,0.1);
     color: var(--text); font-family: var(--font-body); font-size: 0.78rem;
     padding: 6px 10px; border-radius: 6px; outline: none; cursor: pointer;
   }
-  .date-badge input[type="date"]:focus { border-color: var(--accent); }
+  .date-badge input[type="date"]:focus { border-color: #1a56db; box-shadow: 0 0 0 3px rgba(26,86,219,0.1); }
   .btn-header {
-    padding: 7px 14px; background: transparent; border: 1px solid var(--border);
+    padding: 7px 14px; background: transparent; border: 1px solid rgba(0,0,0,0.12);
     color: var(--muted); border-radius: 6px; font-family: var(--font-head);
     font-size: 0.65rem; font-weight: 700; letter-spacing: 1px; cursor: pointer;
     text-transform: uppercase; transition: all 0.2s; white-space: nowrap;
   }
-  .btn-header:hover { border-color: var(--accent); color: var(--accent); }
-  .btn-header.accent { border-color: var(--accent); color: var(--accent); }
-  .btn-header.accent:hover { background: var(--accent); color: var(--bg); }
+  .btn-header:hover { border-color: #1a56db; color: #1a56db; }
+  .btn-header.accent { border-color: #1a56db; color: #1a56db; }
+  .btn-header.accent:hover { background: #1a56db; color: #fff; }
   .sync-indicator {
     display: flex; align-items: center; gap: 5px;
     font-size: 0.6rem; color: var(--muted);
   }
   .sync-dot {
     width: 7px; height: 7px; border-radius: 50%;
-    background: var(--accent); animation: pulse 2s infinite;
+    background: #1a56db; animation: pulse 2s infinite;
   }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
   .sync-dot.synced  { background: var(--obtain); }
@@ -112,8 +215,8 @@
     left: 0;
     width: var(--sidebar-w);
     height: calc(100vh - var(--header-h));
-    background: var(--surface);
-    border-right: 1px solid var(--border);
+    background: #fff;
+    border-right: 1px solid rgba(0,0,0,0.08);
     overflow-y: auto;
     overflow-x: hidden;
     z-index: 100;
@@ -123,7 +226,7 @@
   }
   .sidebar::-webkit-scrollbar { width: 4px; }
   .sidebar::-webkit-scrollbar-track { background: transparent; }
-  .sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  .sidebar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 2px; }
 
   .sidebar-section-label {
     font-size: 0.52rem; text-transform: uppercase; letter-spacing: 2px;
@@ -139,15 +242,15 @@
     border-left: 2px solid transparent;
     position: relative;
   }
-  .nav-item:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+  .nav-item:hover { color: var(--text); background: rgba(26,86,219,0.04); }
   .nav-item .nav-dot {
     width: 6px; height: 6px; border-radius: 50%;
     background: currentColor; opacity: 0.4; flex-shrink: 0;
   }
   .nav-item.active {
-    color: var(--text);
-    background: rgba(255,255,255,0.05);
-    border-left-color: var(--accent);
+    color: #1a56db;
+    background: rgba(26,86,219,0.07);
+    border-left-color: #1a56db;
   }
   .nav-item.active .nav-dot { opacity: 1; }
   .nav-item[data-section="urgente"].active { border-left-color: var(--urgent); color: var(--urgent); }
@@ -202,9 +305,10 @@
 
   /* ── CARD ── */
   .card {
-    background: var(--surface); border: 1px solid var(--border);
+    background: #fff; border: 1px solid rgba(0,0,0,0.08);
     border-radius: 12px; padding: 24px; margin-bottom: 20px;
     position: relative; overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04);
   }
   .card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; }
   .card.urgent::before { background: var(--urgent); }
@@ -221,28 +325,28 @@
   /* ── SPECIALTY GRID ── */
   .specialty-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
   .specialty-item {
-    background: var(--surface2); border: 1px solid var(--border);
+    background: var(--surface2); border: 1px solid rgba(0,0,0,0.08);
     border-radius: 8px; padding: 13px; transition: border-color 0.2s;
   }
-  .specialty-item:hover { border-color: var(--accent); }
+  .specialty-item:hover { border-color: #1a56db; }
   .specialty-item label { display: block; font-size: 0.62rem; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 7px; }
   .specialty-item input[type="number"] {
     width: 100%; background: transparent; border: none;
-    border-bottom: 1px solid var(--border); color: var(--text);
+    border-bottom: 1px solid rgba(0,0,0,0.1); color: var(--text);
     font-family: var(--font-body); font-size: 1.3rem; font-weight: 500;
     padding: 3px 0; outline: none; text-align: center; -moz-appearance: textfield;
   }
   .specialty-item input[type="number"]::-webkit-outer-spin-button,
   .specialty-item input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
-  .specialty-item input[type="number"]:focus { border-bottom-color: var(--accent); }
+  .specialty-item input[type="number"]:focus { border-bottom-color: #1a56db; }
 
   /* ── GENDER ROW ── */
   .gender-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 14px; }
-  .gender-item { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 13px; }
+  .gender-item { background: var(--surface2); border: 1px solid rgba(0,0,0,0.08); border-radius: 8px; padding: 13px; }
   .gender-item label { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); display: block; margin-bottom: 7px; }
   .gender-item input[type="number"] {
     width: 100%; background: transparent; border: none;
-    border-bottom: 1px solid var(--border); color: var(--text);
+    border-bottom: 1px solid rgba(0,0,0,0.1); color: var(--text);
     font-family: var(--font-body); font-size: 1.3rem; font-weight: 500;
     padding: 3px 0; outline: none; text-align: center; -moz-appearance: textfield;
   }
@@ -259,16 +363,16 @@
   /* ── TABLE ── */
   .surgeries-table-wrap { overflow-x: auto; margin-top: 22px; }
   table { width: 100%; border-collapse: collapse; font-size: 0.76rem; }
-  thead tr { background: var(--surface2); border-bottom: 1px solid var(--border); }
+  thead tr { background: #1a56db; border-bottom: 1px solid rgba(0,0,0,0.08); }
   thead th {
     padding: 9px 12px; text-align: left; font-family: var(--font-head);
     font-size: 0.62rem; font-weight: 600; text-transform: uppercase;
-    letter-spacing: 1.5px; color: var(--muted); white-space: nowrap;
+    letter-spacing: 1.5px; color: #fff; white-space: nowrap;
   }
-  tbody tr { border-bottom: 1px solid rgba(30,45,69,0.6); transition: background 0.15s; }
-  tbody tr:hover { background: var(--surface2); }
+  tbody tr { border-bottom: 1px solid rgba(0,0,0,0.06); transition: background 0.15s; }
+  tbody tr:hover { background: rgba(26,86,219,0.04); }
   tbody td { padding: 9px 12px; color: var(--text); vertical-align: middle; }
-  .total-row td { font-weight: 700; color: var(--accent); background: rgba(0,212,170,0.05); border-top: 1px solid rgba(0,212,170,0.2) !important; }
+  .total-row td { font-weight: 700; color: #1a56db; background: rgba(26,86,219,0.05); border-top: 1px solid rgba(26,86,219,0.2) !important; }
 
   /* Tags */
   .tag {
@@ -290,13 +394,13 @@
   /* ── ADD SURGERY BUTTON & FORM ── */
   .add-surgery-btn {
     display: flex; align-items: center; gap: 6px; margin-top: 14px;
-    padding: 9px 18px; background: transparent; border: 1px dashed var(--border);
+    padding: 9px 18px; background: transparent; border: 1px dashed rgba(0,0,0,0.15);
     color: var(--muted); border-radius: 6px; cursor: pointer;
     font-family: var(--font-body); font-size: 0.76rem; transition: all 0.2s;
   }
-  .add-surgery-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .add-surgery-btn:hover { border-color: #1a56db; color: #1a56db; }
   .surgery-form {
-    background: var(--surface2); border: 1px solid var(--border);
+    background: var(--surface2); border: 1px solid rgba(0,0,0,0.08);
     border-radius: 10px; padding: 18px; margin-top: 14px; display: none;
   }
   .surgery-form .form-row { display: grid; gap: 10px; margin-bottom: 10px; }
@@ -312,17 +416,17 @@
   .surgery-form input[type="text"],
   .surgery-form input[type="time"],
   .surgery-form input[type="number"] {
-    width: 100%; background: var(--bg); border: 1px solid var(--border);
+    width: 100%; background: #fff; border: 1px solid rgba(0,0,0,0.1);
     color: var(--text); font-family: var(--font-body); font-size: 0.78rem;
     padding: 7px 10px; border-radius: 6px; outline: none;
   }
   .surgery-form select:focus,
-  .surgery-form input:focus { border-color: var(--accent); }
-  .surgery-form option { background: var(--bg); }
+  .surgery-form input:focus { border-color: #1a56db; box-shadow: 0 0 0 3px rgba(26,86,219,0.1); }
+  .surgery-form option { background: #fff; }
   .anest-checks { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 2px; }
   .anest-check-label {
     display: flex; align-items: center; gap: 5px;
-    background: var(--bg); border: 1px solid var(--border);
+    background: #fff; border: 1px solid rgba(0,0,0,0.1);
     border-radius: 5px; padding: 6px 11px; cursor: pointer;
     font-size: 0.72rem; font-family: var(--font-head); font-weight: 600;
     letter-spacing: 1px; color: var(--muted); transition: all 0.18s; user-select: none;
@@ -342,7 +446,7 @@
   .transfer-checks { display: flex; gap: 8px; }
   .transfer-check-label {
     display: flex; align-items: center; gap: 5px;
-    background: var(--bg); border: 1px solid var(--border);
+    background: #fff; border: 1px solid rgba(0,0,0,0.1);
     border-radius: 5px; padding: 6px 11px; cursor: pointer;
     font-size: 0.72rem; font-family: var(--font-head); font-weight: 600;
     letter-spacing: 1px; color: var(--muted); transition: all 0.18s; user-select: none;
@@ -352,7 +456,7 @@
   .transfer-check-label.checked-uci { background: rgba(251,191,36,0.2); border-color: #fbbf24; color: #fbbf24; }
   .deceased-toggle {
     display: flex; align-items: center; gap: 8px;
-    background: var(--bg); border: 1px solid var(--border);
+    background: #fff; border: 1px solid rgba(0,0,0,0.1);
     border-radius: 5px; padding: 7px 14px; cursor: pointer;
     font-size: 0.72rem; font-family: var(--font-head); font-weight: 600;
     letter-spacing: 1px; color: var(--muted); transition: all 0.18s; user-select: none;
@@ -361,13 +465,13 @@
   .deceased-toggle input { display: none; }
   .deceased-toggle.active { background: rgba(239,68,68,0.18); border-color: var(--deceased); color: var(--deceased); }
   .btn-add {
-    padding: 9px 20px; background: var(--accent); color: var(--bg); border: none;
+    padding: 9px 20px; background: #1a56db; color: #fff; border: none;
     border-radius: 6px; font-family: var(--font-head); font-size: 0.72rem;
     font-weight: 700; letter-spacing: 1px; cursor: pointer; text-transform: uppercase;
     transition: opacity 0.2s; align-self: end; white-space: nowrap;
   }
-  .btn-add:hover { opacity: 0.85; }
-  .btn-add.elet { background: var(--elective); }
+  .btn-add:hover { background: #1447c0; opacity: 1; }
+  .btn-add.elet { background: #0891b2; }
   .btn-remove {
     background: transparent; border: none; color: var(--muted);
     cursor: pointer; font-size: 0.82rem; transition: color 0.2s; padding: 3px;
@@ -377,14 +481,14 @@
   /* ── ANESTHESIA GRIDS ── */
   .anest-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(175px, 1fr)); gap: 12px; }
   .anest-item {
-    background: var(--surface2); border: 1px solid var(--border);
+    background: var(--surface2); border: 1px solid rgba(0,0,0,0.08);
     border-radius: 8px; padding: 13px; transition: border-color 0.2s;
   }
   .anest-item:hover { border-color: var(--anest); }
   .anest-item label { display: block; font-size: 0.6rem; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 7px; line-height: 1.4; }
   .anest-item input[type="number"] {
     width: 100%; background: transparent; border: none;
-    border-bottom: 1px solid var(--border); color: var(--text);
+    border-bottom: 1px solid rgba(0,0,0,0.1); color: var(--text);
     font-family: var(--font-body); font-size: 1.3rem; font-weight: 500;
     padding: 3px 0; outline: none; text-align: center; -moz-appearance: textfield;
   }
@@ -402,21 +506,21 @@
   /* ── SUSPENSAS ── */
   .suspensas-form {
     display: grid; grid-template-columns: 1fr 1fr 2fr auto; gap: 12px;
-    align-items: end; background: var(--surface2); border: 1px solid var(--border);
+    align-items: end; background: var(--surface2); border: 1px solid rgba(0,0,0,0.08);
     border-radius: 8px; padding: 16px; margin-top: 14px;
   }
   .suspensas-form .form-group label { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); display: block; margin-bottom: 5px; }
   .suspensas-form select,
   .suspensas-form input[type="text"],
   .suspensas-form textarea {
-    width: 100%; background: var(--bg); border: 1px solid var(--border);
+    width: 100%; background: #fff; border: 1px solid rgba(0,0,0,0.1);
     color: var(--text); font-family: var(--font-body); font-size: 0.78rem;
     padding: 7px 10px; border-radius: 6px; outline: none; resize: vertical;
   }
   .suspensas-form select:focus,
   .suspensas-form input:focus,
-  .suspensas-form textarea:focus { border-color: var(--suspended); }
-  .suspensas-form option { background: var(--bg); }
+  .suspensas-form textarea:focus { border-color: var(--suspended); box-shadow: 0 0 0 3px rgba(217,119,6,0.1); }
+  .suspensas-form option { background: #fff; }
   .btn-add-sus {
     padding: 9px 18px; background: var(--suspended); color: var(--bg); border: none;
     border-radius: 6px; font-family: var(--font-head); font-size: 0.72rem;
@@ -428,17 +532,17 @@
   /* ── OBTIDOS ── */
   .obtidos-form {
     display: grid; grid-template-columns: 3fr 1fr auto; gap: 12px;
-    align-items: end; background: var(--surface2); border: 1px solid var(--border);
+    align-items: end; background: var(--surface2); border: 1px solid rgba(0,0,0,0.08);
     border-radius: 8px; padding: 16px; margin-bottom: 14px;
   }
   .obtidos-form .form-group label { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); display: block; margin-bottom: 5px; }
   .obtidos-form input[type="text"],
   .obtidos-form input[type="number"] {
-    width: 100%; background: var(--bg); border: 1px solid var(--border);
+    width: 100%; background: #fff; border: 1px solid rgba(0,0,0,0.1);
     color: var(--text); font-family: var(--font-body); font-size: 0.78rem;
     padding: 7px 10px; border-radius: 6px; outline: none;
   }
-  .obtidos-form input:focus { border-color: var(--obtain); }
+  .obtidos-form input:focus { border-color: var(--obtain); box-shadow: 0 0 0 3px rgba(5,150,105,0.1); }
   .btn-add-ob {
     padding: 9px 18px; background: var(--obtain); color: var(--bg); border: none;
     border-radius: 6px; font-family: var(--font-head); font-size: 0.72rem;
@@ -448,7 +552,7 @@
   .btn-add-ob:hover { opacity: 0.85; }
   .obtidos-totals { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 22px; }
   .ob-total-card {
-    background: var(--surface2); border: 1px solid var(--border);
+    background: var(--surface2); border: 1px solid rgba(0,0,0,0.08);
     border-radius: 8px; padding: 18px; text-align: center;
   }
   .ob-total-card label { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); display: block; margin-bottom: 7px; }
@@ -459,8 +563,9 @@
   /* ── RESUMO ── */
   .resumo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; margin-bottom: 24px; }
   .resumo-kpi {
-    background: var(--surface2); border: 1px solid var(--border);
+    background: #fff; border: 1px solid rgba(0,0,0,0.08);
     border-radius: 10px; padding: 18px 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04);
   }
   .resumo-kpi label { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); display: block; margin-bottom: 6px; }
   .resumo-kpi .kpi-val { font-size: 2rem; font-weight: 500; }
@@ -473,31 +578,31 @@
   /* ── SAVE BAR ── */
   .save-bar {
     position: fixed; bottom: 0; left: var(--sidebar-w); right: 0;
-    background: rgba(10,15,30,0.98); border-top: 1px solid var(--border);
-    backdrop-filter: blur(12px); padding: 12px 40px;
+    background: #fff; border-top: 1px solid rgba(0,0,0,0.08);
+    box-shadow: 0 -2px 12px rgba(0,0,0,0.06); padding: 12px 40px;
     display: flex; align-items: center; justify-content: space-between; z-index: 300;
     gap: 12px;
   }
   .save-status { font-size: 0.7rem; color: var(--muted); }
   .save-status span { color: var(--accent); }
   .btn-save {
-    padding: 10px 28px; background: var(--accent); color: var(--bg); border: none;
+    padding: 10px 28px; background: #1a56db; color: #fff; border: none;
     border-radius: 6px; font-family: var(--font-head); font-size: 0.78rem;
     font-weight: 800; letter-spacing: 2px; cursor: pointer; text-transform: uppercase;
-    transition: all 0.2s; box-shadow: 0 0 18px rgba(0,212,170,0.28);
+    transition: all 0.2s; box-shadow: 0 2px 8px rgba(26,86,219,0.3);
   }
-  .btn-save:hover { background: #00f0c0; box-shadow: 0 0 28px rgba(0,212,170,0.5); }
+  .btn-save:hover { background: #1447c0; box-shadow: 0 4px 16px rgba(26,86,219,0.4); }
   .btn-next-day {
-    padding: 10px 20px; background: transparent; border: 1px solid var(--accent2);
-    color: var(--accent2); border-radius: 6px; font-family: var(--font-head);
+    padding: 10px 20px; background: transparent; border: 1px solid #0891b2;
+    color: #0891b2; border-radius: 6px; font-family: var(--font-head);
     font-size: 0.72rem; font-weight: 700; letter-spacing: 1.5px; cursor: pointer;
     text-transform: uppercase; transition: all 0.2s;
   }
-  .btn-next-day:hover { background: var(--accent2); color: var(--bg); }
+  .btn-next-day:hover { background: #0891b2; color: #fff; }
 
   .toast {
     position: fixed; top: 22px; right: 22px;
-    background: var(--accent); color: var(--bg);
+    background: #1a56db; color: #fff;
     padding: 11px 22px; border-radius: 8px;
     font-family: var(--font-head); font-size: 0.78rem; font-weight: 700;
     z-index: 500; opacity: 0; transform: translateY(-10px);
@@ -510,7 +615,7 @@
     display: flex; gap: 4px; margin-bottom: 28px; flex-wrap: wrap;
   }
   .period-btn {
-    padding: 8px 18px; background: var(--surface2); border: 1px solid var(--border);
+    padding: 8px 18px; background: var(--surface2); border: 1px solid rgba(0,0,0,0.1);
     color: var(--muted); border-radius: 6px; font-family: var(--font-head);
     font-size: 0.68rem; font-weight: 700; letter-spacing: 1.5px;
     cursor: pointer; text-transform: uppercase; transition: all 0.2s;
@@ -525,8 +630,9 @@
     display: grid; grid-template-columns: repeat(auto-fill, minmax(175px,1fr)); gap: 12px; margin-bottom: 22px;
   }
   .stats-kpi {
-    background: var(--surface2); border: 1px solid var(--border);
+    background: #fff; border: 1px solid rgba(0,0,0,0.08);
     border-radius: 10px; padding: 16px 18px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
   }
   .stats-kpi label { font-size: 0.58rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); display: block; margin-bottom: 6px; }
   .stats-kpi .sk-val { font-size: 1.9rem; font-weight: 500; }
@@ -552,24 +658,24 @@
   .period-controls { display:flex; align-items:center; gap:9px; margin-bottom:18px; flex-wrap:wrap; }
   .period-controls label { font-size:.58rem; text-transform:uppercase; letter-spacing:1.5px; color:var(--muted); }
   .period-controls input[type=date], .period-controls input[type=month], .period-controls select {
-    background:var(--surface2); border:1px solid var(--border); color:var(--text);
+    background:var(--surface2); border:1px solid rgba(0,0,0,0.1); color:var(--text);
     font-family:var(--font-body); font-size:.76rem; padding:6px 11px; border-radius:6px; outline:none;
   }
-  .period-controls input:focus, .period-controls select:focus { border-color:var(--accent2); }
+  .period-controls input:focus, .period-controls select:focus { border-color:#1a56db; box-shadow: 0 0 0 3px rgba(26,86,219,0.1); }
   .btn-load { padding:7px 16px; background:var(--accent2); color:#fff; border:none; border-radius:6px;
     font-family:var(--font-head); font-size:.65rem; font-weight:700; letter-spacing:1px;
     text-transform:uppercase; cursor:pointer; transition:opacity .2s; }
   .btn-load:hover { opacity:.85; }
   /* Summary subtabs */
-  .subtab-bar { display:flex; gap:0; margin-bottom:18px; border:1px solid var(--border); border-radius:9px; overflow:hidden; width:fit-content; }
+  .subtab-bar { display:flex; gap:0; margin-bottom:18px; border:1px solid rgba(0,0,0,0.1); border-radius:9px; overflow:hidden; width:fit-content; }
   .subtab-btn { padding:8px 22px; cursor:pointer; font-family:var(--font-head); font-size:.65rem; font-weight:700;
-    text-transform:uppercase; letter-spacing:1px; transition:all .18s; background:var(--surface2); color:var(--muted); border:none; }
+    text-transform:uppercase; letter-spacing:1px; transition:all .18s; background:#fff; color:var(--muted); border:none; }
   /* Hist report card */
   .hist-bar { display:flex; flex-direction:column; gap:6px; margin-top:7px; }
   .hist-row { display:flex; align-items:center; gap:9px; }
   .hist-row .hr-label { font-size:.6rem; color:var(--muted); width:180px; flex-shrink:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .hist-row .hr-bar-wrap { flex:1; background:var(--surface2); border-radius:3px; height:14px; overflow:hidden; }
-  .hist-row .hr-bar { height:100%; background:var(--accent); border-radius:3px; transition:width .5s ease; min-width:2px; }
+  .hist-row .hr-bar-wrap { flex:1; background:rgba(26,86,219,0.06); border-radius:3px; height:14px; overflow:hidden; }
+  .hist-row .hr-bar { height:100%; background:#1a56db; border-radius:3px; transition:width .5s ease; min-width:2px; }
   .hist-row .hr-val { font-size:.65rem; color:var(--text); width:32px; text-align:right; flex-shrink:0; }
 
   /* ── MODAL DE RESUMO DO DIA ── */
@@ -581,18 +687,19 @@
   }
   .modal-overlay.open { opacity: 1; pointer-events: all; }
   .modal-box {
-    background: var(--surface); border: 1px solid var(--border);
+    background: #fff; border: 1px solid rgba(0,0,0,0.1);
     border-radius: 16px; padding: 32px; width: 90%; max-width: 700px;
     max-height: 80vh; overflow-y: auto;
     transform: translateY(20px); transition: transform 0.25s;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.1);
   }
   .modal-overlay.open .modal-box { transform: translateY(0); }
   .modal-header {
     display: flex; align-items: center; justify-content: space-between;
     margin-bottom: 24px; padding-bottom: 16px;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid rgba(0,0,0,0.08);
   }
-  .modal-title { font-family: var(--font-head); font-size: 1.2rem; font-weight: 800; color: var(--accent); }
+  .modal-title { font-family: var(--font-head); font-size: 1.2rem; font-weight: 800; color: #1a56db; }
   .modal-date { font-size: 0.7rem; color: var(--muted); margin-top: 3px; }
   .modal-close {
     background: transparent; border: 1px solid var(--border);
@@ -606,7 +713,7 @@
     gap: 10px; margin-bottom: 20px;
   }
   .modal-kpi {
-    background: var(--surface2); border: 1px solid var(--border);
+    background: var(--surface2); border: 1px solid rgba(0,0,0,0.08);
     border-radius: 8px; padding: 12px 14px; text-align: center;
   }
   .modal-kpi label { font-size: 0.55rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); display: block; margin-bottom: 5px; }
@@ -620,16 +727,16 @@
     display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px;
   }
   .modal-spec-item {
-    background: var(--surface2); border: 1px solid var(--border);
+    background: var(--surface2); border: 1px solid rgba(0,0,0,0.08);
     border-radius: 6px; padding: 10px 12px;
     display: flex; justify-content: space-between; align-items: center;
   }
   .modal-spec-item .ms-name { font-size: 0.68rem; color: var(--text); }
-  .modal-spec-item .ms-val { font-size: 1.1rem; font-weight: 700; color: var(--accent); }
+  .modal-spec-item .ms-val { font-size: 1.1rem; font-weight: 700; color: #1a56db; }
   .modal-spec-item .ms-sub { font-size: 0.54rem; color: var(--muted); }
   .modal-actions {
     display: flex; gap: 10px; justify-content: flex-end;
-    margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border);
+    margin-top: 24px; padding-top: 16px; border-top: 1px solid rgba(0,0,0,0.08);
     flex-wrap: wrap;
   }
   .modal-btn {
@@ -637,11 +744,11 @@
     font-family: var(--font-head); font-size: 0.72rem; font-weight: 700;
     letter-spacing: 1px; cursor: pointer; text-transform: uppercase; transition: all 0.2s;
   }
-  .modal-btn.primary { background: var(--accent); color: var(--bg); border: none; }
-  .modal-btn.primary:hover { opacity: 0.85; }
-  .modal-btn.secondary { background: transparent; border: 1px solid var(--accent2); color: var(--accent2); }
-  .modal-btn.secondary:hover { background: var(--accent2); color: var(--bg); }
-  .modal-btn.outline { background: transparent; border: 1px solid var(--border); color: var(--muted); }
+  .modal-btn.primary { background: #1a56db; color: #fff; border: none; }
+  .modal-btn.primary:hover { background: #1447c0; }
+  .modal-btn.secondary { background: transparent; border: 1px solid #0891b2; color: #0891b2; }
+  .modal-btn.secondary:hover { background: #0891b2; color: #fff; }
+  .modal-btn.outline { background: transparent; border: 1px solid rgba(0,0,0,0.1); color: var(--muted); }
   .modal-btn.outline:hover { border-color: var(--text); color: var(--text); }
 
   /* ── BACKUP MODAL ── */
@@ -653,17 +760,18 @@
   }
   .backup-modal.open { opacity: 1; pointer-events: all; }
   .backup-box {
-    background: var(--surface); border: 1px solid var(--border);
+    background: #fff; border: 1px solid rgba(0,0,0,0.1);
     border-radius: 14px; padding: 28px; width: 90%; max-width: 600px;
     max-height: 88vh; overflow-y: auto;
     transform: translateY(20px); transition: transform 0.25s;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.1);
   }
   .backup-modal.open .backup-box { transform: translateY(0); }
   .backup-modal-header {
     display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 22px; padding-bottom: 14px; border-bottom: 1px solid var(--border);
+    margin-bottom: 22px; padding-bottom: 14px; border-bottom: 1px solid rgba(0,0,0,0.08);
   }
-  .backup-title { font-family: var(--font-head); font-size: 1rem; font-weight: 800; color: var(--accent); }
+  .backup-title { font-family: var(--font-head); font-size: 1rem; font-weight: 800; color: #1a56db; }
   .backup-modal-close {
     background: transparent; border: 1px solid var(--border); color: var(--muted);
     border-radius: 6px; padding: 5px 11px; cursor: pointer;
@@ -676,16 +784,16 @@
     text-transform: uppercase; letter-spacing: 2px; color: var(--muted);
     margin: 18px 0 8px; display: flex; align-items: center; gap: 8px;
   }
-  .backup-section-label::after { content:''; flex:1; height:1px; background:var(--border); }
+  .backup-section-label::after { content:''; flex:1; height:1px; background:rgba(0,0,0,0.08); }
   .backup-actions { display: flex; flex-direction: column; gap: 8px; }
   .backup-btn {
     display: flex; align-items: center; gap: 12px;
     padding: 12px 16px; border-radius: 8px; cursor: pointer;
     font-family: var(--font-body); font-size: 0.76rem; transition: all 0.18s;
-    border: 1px solid var(--border); background: var(--surface2); color: var(--text);
+    border: 1px solid rgba(0,0,0,0.08); background: var(--surface2); color: var(--text);
     text-align: left; width: 100%;
   }
-  .backup-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .backup-btn:hover { border-color: #1a56db; color: #1a56db; }
   .backup-btn.email-btn:hover { border-color: var(--accent2); color: var(--accent2); }
   .backup-btn.print-btn:hover { border-color: #34d399; color: #34d399; }
   .backup-btn .bk-icon { font-size: 1.3rem; flex-shrink: 0; }
@@ -693,7 +801,7 @@
   .backup-btn .bk-name { font-weight: 600; font-size: 0.78rem; }
   .backup-btn .bk-desc { font-size: 0.6rem; color: var(--muted); margin-top: 2px; }
   .email-config {
-    background: var(--surface2); border: 1px solid var(--border);
+    background: var(--surface2); border: 1px solid rgba(0,0,0,0.08);
     border-radius: 8px; padding: 14px 16px; margin-top: 4px; display: none;
   }
   .email-config.open { display: block; }
@@ -701,19 +809,19 @@
   .email-config input[type="email"],
   .email-config input[type="text"],
   .email-config textarea {
-    width: 100%; background: var(--bg); border: 1px solid var(--border);
+    width: 100%; background: #fff; border: 1px solid rgba(0,0,0,0.1);
     color: var(--text); font-family: var(--font-body); font-size: 0.76rem;
     padding: 7px 10px; border-radius: 6px; outline: none; margin-bottom: 10px;
     resize: vertical;
   }
-  .email-config input:focus, .email-config textarea:focus { border-color: var(--accent2); }
+  .email-config input:focus, .email-config textarea:focus { border-color: #1a56db; box-shadow: 0 0 0 3px rgba(26,86,219,0.1); }
   .email-send-btn {
-    width: 100%; padding: 9px; background: var(--accent2); border: none;
-    border-radius: 6px; color: var(--bg); font-family: var(--font-head);
+    width: 100%; padding: 9px; background: #1a56db; border: none;
+    border-radius: 6px; color: #fff; font-family: var(--font-head);
     font-size: 0.72rem; font-weight: 800; letter-spacing: 1.5px;
     cursor: pointer; text-transform: uppercase; transition: all 0.2s;
   }
-  .email-send-btn:hover { opacity: 0.85; }
+  .email-send-btn:hover { background: #1447c0; }
   #restore-file { display: none; }
 
   /* ── PRINT/PDF ── */
@@ -779,8 +887,8 @@
   }
 
   ::-webkit-scrollbar { width: 6px; height: 6px; }
-  ::-webkit-scrollbar-track { background: var(--bg); }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-track { background: #F0F2F5; }
+  ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 3px; }
 
   @media (max-width: 900px) {
     :root { --sidebar-w: 0px; }
@@ -797,12 +905,44 @@
     .resumo-grid { grid-template-columns: 1fr 1fr; }
     .stats-kpi-grid { grid-template-columns: 1fr 1fr; }
   }
+/* TOAST STACK */
+#toast-stack{position:fixed;bottom:68px;right:18px;display:flex;flex-direction:column-reverse;
+  gap:8px;z-index:9999;pointer-events:none;max-width:320px;}
+.tk{display:flex;align-items:flex-start;gap:10px;padding:11px 14px 8px;border-radius:10px;
+  background:#fff;border:1px solid rgba(0,0,0,0.08);box-shadow:0 4px 20px rgba(0,0,0,0.12);
+  pointer-events:all;cursor:pointer;overflow:hidden;position:relative;
+  animation:tkIn .22s ease;min-width:220px;}
+@keyframes tkIn{from{opacity:0;transform:translateX(28px)}to{opacity:1;transform:translateX(0)}}
+.tk-icon{font-size:18px;line-height:1;flex-shrink:0;margin-top:1px;}
+.tk-body{flex:1;min-width:0;}
+.tk-title{font-family:inherit;font-size:12px;font-weight:700;line-height:1.2;}
+.tk-msg{font-family:inherit;font-size:11px;font-weight:400;color:#6B7280;margin-top:2px;line-height:1.3;}
+.tk-bar{position:absolute;bottom:0;left:0;height:3px;border-radius:0 0 10px 10px;
+  animation:tkBar var(--tk-dur,3s) linear forwards;}
+@keyframes tkBar{from{width:100%}to{width:0%}}
+.tk-ok{border-color:rgba(5,150,105,.25);}.tk-ok .tk-title{color:#059669;}.tk-ok .tk-bar{background:#059669;}
+.tk-err{border-color:rgba(220,38,38,.25);}.tk-err .tk-title{color:#DC2626;}.tk-err .tk-bar{background:#DC2626;}
+.tk-warn{border-color:rgba(217,119,6,.25);}.tk-warn .tk-title{color:#D97706;}.tk-warn .tk-bar{background:#D97706;}
+.tk-save{border-color:rgba(26,86,219,.25);}.tk-save .tk-title{color:#1a56db;}.tk-save .tk-bar{background:#1a56db;}
+.tk-del{border-color:rgba(124,58,237,.25);}.tk-del .tk-title{color:#7C3AED;}.tk-del .tk-bar{background:#7C3AED;}
+.tk-edit{border-color:rgba(6,182,212,.25);}.tk-edit .tk-title{color:#0891B2;}.tk-edit .tk-bar{background:#0891B2;}
+.tk-info{border-color:rgba(26,86,219,.18);}.tk-info .tk-title{color:#1a56db;}.tk-info .tk-bar{background:#1a56db;}
+tr.kb-focus{outline:2px solid #1a56db;outline-offset:-2px;background:rgba(26,86,219,0.06)!important;}
 </style>
   <link rel="stylesheet" href="hprenda-theme.css">
   <script src="hprenda-mail.js" defer></script>
   <script src="hprenda-db.js"></script>
   <script src="hprenda-crud.js" defer></script>
   <script src="hprenda-export.js" defer></script>
+<script>
+if(!window._fbReady) window._fbReady = false;
+if(!window._fb) window._fb = {
+  ref:function(){return {};},
+  set:function(){return Promise.resolve();},
+  get:function(){return Promise.resolve({exists:function(){return false;},val:function(){return null;}});},
+  onValue:function(){return function(){};}
+};
+</script>
 </head>
 <body>
 
@@ -859,7 +999,7 @@
     <div class="nav-item" data-section="hist_anual"><span class="nav-dot"></span>📅 Anual</div>
     <div class="sidebar-divider"></div>
     <div style="padding: 10px 14px;">
-      <button onclick="saveAll(); showToast('✓ Registo guardado!')" style="
+      <button onclick="saveAll(); toast('Registo guardado com sucesso','save')" style="
         width:100%; padding:11px 10px; background:var(--accent); border:none;
         border-radius:8px; color:var(--bg); font-family:var(--font-head);
         font-size:0.72rem; font-weight:800; letter-spacing:1.5px; cursor:pointer;
@@ -1697,6 +1837,9 @@
 </div>
 
 <script>
+function safeGet(k){try{return localStorage.getItem(k);}catch(e){return null;}}
+function safeSet(k,v){try{localStorage.setItem(k,v);return true;}catch(e){console.warn('localStorage full');return false;}}
+function safeRemove(k){try{localStorage.removeItem(k);}catch(e){}}
 // ── Constants ──
 const SPECIALTIES = ['Cirurgia Geral','Ortopedia','Maxilo Facial','Urologia','Neurocirurgia','Otorrinolaringologia'];
 const ANESTHESIA_TYPES = ['Gerais Endotraqueal','Gerais Endovenosa','Dissociativa','Balanceada','Combinadas','Raquidianas','Epidurales','Bloqueio Nervoso','Locais'];
@@ -1767,7 +1910,7 @@ function buildSpecGrid(containerId, prefix) {
 function updateSpecTotal(prefix) {
   let total = 0;
   SPECIALTIES.forEach(spec => {
-    total += parseInt(document.getElementById(`${prefix}-spec-${specKey(spec)}`).value) || 0;
+    total += parseInt(document.getElementById(`${prefix}-spec-${specKey(spec)}`)?.value,10) || 0;
   });
   document.getElementById(`${prefix}-total-geral`).textContent = total;
 }
@@ -1800,7 +1943,7 @@ function buildAnestGrid(containerId, prefix) {
 function updateAnestTotal(prefix) {
   let total = 0;
   ANESTHESIA_TYPES.forEach(type => {
-    total += parseInt(document.getElementById(`${prefix}-anest-${specKey(type)}`).value) || 0;
+    total += parseInt(document.getElementById(`${prefix}-anest-${specKey(type)}`)?.value,10) || 0;
   });
   document.getElementById(`${prefix}-anest-total`).textContent = total;
 }
@@ -2120,7 +2263,7 @@ function updateSurgery(editPrefix, idx) {
   document.getElementById(`${formPrefix}-surg-form`).style.display = 'none';
 
   autoSave();
-  showToast('✓ Cirurgia atualizada!');
+  toast('Cirurgia actualizada com sucesso','edit');
 }
 
 function renderSurgeries(prefix) {
@@ -2162,15 +2305,15 @@ function renderSurgeries(prefix) {
 
 // ── Suspensas ──
 function addSuspensa() {
-  const esp = document.getElementById('sus-esp').value;
-  const pac = document.getElementById('sus-paciente').value.trim();
-  const mot = document.getElementById('sus-motivo').value.trim();
+  const esp = document.getElementById('sus-esp')?.value;
+  const pac = document.getElementById('sus-paciente')?.value.trim();
+  const mot = document.getElementById('sus-motivo')?.value.trim();
   if (!esp && !pac) return;
   suspList.push({ esp: esp||'—', pac: pac||'—', mot: mot||'—' });
   renderSuspensas();
-  document.getElementById('sus-esp').value = '';
-  document.getElementById('sus-paciente').value = '';
-  document.getElementById('sus-motivo').value = '';
+  document.getElementById('sus-esp')?.value = '';
+  document.getElementById('sus-paciente')?.value = '';
+  document.getElementById('sus-motivo')?.value = '';
   autoSave();
 }
 
@@ -2193,13 +2336,13 @@ function renderSuspensas() {
 
 // ── Obtidos ──
 function addObtido() {
-  const desc = document.getElementById('ob-desc').value.trim();
-  const qty = parseInt(document.getElementById('ob-qty').value) || 0;
+  const desc = document.getElementById('ob-desc')?.value.trim();
+  const qty = parseInt(document.getElementById('ob-qty')?.value) || 0;
   if (!desc) return;
   obtList.push({ desc, qty });
   renderObtidos();
-  document.getElementById('ob-desc').value = '';
-  document.getElementById('ob-qty').value = '';
+  document.getElementById('ob-desc')?.value = '';
+  document.getElementById('ob-qty')?.value = '';
   autoSave();
 }
 
@@ -2265,8 +2408,8 @@ function updateResumo() {
   specGrid.innerHTML = '';
   let hasSpecData = false;
   SPECIALTIES.forEach(sp => {
-    const urgVal  = parseInt(document.getElementById(`urg-spec-${specKey(sp)}`)?.value) || 0;
-    const eletVal = parseInt(document.getElementById(`elet-spec-${specKey(sp)}`)?.value) || 0;
+    const urgVal  = parseInt(document.getElementById(`urg-spec-${specKey(sp)}`)?.value,10) || 0;
+    const eletVal = parseInt(document.getElementById(`elet-spec-${specKey(sp)}`)?.value,10) || 0;
     // Also count from surgery lists for accuracy
     const urgList  = surgeries.urg.filter(s => s.esp === sp).length;
     const eletList = surgeries.elet.filter(s => s.esp === sp).length;
@@ -2295,8 +2438,8 @@ function updateResumo() {
   anestGrid.innerHTML = '';
   let hasAnestData = false;
   ANESTHESIA_TYPES.forEach(type => {
-    const urgVal  = parseInt(document.getElementById(`urg-anest-${specKey(type)}`)?.value) || 0;
-    const eletVal = parseInt(document.getElementById(`elet-anest-${specKey(type)}`)?.value) || 0;
+    const urgVal  = parseInt(document.getElementById(`urg-anest-${specKey(type)}`)?.value,10) || 0;
+    const eletVal = parseInt(document.getElementById(`elet-anest-${specKey(type)}`)?.value,10) || 0;
     const combinedTotal = urgVal + eletVal;
     if (combinedTotal > 0) hasAnestData = true;
     const div = document.createElement('div');
@@ -2378,6 +2521,7 @@ function autoSave() {
 // ★ persist aceita data explícita — impede que saves vão para a data errada.
 function persist(date) {
   const targetDate = date || currentLoadedDate;
+  if(!targetDate){ if(typeof showToast==='function') showToast('Seleccione uma data'); return; }
   const data = {
     urgSpecs: {}, eletSpecs: {},
     urgAnest: {}, eletAnest: {},
@@ -2392,7 +2536,7 @@ function persist(date) {
     data.eletAnest[specKey(t)] = document.getElementById(`elet-anest-${specKey(t)}`).value;
   });
   data._ts = Date.now();
-  localStorage.setItem(storageKey(targetDate), JSON.stringify(data));
+  safeSet(storageKey(targetDate), JSON.stringify(data));
   _persistToFirebase(data, targetDate);
 }
 
@@ -2426,7 +2570,7 @@ function clearDayState() {
 }
 
 function loadFromStorage() {
-  const raw = localStorage.getItem(storageKey());
+  const raw = safeGet(storageKey());
   if (!raw) {
     // No data for this day — clear everything so previous day doesn't bleed in
     clearDayState();
@@ -2485,17 +2629,26 @@ function saveAll() {
     if (disp) disp.textContent = fmt;
   }
   // ★ Buttons stay permanently visible — feedback only via toast
-  showToast('✓ Registo guardado com sucesso!');
+  toast('Registo guardado com sucesso','save');
 }
 
-function showToast(msg) {
-  const toast = document.getElementById('toast');
-  toast.textContent = msg;
-  toast.classList.add('show');
-  setTimeout(() => toast.classList.remove('show'), 2800);
-}
+
 
 // ── Export PDF — jsPDF + autoTable (sem diálogo de impressão) ──
+
+function clearOldData(daysToKeep=365){
+  const cutoff=new Date();cutoff.setDate(cutoff.getDate()-daysToKeep);
+  const cutoffStr=cutoff.toISOString().slice(0,10);
+  let removed=0;
+  try{
+    const keys=Object.keys(localStorage).filter(k=>k.startsWith('bloco_'));
+    keys.forEach(k=>{
+      const datepart=k.replace('bloco_','');
+      if(datepart<cutoffStr){safeRemove(k);removed++;}
+    });
+  }catch(e){}
+  return removed;
+}
 function exportPDF() {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: 'portrait' });
@@ -2529,7 +2682,7 @@ function exportPDF() {
     head: [['Urgentes', 'Eletivas', 'Total', 'Suspensas', 'Homens', 'Mulheres', 'Falecidos', 'Sala', 'UCI']],
     body: [[urgCount, eletCount, total, suspList.length, hom, mul, dec, sala, uci]],
     styles: { fontSize: 9, cellPadding: 3, halign: 'center' },
-    headStyles: { fillColor: [0, 61, 112], textColor: 255, fontStyle: 'bold' },
+    headStyles: { fillColor: [26, 86, 219], textColor: 255, fontStyle: 'bold' },
     bodyStyles: { fontStyle: 'bold' },
   });
 
@@ -2546,7 +2699,7 @@ function exportPDF() {
       head: [['Especialidade', 'Urgente', 'Eletiva', 'Total']],
       body: specRows,
       styles: { fontSize: 9, cellPadding: 3 },
-      headStyles: { fillColor: [0, 100, 160], textColor: 255, fontStyle: 'bold' },
+      headStyles: { fillColor: [26, 86, 219], textColor: 255, fontStyle: 'bold' },
       columnStyles: { 0: { halign: 'left' }, 1: { halign: 'center' }, 2: { halign: 'center' }, 3: { halign: 'center', fontStyle: 'bold' } },
       alternateRowStyles: { fillColor: [240, 248, 255] },
     });
@@ -2554,8 +2707,8 @@ function exportPDF() {
 
   // ── Por anestesia ──
   const anestRows = ANESTHESIA_TYPES.map(type => {
-    const u = parseInt(document.getElementById(`urg-anest-${specKey(type)}`)?.value) || 0;
-    const e = parseInt(document.getElementById(`elet-anest-${specKey(type)}`)?.value) || 0;
+    const u = parseInt(document.getElementById(`urg-anest-${specKey(type)}`)?.value,10) || 0;
+    const e = parseInt(document.getElementById(`elet-anest-${specKey(type)}`)?.value,10) || 0;
     return [type, u, e, u + e];
   }).filter(r => r[3] > 0);
   if (anestRows.length) {
@@ -2564,7 +2717,7 @@ function exportPDF() {
       head: [['Técnica Anestésica', 'Urgente', 'Eletiva', 'Total']],
       body: anestRows,
       styles: { fontSize: 9, cellPadding: 3 },
-      headStyles: { fillColor: [80, 50, 140], textColor: 255, fontStyle: 'bold' },
+      headStyles: { fillColor: [26, 86, 219], textColor: 255, fontStyle: 'bold' },
       columnStyles: { 0: { halign: 'left' }, 1: { halign: 'center' }, 2: { halign: 'center' }, 3: { halign: 'center', fontStyle: 'bold' } },
       alternateRowStyles: { fillColor: [248, 245, 255] },
     });
@@ -2586,7 +2739,7 @@ function exportPDF() {
       head: [['#', 'Tipo', 'Especialidade', 'Paciente', 'Sexo', 'Procedimento', 'Anestesia']],
       body: surgRows,
       styles: { fontSize: 8, cellPadding: 2 },
-      headStyles: { fillColor: [20, 60, 100], textColor: 255, fontStyle: 'bold' },
+      headStyles: { fillColor: [26, 86, 219], textColor: 255, fontStyle: 'bold' },
       columnStyles: { 0: { halign: 'center', cellWidth: 8 }, 4: { halign: 'center', cellWidth: 10 } },
       alternateRowStyles: { fillColor: [245, 250, 255] },
     });
@@ -2600,22 +2753,22 @@ function exportPDF() {
       head: [['#', 'Especialidade', 'Paciente', 'Motivo']],
       body: suspRows,
       styles: { fontSize: 8, cellPadding: 2 },
-      headStyles: { fillColor: [180, 70, 0], textColor: 255, fontStyle: 'bold' },
+      headStyles: { fillColor: [26, 86, 219], textColor: 255, fontStyle: 'bold' },
       alternateRowStyles: { fillColor: [255, 248, 240] },
     });
   }
 
   // ── Rodapé ──
   const pageCount = doc.internal.getNumberOfPages();
-  for (let i = 1; i <= pageCount; i++) {
+  for(let i=1;i<=pageCount;i++){
     doc.setPage(i);
-    doc.setFontSize(7); doc.setTextColor(150);
-    doc.text(`Hospital Prenda · Bloco Operatório · ${dateStr} · Pág. ${i}/${pageCount}`, 14, doc.internal.pageSize.getHeight() - 8);
-    doc.setTextColor(0);
+    doc.setFontSize(8);doc.setTextColor(150,150,150);
+    doc.text('Hospital do Prenda · Luanda · Angola',15,doc.internal.pageSize.height-8);
+    doc.text('Pág. '+i+'/'+pageCount,195,doc.internal.pageSize.height-8,{align:'right'});
   }
 
   doc.save(`Bloco_Operatorio_${dv || 'export'}.pdf`);
-  showToast('✅ PDF exportado com sucesso!');
+  toast('Ficheiro PDF exportado','pdf');
 }
 
 
@@ -2692,11 +2845,11 @@ function _startListener() {
   const unsubscribe = ref.on('value', (snap) => {
     const remote = snap.val();
     if (!remote) return;
-    const localRaw = localStorage.getItem(storageKey());
+    const localRaw = safeGet(storageKey());
     const localTs  = localRaw ? (JSON.parse(localRaw)._ts || 0) : 0;
     if ((remote._ts||0) > localTs) {
       _applyData(remote);
-      localStorage.setItem(storageKey(), JSON.stringify(remote));
+      safeSet(storageKey(), JSON.stringify(remote));
       setSyncState('synced', 'Sincronizado ' + _timeNow());
     }
   }, () => setSyncState('error', 'Erro de ligação'));
@@ -2790,7 +2943,7 @@ function loadStats() {
     Object.keys(localStorage).forEach(k => {
       if (k.startsWith('bloco_')) {
         const dateKey = k.replace('bloco_', '');
-        try { data[dateKey] = JSON.parse(localStorage.getItem(k)); } catch(e) {}
+        try { data[dateKey] = JSON.parse(safeGet(k)); } catch(e) {}
       }
     });
     _statsCache = data;
@@ -2803,7 +2956,7 @@ function _mergeLocalIntoCache(cache) {
     if (k.startsWith('bloco_')) {
       const dateKey = k.replace('bloco_', '');
       if (!cache[dateKey]) {
-        try { cache[dateKey] = JSON.parse(localStorage.getItem(k)); } catch(e) {}
+        try { cache[dateKey] = JSON.parse(safeGet(k)); } catch(e) {}
       }
     }
   });
@@ -3126,8 +3279,8 @@ function openResumoModal() {
   // Anest
   const anGrid = document.getElementById('modal-anest-grid');
   anGrid.innerHTML = ANESTHESIA_TYPES.map(type => {
-    const u = parseInt(document.getElementById(`urg-anest-${specKey(type)}`)?.value)||0;
-    const e = parseInt(document.getElementById(`elet-anest-${specKey(type)}`)?.value)||0;
+    const u = parseInt(document.getElementById(`urg-anest-${specKey(type)}`)?.value,10)||0;
+    const e = parseInt(document.getElementById(`elet-anest-${specKey(type)}`)?.value,10)||0;
     const t = u+e;
     if (!t) return '';
     return `<div class="modal-spec-item">
@@ -3165,7 +3318,7 @@ function confirmNextDay() {
   globalOb = 0; savedDayOb = 0;
   loadFromStorage();
   if (fbConnected) _startListener();
-  showToast('📅 Novo dia iniciado!');
+  toast('Novo dia iniciado com sucesso','save');
 }
 
 // ── BACKUP ──
@@ -3182,7 +3335,7 @@ function backupAllData() {
   const allKeys = Object.keys(localStorage).filter(k => k.startsWith('bloco_'));
   const backup = {};
   allKeys.forEach(k => {
-    try { backup[k] = JSON.parse(localStorage.getItem(k)); } catch(e){}
+    try { backup[k] = JSON.parse(safeGet(k)); } catch(e){}
   });
   const blob = new Blob([JSON.stringify(backup, null, 2)], {type:'application/json'});
   const url = URL.createObjectURL(blob);
@@ -3192,11 +3345,11 @@ function backupAllData() {
   a.click();
   URL.revokeObjectURL(url);
   closeBackup();
-  showToast('✓ Backup exportado!');
+  toast('Backup exportado com sucesso','pdf');
 }
 function backupToday() {
   const key = storageKey();
-  const raw = localStorage.getItem(key);
+  const raw = safeGet(key);
   if (!raw) { showToast('⚠ Sem dados para exportar'); return; }
   const blob = new Blob([raw], {type:'application/json'});
   const url = URL.createObjectURL(blob);
@@ -3218,14 +3371,14 @@ function restoreFromFile(input) {
       // Check if it's a single-day or full backup
       if (data.surgeries || data.urgSpecs) {
         // Single day — restore to current date key
-        localStorage.setItem(storageKey(), JSON.stringify(data));
+        safeSet(storageKey(), JSON.stringify(data));
         loadFromStorage();
         showToast('✓ Dia restaurado!');
       } else {
         // Full backup — multiple keys
         Object.keys(data).forEach(k => {
           if (k.startsWith('bloco_')) {
-            localStorage.setItem(k, JSON.stringify(data[k]));
+            safeSet(k, JSON.stringify(data[k]));
           }
         });
         loadFromStorage();
@@ -3249,9 +3402,9 @@ function toggleEmailConfig(id) {
     const dv = dateInput.value;
     let dateStr = dv ? dv.split('-').reverse().join('/') : new Date().toLocaleDateString('pt-PT');
     if (id === 'email-day-cfg') {
-      document.getElementById('email-subj-day').value = `Bloco Operatório — Resumo ${dateStr}`;
+      document.getElementById('email-subj-day')?.value = `Bloco Operatório — Resumo ${dateStr}`;
     } else {
-      document.getElementById('email-subj-backup').value = `Bloco Operatório — Backup ${dateStr}`;
+      document.getElementById('email-subj-backup')?.value = `Bloco Operatório — Backup ${dateStr}`;
     }
   }
 }
@@ -3310,9 +3463,9 @@ function _buildDaySummaryText() {
 }
 
 function sendEmailDay() {
-  const to      = document.getElementById('email-to-day').value.trim();
-  const subj    = document.getElementById('email-subj-day').value.trim();
-  const extra   = document.getElementById('email-body-day').value.trim();
+  const to      = document.getElementById('email-to-day')?.value.trim();
+  const subj    = document.getElementById('email-subj-day')?.value.trim();
+  const extra   = document.getElementById('email-body-day')?.value.trim();
   if (!to) { showToast('⚠ Indique o destinatário!'); return; }
 
   const body = _buildDaySummaryText() + (extra ? '\n\n' + extra : '');
@@ -3323,14 +3476,14 @@ function sendEmailDay() {
 }
 
 function sendEmailBackup() {
-  const to    = document.getElementById('email-to-backup').value.trim();
-  const subj  = document.getElementById('email-subj-backup').value.trim();
-  const extra = document.getElementById('email-body-backup').value.trim();
+  const to    = document.getElementById('email-to-backup')?.value.trim();
+  const subj  = document.getElementById('email-subj-backup')?.value.trim();
+  const extra = document.getElementById('email-body-backup')?.value.trim();
   if (!to) { showToast('⚠ Indique o destinatário!'); return; }
 
   // Build JSON of today's data for the body
   const key = storageKey();
-  const raw = localStorage.getItem(key) || '{}';
+  const raw = safeGet(key) || '{}';
   let body = '';
   if (extra) body += extra + '\n\n';
   body += `Backup do dia ${dateInput.value ? dateInput.value.split('-').reverse().join('/') : ''}:\n`;
@@ -3383,8 +3536,8 @@ function _fmtDateStr(d) {
 function _getStoredDay(date) {
   const dateKey = date.replace(/-/g,'');
   // Try both formats
-  const raw1 = localStorage.getItem(`bloco_${date}`);
-  const raw2 = localStorage.getItem(`bloco_${dateKey}`);
+  const raw1 = safeGet(`bloco_${date}`);
+  const raw2 = safeGet(`bloco_${dateKey}`);
   if (raw1) try { return JSON.parse(raw1); } catch(e) {}
   if (raw2) try { return JSON.parse(raw2); } catch(e) {}
   // Try Firebase cache
@@ -3640,9 +3793,9 @@ function _renderHistReport(containerId, dates, title, filterType) {
 // RESUMO GERAL (período persistente)
 // ════════════════════════════════════════════════════════
 function loadResumoGeral() {
-  const s = document.getElementById('resumo-geral-start').value;
-  const e = document.getElementById('resumo-geral-end').value;
-  const tipo = document.getElementById('resumo-geral-tipo').value;
+  const s = document.getElementById('resumo-geral-start')?.value;
+  const e = document.getElementById('resumo-geral-end')?.value;
+  const tipo = document.getElementById('resumo-geral-tipo')?.value;
   if (!s || !e) { showToast('⚠ Indique o período!'); return; }
   const dates = _datesInRange(s, e);
   _renderHistReport('resumo-geral-content', dates, `${_fmtDateStr(s)} – ${_fmtDateStr(e)}`, tipo);
@@ -3661,8 +3814,8 @@ function loadHistPeriod(startId, endId, tipoId, containerId, label) {
 }
 
 function loadHistMonthly() {
-  const m = document.getElementById('men-month').value;
-  const tipo = document.getElementById('men-tipo').value;
+  const m = document.getElementById('men-month')?.value;
+  const tipo = document.getElementById('men-tipo')?.value;
   if (!m) { showToast('⚠ Selecione o mês!'); return; }
   const [y, mo] = m.split('-');
   const last = new Date(y, mo, 0).getDate();
@@ -3673,26 +3826,26 @@ function loadHistMonthly() {
 }
 
 function loadHistQuarter() {
-  const q = parseInt(document.getElementById('tri-q').value);
-  const y = document.getElementById('tri-year').value;
-  const tipo = document.getElementById('tri-tipo').value;
+  const q = parseInt(document.getElementById('tri-q')?.value);
+  const y = document.getElementById('tri-year')?.value;
+  const tipo = document.getElementById('tri-tipo')?.value;
   const ss = ['01','04','07','10'], es = ['03','06','09','12'], ed = ['31','30','30','31'];
   const s = `${y}-${ss[q-1]}-01`, e = `${y}-${es[q-1]}-${ed[q-1]}`;
   _renderHistReport('hist-tri-content', _datesInRange(s, e), `${q}º Trimestre ${y}`, tipo);
 }
 
 function loadHistSemester() {
-  const h = parseInt(document.getElementById('seme-h').value);
-  const y = document.getElementById('seme-year').value;
-  const tipo = document.getElementById('seme-tipo').value;
+  const h = parseInt(document.getElementById('seme-h')?.value);
+  const y = document.getElementById('seme-year')?.value;
+  const tipo = document.getElementById('seme-tipo')?.value;
   const s = h === 1 ? `${y}-01-01` : `${y}-07-01`;
   const e = h === 1 ? `${y}-06-30` : `${y}-12-31`;
   _renderHistReport('hist-seme-content', _datesInRange(s, e), `${h}º Semestre ${y}`, tipo);
 }
 
 function loadHistAnnual() {
-  const y = document.getElementById('anu-year').value;
-  const tipo = document.getElementById('anu-tipo').value;
+  const y = document.getElementById('anu-year')?.value;
+  const tipo = document.getElementById('anu-tipo')?.value;
   _renderHistReport('hist-anu-content', _datesInRange(`${y}-01-01`, `${y}-12-31`), `Ano ${y}`, tipo);
 }
 
@@ -3740,7 +3893,7 @@ function _buildAndPrintPeriodPDF(dates, title, filterType) {
     head: [['Total', 'Urgentes', 'Eletivas', 'Média/Dia', 'Suspensas', 'Homens', 'Mulheres', 'Falecidos', 'T.Sala', 'T.UCI']],
     body: [[agg.total, agg.totUrg, agg.totElet, avgDia, agg.totSus, agg.totHom, agg.totMul, agg.totDec, agg.totSala, agg.totUci]],
     styles: { fontSize: 9, cellPadding: 3, halign: 'center' },
-    headStyles: { fillColor: [0, 61, 112], textColor: 255, fontStyle: 'bold' },
+    headStyles: { fillColor: [26, 86, 219], textColor: 255, fontStyle: 'bold' },
     bodyStyles: { fontStyle: 'bold' },
   });
 
@@ -3767,7 +3920,7 @@ function _buildAndPrintPeriodPDF(dates, title, filterType) {
       head: [['Técnica Anestésica', 'Urgente', 'Eletiva', 'Total']],
       body,
       styles: { fontSize: 9, cellPadding: 3 },
-      headStyles: { fillColor: [80, 50, 140], textColor: 255, fontStyle: 'bold' },
+      headStyles: { fillColor: [26, 86, 219], textColor: 255, fontStyle: 'bold' },
       columnStyles: { 0: { halign: 'left' }, 1: { halign: 'center' }, 2: { halign: 'center' }, 3: { halign: 'center', fontStyle: 'bold' } },
       alternateRowStyles: { fillColor: [248, 245, 255] },
     });
@@ -3775,16 +3928,16 @@ function _buildAndPrintPeriodPDF(dates, title, filterType) {
 
   // ── Rodapé ──
   const pageCount = doc.internal.getNumberOfPages();
-  for (let i = 1; i <= pageCount; i++) {
+  for(let i=1;i<=pageCount;i++){
     doc.setPage(i);
-    doc.setFontSize(7); doc.setTextColor(150);
-    doc.text(`Hospital Prenda · Bloco Operatório · Pág. ${i}/${pageCount} · Criador: Yuri Matias`, 14, doc.internal.pageSize.getHeight() - 8);
-    doc.setTextColor(0);
+    doc.setFontSize(8);doc.setTextColor(150,150,150);
+    doc.text('Hospital do Prenda · Luanda · Angola',15,doc.internal.pageSize.height-8);
+    doc.text('Pág. '+i+'/'+pageCount,195,doc.internal.pageSize.height-8,{align:'right'});
   }
 
   const safeName = title.replace(/[·\s]+/g, '_').replace(/[^a-zA-Z0-9À-ú_-]/g, '');
   doc.save(`Bloco_${safeName}.pdf`);
-  showToast('✅ PDF exportado com sucesso!');
+  toast('Ficheiro PDF exportado','pdf');
 }
 
 // ── Wrappers for each period type ──
@@ -3797,37 +3950,37 @@ function exportPeriodPDF(startId, endId, tipoId, label) {
 }
 
 function exportMonthlyPDF() {
-  const m = document.getElementById('men-month').value;
-  const tipo = document.getElementById('men-tipo').value;
+  const m = document.getElementById('men-month')?.value;
+  const tipo = document.getElementById('men-tipo')?.value;
   if (!m) { showToast('⚠ Selecione o mês!'); return; }
   const [y, mo] = m.split('-');
   const last = new Date(y, mo, 0).getDate();
   const s = `${y}-${mo}-01`, e = `${y}-${mo}-${String(last).padStart(2,'0')}`;
   const MONTHS_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-  _buildAndPrintPeriodPDF(_datesInRange(s, e), `Relatório Mensal · ${MONTHS_PT[parseInt(mo)-1]} ${y}`, tipo);
+  _buildAndPrintPeriodPDF(_datesInRange(s, e), `Relatório Mensal · ${MONTHS_PT[parseInt(mo,10)-1]} ${y}`, tipo);
 }
 
 function exportQuarterPDF() {
-  const q = parseInt(document.getElementById('tri-q').value);
-  const y = document.getElementById('tri-year').value;
-  const tipo = document.getElementById('tri-tipo').value;
+  const q = parseInt(document.getElementById('tri-q')?.value);
+  const y = document.getElementById('tri-year')?.value;
+  const tipo = document.getElementById('tri-tipo')?.value;
   const ss = ['01','04','07','10'], es = ['03','06','09','12'], ed = ['31','30','30','31'];
   const s = `${y}-${ss[q-1]}-01`, e = `${y}-${es[q-1]}-${ed[q-1]}`;
   _buildAndPrintPeriodPDF(_datesInRange(s, e), `Relatório Trimestral · ${q}º Trimestre ${y}`, tipo);
 }
 
 function exportSemesterPDF() {
-  const h = parseInt(document.getElementById('seme-h').value);
-  const y = document.getElementById('seme-year').value;
-  const tipo = document.getElementById('seme-tipo').value;
+  const h = parseInt(document.getElementById('seme-h')?.value);
+  const y = document.getElementById('seme-year')?.value;
+  const tipo = document.getElementById('seme-tipo')?.value;
   const s = h === 1 ? `${y}-01-01` : `${y}-07-01`;
   const e = h === 1 ? `${y}-06-30` : `${y}-12-31`;
   _buildAndPrintPeriodPDF(_datesInRange(s, e), `Relatório Semestral · ${h}º Semestre ${y}`, tipo);
 }
 
 function exportAnnualPDF() {
-  const y = document.getElementById('anu-year').value;
-  const tipo = document.getElementById('anu-tipo').value;
+  const y = document.getElementById('anu-year')?.value;
+  const tipo = document.getElementById('anu-tipo')?.value;
   _buildAndPrintPeriodPDF(_datesInRange(`${y}-01-01`, `${y}-12-31`), `Relatório Anual · Ano ${y}`, tipo);
 }
 
@@ -3841,15 +3994,15 @@ function exportStatsPDF() {
 }
 
 function loadHistDiario() {
-  const d = document.getElementById('dia-date').value;
-  const tipo = document.getElementById('dia-tipo').value;
+  const d = document.getElementById('dia-date')?.value;
+  const tipo = document.getElementById('dia-tipo')?.value;
   if (!d) { showToast('⚠ Selecione uma data!'); return; }
   _renderHistReport('hist-dia-content', [d], _fmtDateStr(d), tipo);
 }
 
 function exportDiarioPDF() {
-  const d = document.getElementById('dia-date').value;
-  const tipo = document.getElementById('dia-tipo').value;
+  const d = document.getElementById('dia-date')?.value;
+  const tipo = document.getElementById('dia-tipo')?.value;
   if (!d) { showToast('⚠ Selecione uma data antes de exportar!'); return; }
   _buildAndPrintPeriodPDF([d], `Relatório Diário · ${_fmtDateStr(d)}`, tipo);
 }
@@ -3905,5 +4058,6 @@ function exportDiarioPDF() {
 <!-- ── PDF PERIOD REPORT (only visible on print) ── -->
 <div id="pdf-period-report" style="display:none;"></div>
 
+<div id="toast-stack"></div>
 </body>
 </html>
