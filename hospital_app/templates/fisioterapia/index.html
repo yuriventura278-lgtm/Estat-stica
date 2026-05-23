@@ -13,7 +13,7 @@
 
     <button class="nav-btn active" id="nav-home"    onclick="mostrarTab('home',this)">🏠 Início</button>
     <button class="nav-btn"        id="nav-doentes" onclick="mostrarTab('doentes',this)">👥 Doentes</button>
-    <button class="nav-btn"        id="nav-sessoes" onclick="mostrarTab('sessoes',this)">📋 Sessões</button>
+    <button class="nav-btn"        id="nav-sessoes" onclick="mostrarTab('sessoes',this)">🦴 Sessões</button>
 
     <div style="margin-top:auto;padding-top:16px;border-top:1px solid var(--bd);">
       <div class="form-group" style="margin-bottom:6px;">
@@ -99,7 +99,7 @@
               <th>NUP</th>
               <th>Diagnóstico</th>
               <th>Patologia</th>
-              <th>Sessões</th>
+              <th>Médico Ref.</th>
               <th>Data Entrada</th>
               <th>Acções</th>
             </tr>
@@ -392,7 +392,7 @@ async function carregarDoentes() {
       '<td style="font-family:var(--fm);font-size:12px;">'+esc(d.nup||'—')+'</td>' +
       '<td>'+esc(d.diagnostico||'—')+'</td>' +
       '<td>'+esc(d.patologia||'—')+'</td>' +
-      '<td style="font-family:var(--fm);font-weight:700;">'+(d.num_sessoes ?? d.sessoes ?? '0')+'</td>' +
+      '<td>'+esc(d.medico_referente||d.medico_ref||'—')+'</td>' +
       '<td style="font-family:var(--fm);font-size:12px;">'+(d.data_entrada||d.data||'—')+'</td>' +
       '<td style="white-space:nowrap;">' +
         '<button class="btn btn-outline btn-sm" onclick="abrirModalSessao(\''+d.id+'\',\''+esc(d.nome)+'\')">Sessão</button> ' +
