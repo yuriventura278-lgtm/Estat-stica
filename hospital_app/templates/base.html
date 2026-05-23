@@ -114,11 +114,28 @@ tbody tr:focus{outline:2px solid var(--acc);outline-offset:-2px;background:rgba(
 <header class="hdr">
   <div class="hdr-logo">H</div>
   <span class="hdr-title">Hospital do Prenda</span>
-  <nav style="display:flex;gap:8px;margin-left:24px;">
-    <a href="/" class="btn btn-outline btn-sm" style="text-decoration:none;">Início</a>
-    <a href="/cirurgia" class="btn btn-outline btn-sm" style="text-decoration:none;">Cirurgia</a>
+  <nav style="display:flex;gap:6px;margin-left:20px;flex-wrap:wrap;">
+    <a href="/" class="btn btn-outline btn-sm" style="text-decoration:none;">🏠</a>
+    <a href="/cirurgia" class="btn btn-outline btn-sm" style="text-decoration:none;">🔪 Cirurgia</a>
+    <a href="/laboratorio" class="btn btn-outline btn-sm" style="text-decoration:none;">🧪 Lab</a>
+    <a href="/hiv" class="btn btn-outline btn-sm" style="text-decoration:none;">🏥 VIH</a>
+    <a href="/hemoterapia" class="btn btn-outline btn-sm" style="text-decoration:none;">🩸 Hemo</a>
+    <a href="/imagiologia" class="btn btn-outline btn-sm" style="text-decoration:none;">🩻 Imag</a>
+    <a href="/consulta" class="btn btn-outline btn-sm" style="text-decoration:none;">👨‍⚕️ Consulta</a>
+    <a href="/bloco" class="btn btn-outline btn-sm" style="text-decoration:none;">🏨 Bloco</a>
+    <a href="/fisioterapia" class="btn btn-outline btn-sm" style="text-decoration:none;">🦴 Fisio</a>
   </nav>
-  <span class="hdr-sub" id="relogio">--:--:--</span>
+  <div style="display:flex;align-items:center;gap:10px;margin-left:auto;">
+    {% if utilizador %}
+    <span style="font-size:12px;color:var(--mut);">
+      👤 <strong>{{ utilizador.nome_completo }}</strong>
+      <span style="background:rgba(26,86,219,0.1);color:var(--acc);padding:2px 7px;
+        border-radius:10px;font-size:10px;font-weight:700;margin-left:4px;">{{ utilizador.cargo|upper }}</span>
+    </span>
+    <a href="/logout" class="btn btn-outline btn-sm" style="text-decoration:none;color:var(--red);border-color:rgba(220,38,38,0.2);">Sair</a>
+    {% endif %}
+    <span style="font-size:12px;color:var(--mut);" id="relogio">--:--:--</span>
+  </div>
 </header>
 
 <!-- Conteúdo específico de cada página -->

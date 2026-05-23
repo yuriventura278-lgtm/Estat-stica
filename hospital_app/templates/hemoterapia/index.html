@@ -1,0 +1,549 @@
+{% extends "base.html" %}
+{% block titulo %}Hemoterapia — Hospital do Prenda{% endblock %}
+
+{% block conteudo %}
+<div style="display:flex;min-height:calc(100vh - 64px);">
+
+  <!-- ─── BARRA LATERAL ─────────────────────────────────────── -->
+  <aside style="width:220px;background:var(--s1);border-right:1px solid var(--bd);
+    padding:16px 12px;display:flex;flex-direction:column;gap:4px;flex-shrink:0;">
+
+    <div style="font-size:10px;font-weight:700;color:var(--mut);text-transform:uppercase;
+      letter-spacing:1px;padding:8px 8px 4px;">🩸 Hemoterapia</div>
+
+    <button class="nav-btn active" id="nav-home"        onclick="mostrarTab('home',this)">🏠 Início</button>
+    <button class="nav-btn"        id="nav-dadivas"     onclick="mostrarTab('dadivas',this)">💉 Dádivas</button>
+    <button class="nav-btn"        id="nav-transfusoes" onclick="mostrarTab('transfusoes',this)">🔴 Transfusões</button>
+
+    <div style="margin-top:auto;padding-top:16px;border-top:1px solid var(--bd);">
+      <!-- Filtro de datas para estatísticas -->
+      <div class="form-group" style="margin-bottom:6px;">
+        <label>Período: Início</label>
+        <input type="date" id="data-inicio" style="padding:6px 10px;border:1px solid var(--bd);border-radius:8px;font-size:12px;">
+      </div>
+      <div class="form-group" style="margin-bottom:8px;">
+        <label>Período: Fim</label>
+        <input type="date" id="data-fim" style="padding:6px 10px;border:1px solid var(--bd);border-radius:8px;font-size:12px;">
+      </div>
+      <button class="btn btn-outline btn-sm" style="width:100%;justify-content:center;margin-bottom:6px;"
+        onclick="carregarEstatisticas()">🔄 Actualizar</button>
+      <button class="btn btn-outline btn-sm" style="width:100%;justify-content:center;"
+        onclick="exportarDados()">📥 Exportar JSON</button>
+    </div>
+  </aside>
+
+  <!-- ─── CONTEÚDO PRINCIPAL ────────────────────────────────── -->
+  <main style="flex:1;padding:24px;overflow-y:auto;">
+
+    <!-- ── TAB: INÍCIO ────────────────────────────────────────── -->
+    <div id="tab-home" class="tab-pane">
+      <h2 style="font-size:17px;font-weight:700;margin-bottom:16px;">🩸 Serviço de Hemoterapia</h2>
+
+      <!-- Estatísticas principais -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:24px;">
+        <div class="card" style="text-align:center;padding:16px;">
+          <div style="font-size:28px;font-family:var(--fm);font-weight:700;color:var(--acc);" id="stat-dadivas">—</div>
+          <div style="font-size:11px;color:var(--mut);margin-top:4px;">Dádivas (mês)</div>
+        </div>
+        <div class="card" style="text-align:center;padding:16px;">
+          <div style="font-size:28px;font-family:var(--fm);font-weight:700;color:var(--red);" id="stat-transfusoes">—</div>
+          <div style="font-size:11px;color:var(--mut);margin-top:4px;">Transfusões (mês)</div>
+        </div>
+        <div class="card" style="text-align:center;padding:16px;">
+          <div style="font-size:28px;font-family:var(--fm);font-weight:700;color:var(--amb);" id="stat-critico">—</div>
+          <div style="font-size:11px;color:var(--mut);margin-top:4px;">Stock Crítico</div>
+        </div>
+      </div>
+
+      <!-- Tabela de stock sanguíneo -->
+      <div class="card" style="margin-bottom:20px;">
+        <div class="card-title">📦 Stock de Sangue por Grupo</div>
+        <div id="stock-container" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:10px;">
+          <!-- Preenchido dinamicamente -->
+          <div style="text-align:center;color:var(--mut);grid-column:1/-1;padding:16px;">A carregar stock...</div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="abrirModalDadiva()">+ Nova Dádiva</button>
+        <button class="btn btn-outline" onclick="abrirModalTransfusao()">+ Nova Transfusão</button>
+      </div>
+    </div>
+
+    <!-- ── TAB: DÁDIVAS ──────────────────────────────────────── -->
+    <div id="tab-dadivas" class="tab-pane" style="display:none;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <h2 style="font-size:17px;font-weight:700;">💉 Dádivas de Sangue</h2>
+        <button class="btn btn-primary btn-sm" onclick="abrirModalDadiva()">+ Nova Dádiva</button>
+      </div>
+
+      <div class="card" style="padding:0;overflow:hidden;">
+        <table>
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>NUP</th>
+              <th>Grupo Sang.</th>
+              <th>Volume (ml)</th>
+              <th>Data</th>
+              <th>Estado</th>
+              <th>Acções</th>
+            </tr>
+          </thead>
+          <tbody id="tabela-dadivas">
+            <tr><td colspan="7" style="text-align:center;color:var(--mut);padding:24px;">A carregar...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── TAB: TRANSFUSÕES ──────────────────────────────────── -->
+    <div id="tab-transfusoes" class="tab-pane" style="display:none;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <h2 style="font-size:17px;font-weight:700;">🔴 Transfusões</h2>
+        <button class="btn btn-primary btn-sm" onclick="abrirModalTransfusao()">+ Nova Transfusão</button>
+      </div>
+
+      <div class="card" style="padding:0;overflow:hidden;">
+        <table>
+          <thead>
+            <tr>
+              <th>Nome Receptor</th>
+              <th>NUP</th>
+              <th>Grupo Sang.</th>
+              <th>Volume (ml)</th>
+              <th>Indicação</th>
+              <th>Data</th>
+              <th>Reacção</th>
+              <th>Acções</th>
+            </tr>
+          </thead>
+          <tbody id="tabela-transfusoes">
+            <tr><td colspan="8" style="text-align:center;color:var(--mut);padding:24px;">A carregar...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ─── MODAL: NOVA DÁDIVA ───────────────────────────────── -->
+<div id="modal-dadiva" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span class="modal-title">Nova Dádiva de Sangue</span>
+      <button class="modal-close" onclick="fecharModal('modal-dadiva')">✕</button>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="form-group" style="grid-column:1/-1;">
+        <label>Nome do Dador *</label>
+        <input type="text" id="dad-nome" placeholder="Nome completo">
+      </div>
+      <div class="form-group">
+        <label>NUP</label>
+        <input type="text" id="dad-nup" placeholder="Número Único">
+      </div>
+      <div class="form-group">
+        <label>Sexo</label>
+        <select id="dad-sexo">
+          <option value="">— Seleccionar —</option>
+          <option value="M">Masculino</option>
+          <option value="F">Feminino</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Idade</label>
+        <input type="number" id="dad-idade" min="18" max="65" placeholder="Anos">
+      </div>
+      <div class="form-group">
+        <label>Grupo Sanguíneo *</label>
+        <select id="dad-grupo">
+          <option value="">— Seleccionar —</option>
+          <option value="A+">A+</option>
+          <option value="A-">A-</option>
+          <option value="B+">B+</option>
+          <option value="B-">B-</option>
+          <option value="AB+">AB+</option>
+          <option value="AB-">AB-</option>
+          <option value="O+">O+</option>
+          <option value="O-">O-</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Volume (ml)</label>
+        <input type="number" id="dad-volume" min="0" value="450" placeholder="450">
+      </div>
+      <div class="form-group">
+        <label>Data da Dádiva *</label>
+        <input type="date" id="dad-data">
+      </div>
+      <div class="form-group">
+        <label>Estado</label>
+        <select id="dad-estado">
+          <option value="pendente">Pendente</option>
+          <option value="aprovado">Aprovado</option>
+          <option value="rejeitado">Rejeitado</option>
+        </select>
+      </div>
+      <div class="form-group" style="grid-column:1/-1;">
+        <label>Observações</label>
+        <textarea id="dad-obs" rows="2" placeholder="Notas adicionais..."></textarea>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="fecharModal('modal-dadiva')">Cancelar</button>
+      <button class="btn btn-primary" data-acao="guardar" onclick="guardarDadiva()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── MODAL: NOVA TRANSFUSÃO ───────────────────────────── -->
+<div id="modal-transfusao" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span class="modal-title">Nova Transfusão</span>
+      <button class="modal-close" onclick="fecharModal('modal-transfusao')">✕</button>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="form-group" style="grid-column:1/-1;">
+        <label>Nome do Receptor *</label>
+        <input type="text" id="tr-nome" placeholder="Nome completo do receptor">
+      </div>
+      <div class="form-group">
+        <label>NUP Receptor</label>
+        <input type="text" id="tr-nup" placeholder="Número Único">
+      </div>
+      <div class="form-group">
+        <label>Grupo Sanguíneo *</label>
+        <select id="tr-grupo">
+          <option value="">— Seleccionar —</option>
+          <option value="A+">A+</option>
+          <option value="A-">A-</option>
+          <option value="B+">B+</option>
+          <option value="B-">B-</option>
+          <option value="AB+">AB+</option>
+          <option value="AB-">AB-</option>
+          <option value="O+">O+</option>
+          <option value="O-">O-</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Volume (ml)</label>
+        <input type="number" id="tr-volume" min="0" placeholder="Ex: 450">
+      </div>
+      <div class="form-group" style="grid-column:1/-1;">
+        <label>Indicação *</label>
+        <input type="text" id="tr-indicacao" placeholder="Motivo clínico da transfusão">
+      </div>
+      <div class="form-group">
+        <label>Médico</label>
+        <input type="text" id="tr-medico" placeholder="Nome do médico">
+      </div>
+      <div class="form-group">
+        <label>Data Transfusão *</label>
+        <input type="date" id="tr-data">
+      </div>
+      <div class="form-group" style="grid-column:1/-1;">
+        <label>Reacção Transfusional</label>
+        <select id="tr-reacao">
+          <option value="nenhuma">Nenhuma</option>
+          <option value="ligeira">Ligeira</option>
+          <option value="moderada">Moderada</option>
+          <option value="grave">Grave</option>
+        </select>
+      </div>
+      <div class="form-group" style="grid-column:1/-1;">
+        <label>Observações</label>
+        <textarea id="tr-obs" rows="2" placeholder="Notas adicionais..."></textarea>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="fecharModal('modal-transfusao')">Cancelar</button>
+      <button class="btn btn-primary" data-acao="guardar" onclick="guardarTransfusao()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block estilos %}
+<style>
+.nav-btn{width:100%;text-align:left;padding:9px 12px;border:none;border-radius:8px;
+  font-family:var(--fh);font-size:13px;font-weight:500;cursor:pointer;
+  background:transparent;color:var(--txt);transition:all .15s;}
+.nav-btn:hover{background:rgba(26,86,219,0.06);color:var(--acc);}
+.nav-btn.active{background:rgba(26,86,219,0.1);color:var(--acc);font-weight:700;}
+.stock-card{background:var(--s2);border:1px solid var(--bd);border-radius:10px;
+  padding:12px;text-align:center;transition:transform .15s;}
+.stock-card:hover{transform:translateY(-2px);}
+.stock-card .grupo{font-size:18px;font-weight:700;font-family:var(--fm);}
+.stock-card .qtd{font-size:24px;font-weight:700;font-family:var(--fm);margin:4px 0;}
+.stock-card .label{font-size:10px;color:var(--mut);text-transform:uppercase;letter-spacing:.5px;}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* ─── Escapar HTML para evitar XSS ──────────────────────── */
+function esc(s) {
+  return String(s||'')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ─── Fechar modal ao clicar fora ───────────────────────── */
+document.querySelectorAll('.modal-overlay').forEach(function(el){
+  el.addEventListener('click', function(e){ if(e.target===el) fecharModal(el.id); });
+});
+
+/* ─── Inicializar datas do período ───────────────────────── */
+(function() {
+  var hoje = new Date();
+  var fim = hoje.toISOString().split('T')[0];
+  var ini = hoje.getFullYear() + '-' + String(hoje.getMonth()+1).padStart(2,'0') + '-01';
+  document.getElementById('data-inicio').value = ini;
+  document.getElementById('data-fim').value = fim;
+  // Preencher datas dos modais
+  document.getElementById('dad-data').value = fim;
+  document.getElementById('tr-data').value = fim;
+})();
+
+/* ─── Navegação entre abas ───────────────────────────────── */
+function mostrarTab(nome, btnClicado) {
+  document.querySelectorAll('.tab-pane').forEach(function(el){ el.style.display='none'; });
+  document.getElementById('tab-'+nome).style.display = 'block';
+  document.querySelectorAll('.nav-btn').forEach(function(b){ b.classList.remove('active'); });
+  if(btnClicado) btnClicado.classList.add('active');
+
+  if(nome === 'home')        { carregarEstatisticas(); carregarStock(); }
+  if(nome === 'dadivas')     carregarDadivas();
+  if(nome === 'transfusoes') carregarTransfusoes();
+}
+
+/* ─── Cor do grupo sanguíneo ─────────────────────────────── */
+var COR_GRUPO = {
+  'A+':'#DC2626','A-':'#b91c1c',
+  'B+':'#D97706','B-':'#b45309',
+  'AB+':'#7C3AED','AB-':'#6d28d9',
+  'O+':'#059669','O-':'#047857'
+};
+
+function badgeGrupo(grupo) {
+  var cor = COR_GRUPO[grupo] || 'var(--mut)';
+  return '<span class="badge" style="background:'+cor+'22;color:'+cor+';font-weight:700;">'+esc(grupo||'—')+'</span>';
+}
+
+function badgeReacao(reacao) {
+  var mapa = {
+    nenhuma: {bg:'rgba(5,150,105,0.1)',  cor:'var(--grn)', txt:'Nenhuma'},
+    ligeira: {bg:'rgba(26,86,219,0.1)',  cor:'var(--acc)', txt:'Ligeira'},
+    moderada:{bg:'rgba(217,119,6,0.12)', cor:'var(--amb)', txt:'Moderada'},
+    grave:   {bg:'rgba(220,38,38,0.1)',  cor:'var(--red)', txt:'Grave'},
+  };
+  var s = mapa[reacao] || {bg:'var(--s2)', cor:'var(--mut)', txt:esc(reacao||'—')};
+  return '<span class="badge" style="background:'+s.bg+';color:'+s.cor+';">'+s.txt+'</span>';
+}
+
+function badgeEstadoDadiva(estado) {
+  var mapa = {
+    aprovado: {bg:'rgba(5,150,105,0.1)',   cor:'var(--grn)', txt:'Aprovado'},
+    rejeitado:{bg:'rgba(220,38,38,0.1)',   cor:'var(--red)', txt:'Rejeitado'},
+    pendente: {bg:'rgba(217,119,6,0.12)', cor:'var(--amb)', txt:'Pendente'},
+  };
+  var s = mapa[estado] || {bg:'var(--s2)', cor:'var(--mut)', txt:esc(estado||'—')};
+  return '<span class="badge" style="background:'+s.bg+';color:'+s.cor+';">'+s.txt+'</span>';
+}
+
+/* ─── Carregar estatísticas ──────────────────────────────── */
+async function carregarEstatisticas() {
+  var ini = document.getElementById('data-inicio').value;
+  var fim = document.getElementById('data-fim').value;
+  var r = await api('GET', '/api/hemo/estatisticas?inicio='+ini+'&fim='+fim);
+  if(!r) return;
+  var d = r.dados;
+  document.getElementById('stat-dadivas').textContent    = d.dadivas     ?? '—';
+  document.getElementById('stat-transfusoes').textContent= d.transfusoes ?? '—';
+  document.getElementById('stat-critico').textContent    = d.stock_critico ?? '—';
+}
+
+/* ─── Carregar stock de sangue ───────────────────────────── */
+async function carregarStock() {
+  var r = await api('GET', '/api/hemo/stock');
+  if(!r) return;
+  var container = document.getElementById('stock-container');
+  var grupos = r.dados || [];
+  if(!grupos.length) {
+    container.innerHTML = '<div style="color:var(--mut);grid-column:1/-1;padding:16px;text-align:center;">Sem dados de stock</div>';
+    return;
+  }
+  container.innerHTML = grupos.map(function(g){
+    var qtd = g.quantidade ?? g.qtd ?? 0;
+    var cor = qtd >= 5 ? 'var(--grn)' : qtd >= 2 ? 'var(--amb)' : 'var(--red)';
+    var bgCor = qtd >= 5 ? 'rgba(5,150,105,0.08)' : qtd >= 2 ? 'rgba(217,119,6,0.08)' : 'rgba(220,38,38,0.08)';
+    return '<div class="stock-card" style="border-color:'+cor+'22;background:'+bgCor+';">' +
+      '<div class="grupo" style="color:'+cor+';">'+esc(g.grupo)+'</div>' +
+      '<div class="qtd" style="color:'+cor+';">'+qtd+'</div>' +
+      '<div class="label">Unidades</div>' +
+    '</div>';
+  }).join('');
+}
+
+/* ─── Carregar dádivas ───────────────────────────────────── */
+async function carregarDadivas() {
+  var r = await api('GET', '/api/hemo/dadores');
+  if(!r) return;
+  var tbody = document.getElementById('tabela-dadivas');
+  if(!r.dados || !r.dados.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--mut);padding:24px;">Sem dádivas registadas</td></tr>';
+    return;
+  }
+  tbody.innerHTML = r.dados.map(function(d){
+    return '<tr tabindex="0">' +
+      '<td style="font-weight:600;">'+esc(d.nome)+'</td>' +
+      '<td style="font-family:var(--fm);font-size:12px;">'+esc(d.nup||'—')+'</td>' +
+      '<td>'+badgeGrupo(d.grupo_sanguineo||d.grupo)+'</td>' +
+      '<td>'+(d.volume||'—')+' ml</td>' +
+      '<td style="font-family:var(--fm);font-size:12px;">'+(d.data_dadiva||d.data||'—')+'</td>' +
+      '<td>'+badgeEstadoDadiva(d.estado)+'</td>' +
+      '<td><button class="btn btn-danger btn-sm" onclick="eliminarDadiva(\''+d.id+'\')">✕</button></td>' +
+    '</tr>';
+  }).join('');
+}
+
+/* ─── Carregar transfusões ───────────────────────────────── */
+async function carregarTransfusoes() {
+  var r = await api('GET', '/api/hemo/transfusoes');
+  if(!r) return;
+  var tbody = document.getElementById('tabela-transfusoes');
+  if(!r.dados || !r.dados.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--mut);padding:24px;">Sem transfusões registadas</td></tr>';
+    return;
+  }
+  tbody.innerHTML = r.dados.map(function(d){
+    return '<tr tabindex="0">' +
+      '<td style="font-weight:600;">'+esc(d.nome_receptor||d.nome||'—')+'</td>' +
+      '<td style="font-family:var(--fm);font-size:12px;">'+esc(d.nup_receptor||d.nup||'—')+'</td>' +
+      '<td>'+badgeGrupo(d.grupo_sanguineo||d.grupo)+'</td>' +
+      '<td>'+(d.volume||'—')+' ml</td>' +
+      '<td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+esc(d.indicacao||'—')+'</td>' +
+      '<td style="font-family:var(--fm);font-size:12px;">'+(d.data_transfusao||d.data||'—')+'</td>' +
+      '<td>'+badgeReacao(d.reacao||d.reacao_transfusional)+'</td>' +
+      '<td><button class="btn btn-danger btn-sm" onclick="eliminarTransfusao(\''+d.id+'\')">✕</button></td>' +
+    '</tr>';
+  }).join('');
+}
+
+/* ─── Abrir/guardar modal de nova dádiva ─────────────────── */
+function abrirModalDadiva() {
+  ['dad-nome','dad-nup','dad-obs'].forEach(function(f){ document.getElementById(f).value = ''; });
+  document.getElementById('dad-sexo').value = '';
+  document.getElementById('dad-grupo').value = '';
+  document.getElementById('dad-idade').value = '';
+  document.getElementById('dad-volume').value = '450';
+  document.getElementById('dad-estado').value = 'pendente';
+  abrirModal('modal-dadiva');
+}
+
+async function guardarDadiva() {
+  var nome = document.getElementById('dad-nome').value.trim();
+  if(!nome) { toast('O nome do dador é obrigatório', 'warn'); return; }
+  var grupo = document.getElementById('dad-grupo').value;
+  if(!grupo) { toast('O grupo sanguíneo é obrigatório', 'warn'); return; }
+  var dados = {
+    nome:            nome,
+    nup:             document.getElementById('dad-nup').value.trim(),
+    sexo:            document.getElementById('dad-sexo').value,
+    idade:           parseInt(document.getElementById('dad-idade').value) || null,
+    grupo_sanguineo: grupo,
+    volume:          parseInt(document.getElementById('dad-volume').value) || 450,
+    data_dadiva:     document.getElementById('dad-data').value,
+    estado:          document.getElementById('dad-estado').value,
+    observacoes:     document.getElementById('dad-obs').value.trim(),
+  };
+  var r = await api('POST', '/api/hemo/dadores', dados);
+  if(r) {
+    toast('Dádiva registada com sucesso', 'save');
+    fecharModal('modal-dadiva');
+    carregarDadivas();
+    carregarStock();
+    carregarEstatisticas();
+  }
+}
+
+/* ─── Eliminar dádiva ────────────────────────────────────── */
+async function eliminarDadiva(id) {
+  if(!confirm('Confirma a eliminação desta dádiva?')) return;
+  var r = await api('DELETE', '/api/hemo/dadores/' + id);
+  if(r) {
+    toast('Dádiva eliminada', 'del');
+    carregarDadivas();
+    carregarStock();
+  }
+}
+
+/* ─── Abrir/guardar modal de nova transfusão ─────────────── */
+function abrirModalTransfusao() {
+  ['tr-nome','tr-nup','tr-indicacao','tr-medico','tr-obs'].forEach(function(f){
+    document.getElementById(f).value = '';
+  });
+  document.getElementById('tr-grupo').value = '';
+  document.getElementById('tr-volume').value = '';
+  document.getElementById('tr-reacao').value = 'nenhuma';
+  abrirModal('modal-transfusao');
+}
+
+async function guardarTransfusao() {
+  var nome = document.getElementById('tr-nome').value.trim();
+  if(!nome) { toast('O nome do receptor é obrigatório', 'warn'); return; }
+  var grupo = document.getElementById('tr-grupo').value;
+  if(!grupo) { toast('O grupo sanguíneo é obrigatório', 'warn'); return; }
+  var indicacao = document.getElementById('tr-indicacao').value.trim();
+  if(!indicacao) { toast('A indicação clínica é obrigatória', 'warn'); return; }
+  var dados = {
+    nome_receptor:    nome,
+    nup_receptor:     document.getElementById('tr-nup').value.trim(),
+    grupo_sanguineo:  grupo,
+    volume:           parseInt(document.getElementById('tr-volume').value) || null,
+    indicacao:        indicacao,
+    medico:           document.getElementById('tr-medico').value.trim(),
+    data_transfusao:  document.getElementById('tr-data').value,
+    reacao:           document.getElementById('tr-reacao').value,
+    observacoes:      document.getElementById('tr-obs').value.trim(),
+  };
+  var r = await api('POST', '/api/hemo/transfusoes', dados);
+  if(r) {
+    toast('Transfusão registada com sucesso', 'save');
+    fecharModal('modal-transfusao');
+    carregarTransfusoes();
+    carregarStock();
+    carregarEstatisticas();
+  }
+}
+
+/* ─── Eliminar transfusão ────────────────────────────────── */
+async function eliminarTransfusao(id) {
+  if(!confirm('Confirma a eliminação desta transfusão?')) return;
+  var r = await api('DELETE', '/api/hemo/transfusoes/' + id);
+  if(r) {
+    toast('Transfusão eliminada', 'del');
+    carregarTransfusoes();
+    carregarStock();
+  }
+}
+
+function exportarDados() {
+  toast('A preparar exportação...', 'info');
+  window.location.href = '/api/hemo/exportar';
+}
+
+/* ─── Inicializar a página ───────────────────────────────── */
+document.addEventListener('DOMContentLoaded', function(){
+  carregarEstatisticas();
+  carregarStock();
+});
+</script>
+{% endblock %}

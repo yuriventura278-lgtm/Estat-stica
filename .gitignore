@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+*.pyo
+hospital_app/data/hospital.db
+hospital_app/exports/

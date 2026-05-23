@@ -28,6 +28,19 @@ def criar_tabelas():
     with get_conn() as conn:
         conn.executescript("""
 
+        -- ─── UTILIZADORES / AUTENTICAÇÃO ────────────────────────
+        CREATE TABLE IF NOT EXISTS utilizadores (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            username        TEXT NOT NULL UNIQUE,
+            nome_completo   TEXT NOT NULL,
+            password_hash   TEXT NOT NULL,
+            cargo           TEXT DEFAULT 'enfermeiro',
+            servico         TEXT DEFAULT 'geral',
+            activo          INTEGER DEFAULT 1,
+            primeira_sessao INTEGER DEFAULT 1,
+            criado          TEXT DEFAULT (datetime('now'))
+        );
+
         -- ─── SERVIÇOS DO HOSPITAL ───────────────────────────────
         CREATE TABLE IF NOT EXISTS servicos (
             id       INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -106,6 +119,203 @@ def criar_tabelas():
 
         CREATE INDEX IF NOT EXISTS idx_cir_obitos_data
             ON cirurgia_obitos(data_obito);
+
+        -- ═══════════════════════════════════════════════════════
+        -- ─── LABORATÓRIO ────────────────────────────────────────
+        CREATE TABLE IF NOT EXISTS lab_requisicoes (
+            id           TEXT PRIMARY KEY,
+            nup          TEXT,
+            nome         TEXT NOT NULL,
+            sexo         TEXT,
+            idade        INTEGER,
+            tipo_analise TEXT NOT NULL,
+            urgente      INTEGER DEFAULT 0,
+            estado       TEXT DEFAULT 'pendente',  -- pendente, em_curso, concluido
+            medico_req   TEXT,
+            data_req     TEXT NOT NULL,
+            data_result  TEXT,
+            resultado    TEXT,
+            observacoes  TEXT,
+            criado       TEXT DEFAULT (datetime('now'))
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_lab_data ON lab_requisicoes(data_req);
+
+        -- ═══════════════════════════════════════════════════════
+        -- ─── VIH / SIDA ──────────────────────────────────────
+        CREATE TABLE IF NOT EXISTS hiv_pacientes (
+            id           TEXT PRIMARY KEY,
+            nome         TEXT NOT NULL,
+            sexo         TEXT,
+            nup          TEXT,
+            data_nasc    TEXT,
+            data_diag    TEXT,
+            estadio      TEXT,   -- I, II, III, IV (OMS)
+            tarv         INTEGER DEFAULT 0,
+            regimen_tarv TEXT,
+            data_inicio_tarv TEXT,
+            hospital     TEXT,
+            activo       INTEGER DEFAULT 1,
+            criado       TEXT DEFAULT (datetime('now'))
+        );
+
+        CREATE TABLE IF NOT EXISTS hiv_consultas (
+            id           TEXT PRIMARY KEY,
+            paciente_id  TEXT REFERENCES hiv_pacientes(id),
+            data_consulta TEXT NOT NULL,
+            peso         REAL,
+            cd4          INTEGER,
+            carga_viral  TEXT,
+            estadio      TEXT,
+            tarv_actual  TEXT,
+            observacoes  TEXT,
+            criado       TEXT DEFAULT (datetime('now'))
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_hiv_consultas ON hiv_consultas(data_consulta);
+
+        -- ═══════════════════════════════════════════════════════
+        -- ─── HEMOTERAPIA ─────────────────────────────────────
+        CREATE TABLE IF NOT EXISTS hemo_dadores (
+            id           TEXT PRIMARY KEY,
+            nome         TEXT NOT NULL,
+            sexo         TEXT,
+            nup          TEXT,
+            idade        INTEGER,
+            grupo_sang   TEXT,  -- A+, A-, B+, B-, AB+, AB-, O+, O-
+            data_dadiva  TEXT NOT NULL,
+            volume_ml    INTEGER DEFAULT 450,
+            estado       TEXT DEFAULT 'aprovado',  -- aprovado, rejeitado, pendente
+            observacoes  TEXT,
+            criado       TEXT DEFAULT (datetime('now'))
+        );
+
+        CREATE TABLE IF NOT EXISTS hemo_transfusoes (
+            id           TEXT PRIMARY KEY,
+            nome_receptor TEXT NOT NULL,
+            nup_receptor  TEXT,
+            grupo_sang    TEXT,
+            volume_ml     INTEGER,
+            indicacao     TEXT,
+            medico        TEXT,
+            data_transf   TEXT NOT NULL,
+            reacao        TEXT DEFAULT 'nenhuma',
+            observacoes   TEXT,
+            criado        TEXT DEFAULT (datetime('now'))
+        );
+
+        CREATE TABLE IF NOT EXISTS hemo_stock (
+            grupo_sang   TEXT PRIMARY KEY,
+            quantidade   INTEGER DEFAULT 0,
+            actualizado  TEXT DEFAULT (datetime('now'))
+        );
+
+        INSERT OR IGNORE INTO hemo_stock (grupo_sang, quantidade) VALUES
+            ('A+',0),('A-',0),('B+',0),('B-',0),
+            ('AB+',0),('AB-',0),('O+',0),('O-',0);
+
+        -- ═══════════════════════════════════════════════════════
+        -- ─── IMAGIOLOGIA ─────────────────────────────────────
+        CREATE TABLE IF NOT EXISTS imag_exames (
+            id           TEXT PRIMARY KEY,
+            nome         TEXT NOT NULL,
+            nup          TEXT,
+            sexo         TEXT,
+            idade        INTEGER,
+            tipo_exame   TEXT NOT NULL,  -- RX, TAC, Eco, RMN, Mamografia
+            regiao       TEXT,           -- Tórax, Abdómen, Crânio, etc.
+            urgente      INTEGER DEFAULT 0,
+            estado       TEXT DEFAULT 'pendente',
+            medico_req   TEXT,
+            data_req     TEXT NOT NULL,
+            data_result  TEXT,
+            resultado    TEXT,
+            conclusao    TEXT,
+            criado       TEXT DEFAULT (datetime('now'))
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_imag_data ON imag_exames(data_req);
+
+        -- ═══════════════════════════════════════════════════════
+        -- ─── CONSULTA EXTERNA ────────────────────────────────
+        CREATE TABLE IF NOT EXISTS con_consultas (
+            id           TEXT PRIMARY KEY,
+            nome         TEXT NOT NULL,
+            nup          TEXT,
+            sexo         TEXT,
+            idade        INTEGER,
+            especialidade TEXT NOT NULL,
+            tipo         TEXT DEFAULT 'primeira',  -- primeira, seguimento, urgencia
+            medico       TEXT,
+            data_consulta TEXT NOT NULL,
+            hora         TEXT,
+            estado       TEXT DEFAULT 'agendada',  -- agendada, realizada, faltou, cancelada
+            motivo       TEXT,
+            diagnostico  TEXT,
+            prescricao   TEXT,
+            observacoes  TEXT,
+            criado       TEXT DEFAULT (datetime('now'))
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_con_data ON con_consultas(data_consulta);
+
+        -- ═══════════════════════════════════════════════════════
+        -- ─── BLOCO OPERATÓRIO ────────────────────────────────
+        CREATE TABLE IF NOT EXISTS bloco_cirurgias (
+            id           TEXT PRIMARY KEY,
+            nome         TEXT NOT NULL,
+            nup          TEXT,
+            sexo         TEXT,
+            idade        INTEGER,
+            tipo_cirurgia TEXT NOT NULL,
+            urgencia     TEXT DEFAULT 'electiva',  -- electiva, urgente, emergencia
+            cirurgiao    TEXT,
+            anestesista  TEXT,
+            anestesia    TEXT,  -- geral, local, raquidiana, epidural
+            data_prog    TEXT,
+            hora_inicio  TEXT,
+            hora_fim     TEXT,
+            sala         TEXT,
+            estado       TEXT DEFAULT 'agendada',  -- agendada, em_curso, concluida, cancelada
+            diagnostico  TEXT,
+            complicacoes TEXT,
+            observacoes  TEXT,
+            criado       TEXT DEFAULT (datetime('now'))
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_bloco_data ON bloco_cirurgias(data_prog);
+
+        -- ═══════════════════════════════════════════════════════
+        -- ─── FISIOTERAPIA ────────────────────────────────────
+        CREATE TABLE IF NOT EXISTS fisio_doentes (
+            id           TEXT PRIMARY KEY,
+            nome         TEXT NOT NULL,
+            nup          TEXT,
+            sexo         TEXT,
+            idade        INTEGER,
+            diagnostico  TEXT,
+            patologia    TEXT,
+            medico_ref   TEXT,
+            data_entrada TEXT NOT NULL,
+            activo       INTEGER DEFAULT 1,
+            criado       TEXT DEFAULT (datetime('now'))
+        );
+
+        CREATE TABLE IF NOT EXISTS fisio_sessoes (
+            id           TEXT PRIMARY KEY,
+            doente_id    TEXT REFERENCES fisio_doentes(id),
+            nome_doente  TEXT,
+            data_sessao  TEXT NOT NULL,
+            num_sessao   INTEGER DEFAULT 1,
+            tipo_terapia TEXT,
+            fisioterapeuta TEXT,
+            duracao_min  INTEGER DEFAULT 30,
+            evolucao     TEXT,  -- melhora, sem_alteracao, piora
+            observacoes  TEXT,
+            criado       TEXT DEFAULT (datetime('now'))
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_fisio_sessoes ON fisio_sessoes(data_sessao);
 
         -- ─── DADOS INICIAIS ───────────────────────────────────────
         INSERT OR IGNORE INTO servicos (codigo, nome) VALUES

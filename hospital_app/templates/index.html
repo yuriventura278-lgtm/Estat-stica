@@ -1,63 +1,105 @@
 {% extends "base.html" %}
-{% block titulo %}Hospital do Prenda — Serviços{% endblock %}
+{% block titulo %}Hospital do Prenda — Painel Principal{% endblock %}
 
 {% block conteudo %}
-<main style="max-width:900px;margin:40px auto;padding:0 20px;">
-  <h1 style="font-size:22px;font-weight:700;margin-bottom:8px;">Serviços do Hospital do Prenda</h1>
-  <p style="color:var(--mut);font-size:13px;margin-bottom:28px;">Selecciona um serviço para aceder ao respectivo sistema de gestão.</p>
+<main style="max-width:960px;margin:32px auto;padding:0 20px;">
 
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:28px;">
+    <div>
+      <h1 style="font-size:22px;font-weight:700;margin-bottom:4px;">
+        Bom dia, {{ utilizador.nome_completo.split()[0] }}! 👋
+      </h1>
+      <p style="font-size:13px;color:var(--mut);">
+        {{ hoje }} · Hospital do Prenda · Luanda, Angola
+      </p>
+    </div>
+    {% if utilizador.cargo == 'admin' %}
+    <a href="/admin/utilizadores" class="btn btn-outline btn-sm" style="text-decoration:none;">
+      👥 Gerir Utilizadores
+    </a>
+    {% endif %}
+  </div>
 
-    <a href="/cirurgia" style="text-decoration:none;">
-      <div class="card" style="cursor:pointer;transition:box-shadow .2s;border-left:4px solid var(--acc);">
-        <div style="font-size:28px;margin-bottom:8px;">🔪</div>
-        <div style="font-weight:700;font-size:14px;margin-bottom:4px;">Cirurgia Geral</div>
-        <div style="font-size:12px;color:var(--mut);">Doentes · Altas · Óbitos · Camas</div>
+  <!-- Grid de serviços -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:16px;">
+
+    <a href="/cirurgia" style="text-decoration:none;" class="card-servico">
+      <div class="card" style="border-left:4px solid var(--acc);cursor:pointer;transition:box-shadow .2s,transform .2s;">
+        <div style="font-size:32px;margin-bottom:10px;">🔪</div>
+        <div style="font-weight:700;font-size:15px;margin-bottom:4px;">Cirurgia Geral</div>
+        <div style="font-size:12px;color:var(--mut);">Internados · Altas · Óbitos · Camas</div>
       </div>
     </a>
 
-    <div class="card" style="opacity:.5;border-left:4px solid var(--bd);">
-      <div style="font-size:28px;margin-bottom:8px;">🧪</div>
-      <div style="font-weight:700;font-size:14px;margin-bottom:4px;">Laboratório</div>
-      <div style="font-size:12px;color:var(--mut);">Em desenvolvimento</div>
-    </div>
+    <a href="/laboratorio" style="text-decoration:none;" class="card-servico">
+      <div class="card" style="border-left:4px solid var(--grn);cursor:pointer;transition:box-shadow .2s,transform .2s;">
+        <div style="font-size:32px;margin-bottom:10px;">🧪</div>
+        <div style="font-weight:700;font-size:15px;margin-bottom:4px;">Laboratório</div>
+        <div style="font-size:12px;color:var(--mut);">Requisições · Resultados</div>
+      </div>
+    </a>
 
-    <div class="card" style="opacity:.5;border-left:4px solid var(--bd);">
-      <div style="font-size:28px;margin-bottom:8px;">🩸</div>
-      <div style="font-weight:700;font-size:14px;margin-bottom:4px;">Hemoterapia</div>
-      <div style="font-size:12px;color:var(--mut);">Em desenvolvimento</div>
-    </div>
+    <a href="/hiv" style="text-decoration:none;" class="card-servico">
+      <div class="card" style="border-left:4px solid var(--amb);cursor:pointer;transition:box-shadow .2s,transform .2s;">
+        <div style="font-size:32px;margin-bottom:10px;">🏥</div>
+        <div style="font-weight:700;font-size:15px;margin-bottom:4px;">VIH / SIDA</div>
+        <div style="font-size:12px;color:var(--mut);">Pacientes · Consultas · TARV</div>
+      </div>
+    </a>
 
-    <div class="card" style="opacity:.5;border-left:4px solid var(--bd);">
-      <div style="font-size:28px;margin-bottom:8px;">🏥</div>
-      <div style="font-weight:700;font-size:14px;margin-bottom:4px;">VIH / SIDA</div>
-      <div style="font-size:12px;color:var(--mut);">Em desenvolvimento</div>
-    </div>
+    <a href="/hemoterapia" style="text-decoration:none;" class="card-servico">
+      <div class="card" style="border-left:4px solid var(--red);cursor:pointer;transition:box-shadow .2s,transform .2s;">
+        <div style="font-size:32px;margin-bottom:10px;">🩸</div>
+        <div style="font-weight:700;font-size:15px;margin-bottom:4px;">Hemoterapia</div>
+        <div style="font-size:12px;color:var(--mut);">Dádivas · Transfusões · Stock</div>
+      </div>
+    </a>
 
-    <div class="card" style="opacity:.5;border-left:4px solid var(--bd);">
-      <div style="font-size:28px;margin-bottom:8px;">🦴</div>
-      <div style="font-weight:700;font-size:14px;margin-bottom:4px;">Fisioterapia</div>
-      <div style="font-size:12px;color:var(--mut);">Em desenvolvimento</div>
-    </div>
+    <a href="/imagiologia" style="text-decoration:none;" class="card-servico">
+      <div class="card" style="border-left:4px solid var(--pur);cursor:pointer;transition:box-shadow .2s,transform .2s;">
+        <div style="font-size:32px;margin-bottom:10px;">🩻</div>
+        <div style="font-weight:700;font-size:15px;margin-bottom:4px;">Imagiologia</div>
+        <div style="font-size:12px;color:var(--mut);">RX · TAC · Ecografia · RMN</div>
+      </div>
+    </a>
 
-    <div class="card" style="opacity:.5;border-left:4px solid var(--bd);">
-      <div style="font-size:28px;margin-bottom:8px;">🩻</div>
-      <div style="font-weight:700;font-size:14px;margin-bottom:4px;">Imagiologia</div>
-      <div style="font-size:12px;color:var(--mut);">Em desenvolvimento</div>
-    </div>
+    <a href="/consulta" style="text-decoration:none;" class="card-servico">
+      <div class="card" style="border-left:4px solid #0891B2;cursor:pointer;transition:box-shadow .2s,transform .2s;">
+        <div style="font-size:32px;margin-bottom:10px;">👨‍⚕️</div>
+        <div style="font-weight:700;font-size:15px;margin-bottom:4px;">Consulta Externa</div>
+        <div style="font-size:12px;color:var(--mut);">Agenda · Consultas · Especialidades</div>
+      </div>
+    </a>
 
-    <div class="card" style="opacity:.5;border-left:4px solid var(--bd);">
-      <div style="font-size:28px;margin-bottom:8px;">🏨</div>
-      <div style="font-weight:700;font-size:14px;margin-bottom:4px;">Bloco Operatório</div>
-      <div style="font-size:12px;color:var(--mut);">Em desenvolvimento</div>
-    </div>
+    <a href="/bloco" style="text-decoration:none;" class="card-servico">
+      <div class="card" style="border-left:4px solid #64748B;cursor:pointer;transition:box-shadow .2s,transform .2s;">
+        <div style="font-size:32px;margin-bottom:10px;">🏨</div>
+        <div style="font-weight:700;font-size:15px;margin-bottom:4px;">Bloco Operatório</div>
+        <div style="font-size:12px;color:var(--mut);">Cirurgias · Programação · Salas</div>
+      </div>
+    </a>
 
-    <div class="card" style="opacity:.5;border-left:4px solid var(--bd);">
-      <div style="font-size:28px;margin-bottom:8px;">👨‍⚕️</div>
-      <div style="font-weight:700;font-size:14px;margin-bottom:4px;">Consulta Externa</div>
-      <div style="font-size:12px;color:var(--mut);">Em desenvolvimento</div>
-    </div>
+    <a href="/fisioterapia" style="text-decoration:none;" class="card-servico">
+      <div class="card" style="border-left:4px solid #84CC16;cursor:pointer;transition:box-shadow .2s,transform .2s;">
+        <div style="font-size:32px;margin-bottom:10px;">🦴</div>
+        <div style="font-weight:700;font-size:15px;margin-bottom:4px;">Fisioterapia</div>
+        <div style="font-size:12px;color:var(--mut);">Doentes · Sessões · Evolução</div>
+      </div>
+    </a>
 
   </div>
+
+  <p style="font-size:11px;color:var(--mut);margin-top:32px;text-align:center;">
+    Hospital do Prenda · Sistema de Gestão Hospitalar · Luanda, Angola · 2026
+  </p>
 </main>
+{% endblock %}
+
+{% block estilos %}
+<style>
+.card-servico .card:hover {
+  box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+  transform: translateY(-2px);
+}
+</style>
 {% endblock %}
