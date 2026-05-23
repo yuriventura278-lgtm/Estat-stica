@@ -197,6 +197,9 @@
       <button class="modal-close" onclick="fecharModal('modal-cirurgia')">✕</button>
     </div>
 
+    <!-- ID oculto para edição -->
+    <input type="hidden" id="cir-id">
+
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
       <div class="form-group" style="grid-column:1/-1;">
         <label>Nome do Doente *</label>
@@ -524,6 +527,8 @@ async function carregarConcluidas() {
 
 /* ─── Abrir/guardar modal nova cirurgia ─────────────────── */
 function abrirModalCirurgia() {
+  document.getElementById('cir-id').value = '';
+  document.querySelector('#modal-cirurgia .modal-title').textContent = 'Nova Cirurgia';
   ['cir-nome','cir-nup','cir-tipo','cir-cirurgiao','cir-anestesista','cir-sala','cir-diagnostico'].forEach(function(f){
     document.getElementById(f).value = '';
   });
@@ -559,9 +564,12 @@ async function guardarCirurgia() {
     diagnostico:     document.getElementById('cir-diagnostico').value.trim(),
     estado:          'agendada',
   };
-  var r = await api('POST', '/api/bloco/cirurgias', dados);
+  var id = document.getElementById('cir-id').value;
+  var r = id
+    ? await api('PUT',  '/api/bloco/cirurgias/'+id, dados)
+    : await api('POST', '/api/bloco/cirurgias',     dados);
   if(r) {
-    toast('Cirurgia registada com sucesso', 'save');
+    toast(id ? 'Cirurgia actualizada com sucesso' : 'Cirurgia registada com sucesso', 'save');
     fecharModal('modal-cirurgia');
     carregarCirurgias();
     carregarCirurgiasHoje();
