@@ -68,9 +68,16 @@
 
     <!-- ── TAB: DÁDIVAS ──────────────────────────────────────── -->
     <div id="tab-dadivas" class="tab-pane" style="display:none;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-        <h2 style="font-size:17px;font-weight:700;">💉 Dádivas de Sangue</h2>
-        <button class="btn btn-primary btn-sm" onclick="abrirModalDadiva()">+ Nova Dádiva</button>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+        <h2 style="font-size:17px;font-weight:700;">🩸 Dádivas de Sangue</h2>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <input type="date" id="dad-filtro-inicio"
+            style="padding:7px 10px;border:1px solid var(--bd);border-radius:8px;font-size:12px;">
+          <input type="date" id="dad-filtro-fim"
+            style="padding:7px 10px;border:1px solid var(--bd);border-radius:8px;font-size:12px;">
+          <button class="btn btn-outline btn-sm" onclick="carregarDadivas()">🔍 Filtrar</button>
+          <button class="btn btn-primary btn-sm" onclick="abrirModalDadiva()">+ Nova Dádiva</button>
+        </div>
       </div>
 
       <div class="card" style="padding:0;overflow:hidden;">
@@ -96,7 +103,7 @@
     <!-- ── TAB: TRANSFUSÕES ──────────────────────────────────── -->
     <div id="tab-transfusoes" class="tab-pane" style="display:none;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-        <h2 style="font-size:17px;font-weight:700;">🔴 Transfusões</h2>
+        <h2 style="font-size:17px;font-weight:700;">💉 Transfusões</h2>
         <button class="btn btn-primary btn-sm" onclick="abrirModalTransfusao()">+ Nova Transfusão</button>
       </div>
 
