@@ -319,17 +319,26 @@ document.querySelectorAll('.modal-overlay').forEach(function(el){
   el.addEventListener('click', function(e){ if(e.target===el) fecharModal(el.id); });
 });
 
-/* ─── Inicializar datas do período ───────────────────────── */
-(function() {
-  var hoje = new Date();
-  var fim = hoje.toISOString().split('T')[0];
-  var ini = hoje.getFullYear() + '-' + String(hoje.getMonth()+1).padStart(2,'0') + '-01';
-  document.getElementById('data-inicio').value = ini;
-  document.getElementById('data-fim').value = fim;
-  // Preencher datas dos modais
-  document.getElementById('dad-data').value = fim;
-  document.getElementById('tr-data').value = fim;
-})();
+/* ─── Estado global da data ──────────────────────────────── */
+var dataActual = '{{ hoje }}';
+
+/* ─── Inicializar datas ──────────────────────────────────── */
+document.addEventListener('DOMContentLoaded', function(){
+  var hoje = dataActual;
+  document.getElementById('data-sel').value         = hoje;
+  document.getElementById('dad-filtro-inicio').value = hoje;
+  document.getElementById('dad-filtro-fim').value    = hoje;
+  document.getElementById('dad-data').value          = hoje;
+  document.getElementById('tr-data').value           = hoje;
+  carregarEstatisticas();
+  carregarStock();
+});
+
+/* ─── Mudar data global ──────────────────────────────────── */
+function mudarData(novaData) {
+  dataActual = novaData;
+  carregarEstatisticas();
+}
 
 /* ─── Navegação entre abas ───────────────────────────────── */
 function mostrarTab(nome, btnClicado) {
@@ -341,6 +350,7 @@ function mostrarTab(nome, btnClicado) {
   if(nome === 'home')        { carregarEstatisticas(); carregarStock(); }
   if(nome === 'dadivas')     carregarDadivas();
   if(nome === 'transfusoes') carregarTransfusoes();
+  if(nome === 'stock')       carregarStockTab();
 }
 
 /* ─── Cor do grupo sanguíneo ─────────────────────────────── */
@@ -379,23 +389,18 @@ function badgeEstadoDadiva(estado) {
 
 /* ─── Carregar estatísticas ──────────────────────────────── */
 async function carregarEstatisticas() {
-  var ini = document.getElementById('data-inicio').value;
-  var fim = document.getElementById('data-fim').value;
-  var r = await api('GET', '/api/hemo/estatisticas?inicio='+ini+'&fim='+fim);
+  var r = await api('GET', '/api/hemo/estatisticas?data=' + dataActual);
   if(!r) return;
   var d = r.dados;
-  document.getElementById('stat-dadivas').textContent    = d.dadivas     ?? '—';
-  document.getElementById('stat-transfusoes').textContent= d.transfusoes ?? '—';
-  document.getElementById('stat-critico').textContent    = d.stock_critico ?? '—';
+  document.getElementById('stat-dadivas').textContent     = d.dadivas      ?? '—';
+  document.getElementById('stat-transfusoes').textContent = d.transfusoes  ?? '—';
+  document.getElementById('stat-critico').textContent     = d.stock_critico ?? '—';
 }
 
-/* ─── Carregar stock de sangue ───────────────────────────── */
-async function carregarStock() {
-  var r = await api('GET', '/api/hemo/stock');
-  if(!r) return;
-  var container = document.getElementById('stock-container');
-  var grupos = r.dados || [];
-  if(!grupos.length) {
+/* ─── Renderizar stock num container ────────────────────── */
+function renderizarStock(grupos, containerId) {
+  var container = document.getElementById(containerId);
+  if(!grupos || !grupos.length) {
     container.innerHTML = '<div style="color:var(--mut);grid-column:1/-1;padding:16px;text-align:center;">Sem dados de stock</div>';
     return;
   }
@@ -411,13 +416,30 @@ async function carregarStock() {
   }).join('');
 }
 
-/* ─── Carregar dádivas ───────────────────────────────────── */
+/* ─── Carregar stock (tab início) ───────────────────────── */
+async function carregarStock() {
+  var r = await api('GET', '/api/hemo/stock');
+  if(!r) return;
+  renderizarStock(r.dados || [], 'stock-container');
+}
+
+/* ─── Carregar stock (tab stock) ────────────────────────── */
+async function carregarStockTab() {
+  var r = await api('GET', '/api/hemo/stock');
+  if(!r) return;
+  renderizarStock(r.dados || [], 'stock-tab-container');
+}
+
+/* ─── Carregar dádivas (com filtro de data) ──────────────── */
 async function carregarDadivas() {
-  var r = await api('GET', '/api/hemo/dadores');
+  var ini = document.getElementById('dad-filtro-inicio').value;
+  var fim = document.getElementById('dad-filtro-fim').value;
+  var url = '/api/hemo/dadores?inicio=' + ini + '&fim=' + fim;
+  var r = await api('GET', url);
   if(!r) return;
   var tbody = document.getElementById('tabela-dadivas');
   if(!r.dados || !r.dados.length) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--mut);padding:24px;">Sem dádivas registadas</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--mut);padding:24px;">Sem dádivas para este período</td></tr>';
     return;
   }
   tbody.innerHTML = r.dados.map(function(d){
@@ -428,7 +450,7 @@ async function carregarDadivas() {
       '<td>'+(d.volume||'—')+' ml</td>' +
       '<td style="font-family:var(--fm);font-size:12px;">'+(d.data_dadiva||d.data||'—')+'</td>' +
       '<td>'+badgeEstadoDadiva(d.estado)+'</td>' +
-      '<td><button class="btn btn-danger btn-sm" onclick="eliminarDadiva(\''+d.id+'\')">✕</button></td>' +
+      '<td><button class="btn btn-danger btn-sm" onclick="eliminarDadiva(\''+d.id+'\')">🗑</button></td>' +
     '</tr>';
   }).join('');
 }
@@ -451,7 +473,7 @@ async function carregarTransfusoes() {
       '<td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+esc(d.indicacao||'—')+'</td>' +
       '<td style="font-family:var(--fm);font-size:12px;">'+(d.data_transfusao||d.data||'—')+'</td>' +
       '<td>'+badgeReacao(d.reacao||d.reacao_transfusional)+'</td>' +
-      '<td><button class="btn btn-danger btn-sm" onclick="eliminarTransfusao(\''+d.id+'\')">✕</button></td>' +
+      '<td><button class="btn btn-danger btn-sm" onclick="eliminarTransfusao(\''+d.id+'\')">🗑</button></td>' +
     '</tr>';
   }).join('');
 }
@@ -459,11 +481,12 @@ async function carregarTransfusoes() {
 /* ─── Abrir/guardar modal de nova dádiva ─────────────────── */
 function abrirModalDadiva() {
   ['dad-nome','dad-nup','dad-obs'].forEach(function(f){ document.getElementById(f).value = ''; });
-  document.getElementById('dad-sexo').value = '';
-  document.getElementById('dad-grupo').value = '';
-  document.getElementById('dad-idade').value = '';
-  document.getElementById('dad-volume').value = '450';
-  document.getElementById('dad-estado').value = 'pendente';
+  document.getElementById('dad-sexo').value    = '';
+  document.getElementById('dad-grupo').value   = '';
+  document.getElementById('dad-idade').value   = '';
+  document.getElementById('dad-volume').value  = '450';
+  document.getElementById('dad-estado').value  = 'pendente';
+  document.getElementById('dad-data').value    = dataActual;
   abrirModal('modal-dadiva');
 }
 
@@ -509,9 +532,10 @@ function abrirModalTransfusao() {
   ['tr-nome','tr-nup','tr-indicacao','tr-medico','tr-obs'].forEach(function(f){
     document.getElementById(f).value = '';
   });
-  document.getElementById('tr-grupo').value = '';
+  document.getElementById('tr-grupo').value  = '';
   document.getElementById('tr-volume').value = '';
   document.getElementById('tr-reacao').value = 'nenhuma';
+  document.getElementById('tr-data').value   = dataActual;
   abrirModal('modal-transfusao');
 }
 
@@ -559,10 +583,6 @@ function exportarDados() {
   window.location.href = '/api/hemo/exportar';
 }
 
-/* ─── Inicializar a página ───────────────────────────────── */
-document.addEventListener('DOMContentLoaded', function(){
-  carregarEstatisticas();
-  carregarStock();
-});
+/* A página inicializa via DOMContentLoaded definido no início deste bloco */
 </script>
 {% endblock %}
