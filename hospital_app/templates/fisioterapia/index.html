@@ -1,0 +1,254 @@
+{% extends "base.html" %}
+{% block titulo %}Fisioterapia — Hospital do Prenda{% endblock %}
+{% block estilos %}
+<style>
+.nav-btn{width:100%;text-align:left;padding:9px 12px;border:none;border-radius:8px;
+  font-family:var(--fh);font-size:13px;font-weight:500;cursor:pointer;
+  background:transparent;color:var(--txt);transition:all .15s;}
+.nav-btn:hover{background:rgba(26,86,219,0.06);color:var(--acc);}
+.nav-btn.active{background:rgba(26,86,219,0.1);color:var(--acc);font-weight:700;}
+</style>
+{% endblock %}
+{% block conteudo %}
+<div style="display:flex;min-height:calc(100vh - 64px);">
+<aside style="width:220px;background:var(--s1);border-right:1px solid var(--bd);padding:16px 12px;display:flex;flex-direction:column;gap:4px;flex-shrink:0;">
+  <div style="font-size:10px;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:1px;padding:8px 8px 4px;">Fisioterapia</div>
+  <button class="nav-btn active" onclick="mostrarTab('home',this)">🏠 Início</button>
+  <button class="nav-btn" onclick="mostrarTab('doentes',this)">👥 Doentes</button>
+  <button class="nav-btn" onclick="mostrarTab('sessoes',this)">🦴 Sessões</button>
+</aside>
+<main style="flex:1;padding:24px;overflow-y:auto;">
+  <div id="tab-home" class="tab-pane">
+    <h2 style="font-size:17px;font-weight:700;margin-bottom:16px;">🦴 Fisioterapia</h2>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:20px;">
+      <div class="card" style="text-align:center;padding:16px;"><div style="font-size:28px;font-family:var(--fm);font-weight:700;color:var(--acc);" id="s-doentes">—</div><div style="font-size:11px;color:var(--mut);margin-top:4px;">Doentes Activos</div></div>
+      <div class="card" style="text-align:center;padding:16px;"><div style="font-size:28px;font-family:var(--fm);font-weight:700;color:var(--grn);" id="s-sessoes">—</div><div style="font-size:11px;color:var(--mut);margin-top:4px;">Sessões (mês)</div></div>
+      <div class="card" style="text-align:center;padding:16px;"><div style="font-size:28px;font-family:var(--fm);font-weight:700;color:var(--amb);" id="s-media">—</div><div style="font-size:11px;color:var(--mut);margin-top:4px;">Média/Doente</div></div>
+    </div>
+    <div style="display:flex;gap:16px;margin-bottom:20px;flex-wrap:wrap;">
+      <div class="card" style="padding:12px 20px;display:flex;align-items:center;gap:8px;">
+        <span style="color:var(--grn);font-weight:700;" id="s-melhora">—</span>
+        <span style="font-size:12px;color:var(--mut);">Melhora</span>
+      </div>
+      <div class="card" style="padding:12px 20px;display:flex;align-items:center;gap:8px;">
+        <span style="color:var(--amb);font-weight:700;" id="s-sem-alt">—</span>
+        <span style="font-size:12px;color:var(--mut);">Sem Alteração</span>
+      </div>
+      <div class="card" style="padding:12px 20px;display:flex;align-items:center;gap:8px;">
+        <span style="color:var(--red);font-weight:700;" id="s-piora">—</span>
+        <span style="font-size:12px;color:var(--mut);">Piora</span>
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="abrirNovoDoente()">+ Novo Doente</button>
+  </div>
+
+  <div id="tab-doentes" class="tab-pane" style="display:none;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <h2 style="font-size:17px;font-weight:700;">👥 Doentes em Fisioterapia</h2>
+      <button class="btn btn-primary btn-sm" onclick="abrirNovoDoente()">+ Novo Doente</button>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden;">
+      <table><thead><tr><th>Nome</th><th>NUP</th><th>Diagnóstico</th><th>Patologia</th><th>Médico Ref.</th><th>Entrada</th><th>Acções</th></tr></thead>
+      <tbody id="tabela-doentes"><tr><td colspan="7" style="text-align:center;color:var(--mut);padding:20px;">A carregar...</td></tr></tbody></table>
+    </div>
+  </div>
+
+  <div id="tab-sessoes" class="tab-pane" style="display:none;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+      <h2 style="font-size:17px;font-weight:700;">🦴 Sessões de Fisioterapia</h2>
+      <div style="display:flex;gap:8px;">
+        <input type="date" id="s-inicio" style="padding:7px 10px;border:1px solid var(--bd);border-radius:8px;font-size:13px;" onchange="carregarSessoes()">
+        <input type="date" id="s-fim" style="padding:7px 10px;border:1px solid var(--bd);border-radius:8px;font-size:13px;" onchange="carregarSessoes()">
+      </div>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden;">
+      <table><thead><tr><th>Doente</th><th>Nº Sessão</th><th>Tipo Terapia</th><th>Fisioterapeuta</th><th>Duração</th><th>Evolução</th><th>Data</th><th>Acções</th></tr></thead>
+      <tbody id="tabela-sessoes"><tr><td colspan="8" style="text-align:center;color:var(--mut);padding:20px;">A carregar...</td></tr></tbody></table>
+    </div>
+  </div>
+</main>
+</div>
+
+<!-- MODAL: Novo/Editar Doente -->
+<div id="modal-doente" class="modal-overlay">
+  <div class="modal-box" style="max-width:500px;">
+    <div class="modal-header"><span class="modal-title" id="modal-fis-titulo">Novo Doente</span><button class="modal-close" onclick="fecharModal('modal-doente')">✕</button></div>
+    <input type="hidden" id="f-id">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="form-group" style="grid-column:1/-1;"><label>Nome completo *</label><input type="text" id="f-nome" placeholder="Nome do doente"></div>
+      <div class="form-group"><label>NUP</label><input type="text" id="f-nup"></div>
+      <div class="form-group"><label>Sexo</label><select id="f-sexo"><option value="">—</option><option value="M">Masculino</option><option value="F">Feminino</option></select></div>
+      <div class="form-group"><label>Idade</label><input type="number" id="f-idade" min="0"></div>
+      <div class="form-group"><label>Data de Entrada *</label><input type="date" id="f-entrada"></div>
+      <div class="form-group" style="grid-column:1/-1;"><label>Diagnóstico *</label><input type="text" id="f-diag" placeholder="Diagnóstico médico"></div>
+      <div class="form-group" style="grid-column:1/-1;"><label>Patologia</label><input type="text" id="f-patologia" placeholder="ex: Hérnia discal L4-L5"></div>
+      <div class="form-group" style="grid-column:1/-1;"><label>Médico Referente</label><input type="text" id="f-medico" placeholder="Dr."></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-outline" onclick="fecharModal('modal-doente')">Cancelar</button><button class="btn btn-primary" onclick="guardarDoente()">💾 Guardar</button></div>
+  </div>
+</div>
+
+<!-- MODAL: Nova Sessão -->
+<div id="modal-sessao" class="modal-overlay">
+  <div class="modal-box" style="max-width:460px;">
+    <div class="modal-header"><span class="modal-title">Nova Sessão</span><button class="modal-close" onclick="fecharModal('modal-sessao')">✕</button></div>
+    <input type="hidden" id="s-doente-id">
+    <p id="s-doente-nome" style="font-weight:600;color:var(--acc);margin-bottom:16px;"></p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="form-group" style="grid-column:1/-1;"><label>Tipo de Terapia *</label><input type="text" id="s-tipo" placeholder="ex: Electroterapia, Cinesioterapia"></div>
+      <div class="form-group"><label>Fisioterapeuta</label><input type="text" id="s-fisio" placeholder="Nome"></div>
+      <div class="form-group"><label>Duração (min)</label><input type="number" id="s-duracao" value="30" min="5"></div>
+      <div class="form-group"><label>Evolução *</label><select id="s-evolucao"><option value="melhora">Melhora</option><option value="sem_alteracao">Sem Alteração</option><option value="piora">Piora</option></select></div>
+      <div class="form-group"><label>Data Sessão *</label><input type="date" id="s-data"></div>
+      <div class="form-group" style="grid-column:1/-1;"><label>Observações</label><textarea id="s-obs" rows="2" style="resize:vertical;"></textarea></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-outline" onclick="fecharModal('modal-sessao')">Cancelar</button><button class="btn btn-primary" onclick="guardarSessao()">💾 Guardar Sessão</button></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+var _hoje='{{ hoje }}';
+var _EVO={melhora:'background:rgba(5,150,105,0.1);color:var(--grn)',sem_alteracao:'background:rgba(217,119,6,0.1);color:var(--amb)',piora:'background:rgba(220,38,38,0.1);color:var(--red)'};
+
+function mostrarTab(n,btn){
+  document.querySelectorAll('.tab-pane').forEach(function(el){el.style.display='none';});
+  document.getElementById('tab-'+n).style.display='block';
+  document.querySelectorAll('.nav-btn').forEach(function(b){b.classList.remove('active');});
+  if(btn)btn.classList.add('active');
+  if(n==='home')carregarStats();
+  if(n==='doentes')carregarDoentes();
+  if(n==='sessoes')carregarSessoes();
+}
+
+async function carregarStats(){
+  var mes=_hoje.substring(0,7)+'-01';
+  var r=await api('GET','/api/fisio/estatisticas?inicio='+mes+'&fim='+_hoje);
+  if(!r)return;var d=r.dados;
+  document.getElementById('s-doentes').textContent=d.total_doentes||0;
+  document.getElementById('s-sessoes').textContent=d.total_sessoes||0;
+  document.getElementById('s-media').textContent=d.media_sessoes_por_doente||0;
+  var ev=d.por_evolucao||{};
+  document.getElementById('s-melhora').textContent=ev.melhora||0;
+  document.getElementById('s-sem-alt').textContent=ev.sem_alteracao||0;
+  document.getElementById('s-piora').textContent=ev.piora||0;
+}
+
+async function carregarDoentes(){
+  var r=await api('GET','/api/fisio/doentes');if(!r)return;
+  var tbody=document.getElementById('tabela-doentes');
+  if(!r.dados||!r.dados.length){tbody.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--mut);padding:20px;">Sem doentes registados</td></tr>';return;}
+  tbody.innerHTML=r.dados.map(function(d){
+    return '<tr tabindex="0"><td style="font-weight:600;">'+esc(d.nome)+'</td>'+
+      '<td style="font-family:var(--fm);font-size:12px;">'+esc(d.nup||'—')+'</td>'+
+      '<td>'+esc(d.diagnostico||'—')+'</td><td>'+esc(d.patologia||'—')+'</td>'+
+      '<td>'+esc(d.medico_ref||'—')+'</td>'+
+      '<td style="font-family:var(--fm);font-size:12px;">'+esc(d.data_entrada||'—')+'</td>'+
+      '<td style="white-space:nowrap;">'+
+        '<button class="btn btn-outline btn-sm" style="color:var(--grn);" onclick="abrirNovaSessao(\''+d.id+'\',\''+esc(d.nome)+'\')">🦴 Sessão</button> '+
+        '<button class="btn btn-outline btn-sm" onclick="editarDoente(\''+d.id+'\')">✏️</button> '+
+        '<button class="btn btn-danger btn-sm" onclick="desactivar(\''+d.id+'\',\''+esc(d.nome)+'\')">✕</button>'+
+      '</td></tr>';
+  }).join('');
+}
+
+async function carregarSessoes(){
+  var ini=document.getElementById('s-inicio').value;
+  var fim=document.getElementById('s-fim').value;
+  var url='/api/fisio/sessoes';
+  if(ini||fim)url+='?inicio='+(ini||_hoje.substring(0,7)+'-01')+'&fim='+(fim||_hoje);
+  var r=await api('GET',url);if(!r)return;
+  var tbody=document.getElementById('tabela-sessoes');
+  if(!r.dados||!r.dados.length){tbody.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--mut);padding:20px;">Sem sessões encontradas</td></tr>';return;}
+  tbody.innerHTML=r.dados.map(function(s){
+    var es=_EVO[s.evolucao]||'';
+    return '<tr tabindex="0"><td style="font-weight:600;">'+esc(s.nome_doente||'—')+'</td>'+
+      '<td style="font-family:var(--fm);text-align:center;">'+esc(s.num_sessao||'—')+'</td>'+
+      '<td>'+esc(s.tipo_terapia||'—')+'</td><td>'+esc(s.fisioterapeuta||'—')+'</td>'+
+      '<td style="font-family:var(--fm);">'+esc(s.duracao_min||'—')+'min</td>'+
+      '<td><span class="badge" style="'+es+'">'+esc(s.evolucao||'—')+'</span></td>'+
+      '<td style="font-family:var(--fm);font-size:12px;">'+esc(s.data_sessao||'—')+'</td>'+
+      '<td><button class="btn btn-danger btn-sm" onclick="eliminarSessao(\''+s.id+'\')">✕</button></td></tr>';
+  }).join('');
+}
+
+function abrirNovoDoente(){
+  document.getElementById('f-id').value='';
+  document.getElementById('modal-fis-titulo').textContent='Novo Doente';
+  ['f-nome','f-nup','f-diag','f-patologia','f-medico'].forEach(function(f){document.getElementById(f).value='';});
+  document.getElementById('f-sexo').value='';document.getElementById('f-idade').value='';
+  document.getElementById('f-entrada').value=_hoje;
+  abrirModal('modal-doente');
+}
+
+async function editarDoente(id){
+  var r=await api('GET','/api/fisio/doentes');if(!r)return;
+  var d=r.dados.find(function(x){return x.id===id;});if(!d)return;
+  document.getElementById('f-id').value=d.id;
+  document.getElementById('modal-fis-titulo').textContent='Editar Doente';
+  document.getElementById('f-nome').value=d.nome||'';
+  document.getElementById('f-nup').value=d.nup||'';
+  document.getElementById('f-sexo').value=d.sexo||'';
+  document.getElementById('f-idade').value=d.idade||'';
+  document.getElementById('f-diag').value=d.diagnostico||'';
+  document.getElementById('f-patologia').value=d.patologia||'';
+  document.getElementById('f-medico').value=d.medico_ref||'';
+  document.getElementById('f-entrada').value=d.data_entrada||'';
+  abrirModal('modal-doente');
+}
+
+async function guardarDoente(){
+  var id=document.getElementById('f-id').value;
+  var dados={nome:document.getElementById('f-nome').value.trim(),nup:document.getElementById('f-nup').value.trim(),
+    sexo:document.getElementById('f-sexo').value,idade:parseInt(document.getElementById('f-idade').value)||null,
+    diagnostico:document.getElementById('f-diag').value.trim(),patologia:document.getElementById('f-patologia').value.trim(),
+    medico_ref:document.getElementById('f-medico').value.trim(),data_entrada:document.getElementById('f-entrada').value||_hoje};
+  var r=id?await api('PUT','/api/fisio/doentes/'+id,dados):await api('POST','/api/fisio/doentes',dados);
+  if(r){toast(id?'Doente actualizado':'Doente registado com sucesso',id?'edit':'save');fecharModal('modal-doente');carregarDoentes();carregarStats();}
+}
+
+async function desactivar(id,nome){
+  if(!confirm('Desactivar o doente "'+nome+'"?'))return;
+  var r=await api('DELETE','/api/fisio/doentes/'+id);
+  if(r){toast('Doente desactivado','del');carregarDoentes();carregarStats();}
+}
+
+function abrirNovaSessao(did,nome){
+  document.getElementById('s-doente-id').value=did;
+  document.getElementById('s-doente-nome').textContent=nome;
+  ['s-tipo','s-fisio','s-obs'].forEach(function(f){document.getElementById(f).value='';});
+  document.getElementById('s-duracao').value='30';
+  document.getElementById('s-evolucao').value='melhora';
+  document.getElementById('s-data').value=_hoje;
+  abrirModal('modal-sessao');
+}
+
+async function guardarSessao(){
+  var dados={doente_id:document.getElementById('s-doente-id').value,
+    nome_doente:document.getElementById('s-doente-nome').textContent,
+    tipo_terapia:document.getElementById('s-tipo').value.trim(),
+    fisioterapeuta:document.getElementById('s-fisio').value.trim(),
+    duracao_min:parseInt(document.getElementById('s-duracao').value)||30,
+    evolucao:document.getElementById('s-evolucao').value,
+    data_sessao:document.getElementById('s-data').value||_hoje,
+    observacoes:document.getElementById('s-obs').value.trim()};
+  var r=await api('POST','/api/fisio/sessoes',dados);
+  if(r){toast('Sessão registada com sucesso','save');fecharModal('modal-sessao');carregarSessoes();carregarStats();}
+}
+
+async function eliminarSessao(id){
+  if(!confirm('Eliminar esta sessão?'))return;
+  var r=await api('DELETE','/api/fisio/sessoes/'+id);
+  if(r){toast('Sessão eliminada','del');carregarSessoes();carregarStats();}
+}
+
+document.addEventListener('DOMContentLoaded',function(){
+  var m=_hoje.substring(0,7);
+  document.getElementById('s-inicio').value=m+'-01';
+  document.getElementById('s-fim').value=_hoje;
+  carregarStats();
+  carregarDoentes();
+});
+</script>
+{% endblock %}

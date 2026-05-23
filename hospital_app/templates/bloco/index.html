@@ -1,0 +1,256 @@
+{% extends "base.html" %}
+{% block titulo %}Bloco Operatório — Hospital do Prenda{% endblock %}
+{% block estilos %}
+<style>
+.nav-btn{width:100%;text-align:left;padding:9px 12px;border:none;border-radius:8px;
+  font-family:var(--fh);font-size:13px;font-weight:500;cursor:pointer;
+  background:transparent;color:var(--txt);transition:all .15s;}
+.nav-btn:hover{background:rgba(26,86,219,0.06);color:var(--acc);}
+.nav-btn.active{background:rgba(26,86,219,0.1);color:var(--acc);font-weight:700;}
+</style>
+{% endblock %}
+{% block conteudo %}
+<div style="display:flex;min-height:calc(100vh - 64px);">
+<aside style="width:220px;background:var(--s1);border-right:1px solid var(--bd);padding:16px 12px;display:flex;flex-direction:column;gap:4px;flex-shrink:0;">
+  <div style="font-size:10px;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:1px;padding:8px 8px 4px;">Bloco Operatório</div>
+  <button class="nav-btn active" onclick="mostrarTab('home',this)">🏠 Início</button>
+  <button class="nav-btn" onclick="mostrarTab('cirurgias',this)">🏨 Cirurgias</button>
+  <button class="nav-btn" onclick="mostrarTab('programadas',this)">📅 Programadas</button>
+  <button class="nav-btn" onclick="mostrarTab('concluidas',this)">✅ Concluídas</button>
+</aside>
+<main style="flex:1;padding:24px;overflow-y:auto;">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+    <label style="font-size:12px;font-weight:600;color:var(--mut);">Data:</label>
+    <input type="date" id="data-sel" value="{{ data }}"
+      style="padding:7px 12px;border:1px solid var(--bd);border-radius:8px;font-family:var(--fh);font-size:13px;"
+      onchange="dataActual=this.value;carregarTudo()">
+  </div>
+
+  <div id="tab-home" class="tab-pane">
+    <h2 style="font-size:17px;font-weight:700;margin-bottom:16px;">🏨 Bloco Operatório</h2>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-bottom:20px;">
+      <div class="card" style="text-align:center;padding:14px;"><div style="font-size:26px;font-family:var(--fm);font-weight:700;color:var(--acc);" id="s-total">—</div><div style="font-size:11px;color:var(--mut);margin-top:3px;">Total</div></div>
+      <div class="card" style="text-align:center;padding:14px;"><div style="font-size:26px;font-family:var(--fm);font-weight:700;color:var(--acc);" id="s-electivas">—</div><div style="font-size:11px;color:var(--mut);margin-top:3px;">Electivas</div></div>
+      <div class="card" style="text-align:center;padding:14px;"><div style="font-size:26px;font-family:var(--fm);font-weight:700;color:var(--amb);" id="s-urgentes">—</div><div style="font-size:11px;color:var(--mut);margin-top:3px;">Urgentes</div></div>
+      <div class="card" style="text-align:center;padding:14px;"><div style="font-size:26px;font-family:var(--fm);font-weight:700;color:var(--red);" id="s-emergencias">—</div><div style="font-size:11px;color:var(--mut);margin-top:3px;">Emergências</div></div>
+      <div class="card" style="text-align:center;padding:14px;"><div style="font-size:26px;font-family:var(--fm);font-weight:700;color:var(--grn);" id="s-concluidas">—</div><div style="font-size:11px;color:var(--mut);margin-top:3px;">Concluídas</div></div>
+    </div>
+    <button class="btn btn-primary" onclick="abrirNovaCirurgia()">+ Nova Cirurgia</button>
+  </div>
+
+  <div id="tab-cirurgias" class="tab-pane" style="display:none;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+      <h2 style="font-size:17px;font-weight:700;">🏨 Todas as Cirurgias</h2>
+      <div style="display:flex;gap:8px;">
+        <select id="f-urgencia" style="padding:7px 10px;border:1px solid var(--bd);border-radius:8px;font-size:13px;" onchange="carregarCirurgias()">
+          <option value="">Todas urgências</option><option value="electiva">Electiva</option>
+          <option value="urgente">Urgente</option><option value="emergencia">Emergência</option>
+        </select>
+        <select id="f-estado" style="padding:7px 10px;border:1px solid var(--bd);border-radius:8px;font-size:13px;" onchange="carregarCirurgias()">
+          <option value="">Todos estados</option><option value="agendada">Agendada</option>
+          <option value="em_curso">Em Curso</option><option value="concluida">Concluída</option>
+          <option value="cancelada">Cancelada</option>
+        </select>
+        <button class="btn btn-primary btn-sm" onclick="abrirNovaCirurgia()">+ Nova</button>
+      </div>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden;">
+      <table><thead><tr><th>Nome</th><th>Tipo</th><th>Urgência</th><th>Cirurgião</th><th>Sala</th><th>Data</th><th>Hora</th><th>Estado</th><th>Acções</th></tr></thead>
+      <tbody id="tabela-cirurgias"><tr><td colspan="9" style="text-align:center;color:var(--mut);padding:20px;">A carregar...</td></tr></tbody></table>
+    </div>
+  </div>
+
+  <div id="tab-programadas" class="tab-pane" style="display:none;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <h2 style="font-size:17px;font-weight:700;">📅 Cirurgias Programadas</h2>
+      <button class="btn btn-primary btn-sm" onclick="abrirNovaCirurgia()">+ Nova</button>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden;">
+      <table><thead><tr><th>Nome</th><th>Tipo</th><th>Urgência</th><th>Cirurgião</th><th>Sala</th><th>Data</th><th>Hora</th><th>Acções</th></tr></thead>
+      <tbody id="tabela-programadas"><tr><td colspan="8" style="text-align:center;color:var(--mut);padding:20px;">A carregar...</td></tr></tbody></table>
+    </div>
+  </div>
+
+  <div id="tab-concluidas" class="tab-pane" style="display:none;">
+    <h2 style="font-size:17px;font-weight:700;margin-bottom:16px;">✅ Cirurgias Concluídas</h2>
+    <div class="card" style="padding:0;overflow:hidden;">
+      <table><thead><tr><th>Nome</th><th>Tipo</th><th>Cirurgião</th><th>Sala</th><th>Data</th><th>Hora Fim</th><th>Complicações</th><th>Acções</th></tr></thead>
+      <tbody id="tabela-concluidas"><tr><td colspan="8" style="text-align:center;color:var(--mut);padding:20px;">A carregar...</td></tr></tbody></table>
+    </div>
+  </div>
+</main>
+</div>
+
+<!-- MODAL: Nova/Editar Cirurgia -->
+<div id="modal-cirurgia" class="modal-overlay">
+  <div class="modal-box" style="max-width:560px;">
+    <div class="modal-header"><span class="modal-title" id="modal-cir-titulo">Nova Cirurgia</span><button class="modal-close" onclick="fecharModal('modal-cirurgia')">✕</button></div>
+    <input type="hidden" id="b-id">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="form-group" style="grid-column:1/-1;"><label>Nome do Doente *</label><input type="text" id="b-nome" placeholder="Nome completo"></div>
+      <div class="form-group"><label>NUP</label><input type="text" id="b-nup"></div>
+      <div class="form-group"><label>Sexo</label><select id="b-sexo"><option value="">—</option><option value="M">Masculino</option><option value="F">Feminino</option></select></div>
+      <div class="form-group"><label>Idade</label><input type="number" id="b-idade" min="0"></div>
+      <div class="form-group" style="grid-column:1/-1;"><label>Tipo de Cirurgia *</label><input type="text" id="b-tipo" placeholder="ex: Apendicectomia, Colecistectomia"></div>
+      <div class="form-group"><label>Urgência</label><select id="b-urgencia"><option value="electiva">Electiva</option><option value="urgente">Urgente</option><option value="emergencia">Emergência</option></select></div>
+      <div class="form-group"><label>Anestesia</label><select id="b-anestesia"><option value="geral">Geral</option><option value="local">Local</option><option value="raquidiana">Raquidiana</option><option value="epidural">Epidural</option><option value="sedacao">Sedação</option></select></div>
+      <div class="form-group"><label>Cirurgião *</label><input type="text" id="b-cirurgiao" placeholder="Dr."></div>
+      <div class="form-group"><label>Anestesista</label><input type="text" id="b-anestesista"></div>
+      <div class="form-group"><label>Data Programada *</label><input type="date" id="b-data"></div>
+      <div class="form-group"><label>Hora Início</label><input type="time" id="b-hora"></div>
+      <div class="form-group"><label>Sala</label><input type="text" id="b-sala" placeholder="ex: Sala 1"></div>
+      <div class="form-group" style="grid-column:1/-1;"><label>Diagnóstico</label><textarea id="b-diag" rows="2" style="resize:vertical;"></textarea></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-outline" onclick="fecharModal('modal-cirurgia')">Cancelar</button><button class="btn btn-primary" onclick="guardarCirurgia()">💾 Guardar</button></div>
+  </div>
+</div>
+
+<!-- MODAL: Actualizar Estado -->
+<div id="modal-actualizar" class="modal-overlay">
+  <div class="modal-box" style="max-width:400px;">
+    <div class="modal-header"><span class="modal-title">Actualizar Cirurgia</span><button class="modal-close" onclick="fecharModal('modal-actualizar')">✕</button></div>
+    <input type="hidden" id="a-bid">
+    <p id="a-nome-label" style="font-weight:600;color:var(--acc);margin-bottom:16px;"></p>
+    <div class="form-group"><label>Estado *</label><select id="a-estado"><option value="em_curso">Em Curso</option><option value="concluida">Concluída</option><option value="cancelada">Cancelada</option></select></div>
+    <div class="form-group"><label>Hora de Fim</label><input type="time" id="a-hora-fim"></div>
+    <div class="form-group"><label>Complicações</label><textarea id="a-complicacoes" rows="3" style="resize:vertical;"></textarea></div>
+    <div class="form-group"><label>Observações</label><textarea id="a-obs" rows="2" style="resize:vertical;"></textarea></div>
+    <div class="modal-footer"><button class="btn btn-outline" onclick="fecharModal('modal-actualizar')">Cancelar</button><button class="btn btn-primary" onclick="guardarActualizacao()">💾 Actualizar</button></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+var dataActual='{{ data }}';
+var _URG={electiva:'background:rgba(26,86,219,0.1);color:var(--acc)',urgente:'background:rgba(217,119,6,0.1);color:var(--amb)',emergencia:'background:rgba(220,38,38,0.1);color:var(--red)'};
+var _EST={agendada:'background:rgba(217,119,6,0.1);color:var(--amb)',em_curso:'background:rgba(26,86,219,0.1);color:var(--acc)',concluida:'background:rgba(5,150,105,0.1);color:var(--grn)',cancelada:'background:rgba(107,114,128,0.1);color:var(--mut)'};
+
+function mostrarTab(n,btn){
+  document.querySelectorAll('.tab-pane').forEach(function(el){el.style.display='none';});
+  document.getElementById('tab-'+n).style.display='block';
+  document.querySelectorAll('.nav-btn').forEach(function(b){b.classList.remove('active');});
+  if(btn)btn.classList.add('active');
+  if(n==='home')carregarStats();
+  if(n==='cirurgias')carregarCirurgias();
+  if(n==='programadas')carregarProgramadas();
+  if(n==='concluidas')carregarConcluidas();
+}
+
+function renderLinhas(dados,colunas,tbody){
+  if(!dados||!dados.length){document.getElementById(tbody).innerHTML='<tr><td colspan="'+colunas+'" style="text-align:center;color:var(--mut);padding:20px;">Sem dados encontrados</td></tr>';return;}
+}
+
+async function carregarStats(){
+  var d=dataActual;var r=await api('GET','/api/bloco/estatisticas?inicio='+d.substring(0,7)+'-01&fim='+d);
+  if(!r)return;var s=r.dados;
+  document.getElementById('s-total').textContent=s.total||0;
+  document.getElementById('s-electivas').textContent=s.electivas||0;
+  document.getElementById('s-urgentes').textContent=s.urgentes||0;
+  document.getElementById('s-emergencias').textContent=s.emergencias||0;
+  document.getElementById('s-concluidas').textContent=s.concluidas||0;
+}
+
+async function carregarCirurgias(){
+  var urg=document.getElementById('f-urgencia').value;
+  var est=document.getElementById('f-estado').value;
+  var url='/api/bloco/cirurgias?data='+dataActual;
+  if(urg)url+='&urgencia='+urg;if(est)url+='&estado='+est;
+  var r=await api('GET',url);if(!r)return;
+  var tbody=document.getElementById('tabela-cirurgias');
+  if(!r.dados||!r.dados.length){tbody.innerHTML='<tr><td colspan="9" style="text-align:center;color:var(--mut);padding:20px;">Sem cirurgias encontradas</td></tr>';return;}
+  tbody.innerHTML=r.dados.map(function(c){
+    var us=_URG[c.urgencia]||'';var es=_EST[c.estado]||'';
+    return '<tr tabindex="0"><td style="font-weight:600;">'+esc(c.nome)+'</td><td>'+esc(c.tipo_cirurgia||'—')+'</td>'+
+      '<td><span class="badge" style="'+us+'">'+esc(c.urgencia||'—')+'</span></td>'+
+      '<td>'+esc(c.cirurgiao||'—')+'</td><td>'+esc(c.sala||'—')+'</td>'+
+      '<td style="font-family:var(--fm);font-size:12px;">'+esc(c.data_prog||'—')+'</td>'+
+      '<td style="font-family:var(--fm);font-size:12px;">'+esc(c.hora_inicio||'—')+'</td>'+
+      '<td><span class="badge" style="'+es+'">'+esc(c.estado||'—')+'</span></td>'+
+      '<td style="white-space:nowrap;"><button class="btn btn-outline btn-sm" onclick="abrirActualizar(\''+c.id+'\',\''+esc(c.nome)+'\')">✏️</button> '+
+      '<button class="btn btn-danger btn-sm" onclick="eliminar(\''+c.id+'\')">✕</button></td></tr>';
+  }).join('');
+}
+
+async function carregarProgramadas(){
+  var r=await api('GET','/api/bloco/cirurgias?estado=agendada');if(!r)return;
+  var tbody=document.getElementById('tabela-programadas');
+  if(!r.dados||!r.dados.length){tbody.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--mut);padding:20px;">Sem cirurgias programadas</td></tr>';return;}
+  tbody.innerHTML=r.dados.map(function(c){
+    var us=_URG[c.urgencia]||'';
+    return '<tr tabindex="0"><td style="font-weight:600;">'+esc(c.nome)+'</td><td>'+esc(c.tipo_cirurgia||'—')+'</td>'+
+      '<td><span class="badge" style="'+us+'">'+esc(c.urgencia||'—')+'</span></td>'+
+      '<td>'+esc(c.cirurgiao||'—')+'</td><td>'+esc(c.sala||'—')+'</td>'+
+      '<td style="font-family:var(--fm);font-size:12px;">'+esc(c.data_prog||'—')+'</td>'+
+      '<td style="font-family:var(--fm);font-size:12px;">'+esc(c.hora_inicio||'—')+'</td>'+
+      '<td><button class="btn btn-outline btn-sm" onclick="abrirActualizar(\''+c.id+'\',\''+esc(c.nome)+'\')">▶ Iniciar</button> '+
+      '<button class="btn btn-danger btn-sm" onclick="eliminar(\''+c.id+'\')">✕</button></td></tr>';
+  }).join('');
+}
+
+async function carregarConcluidas(){
+  var r=await api('GET','/api/bloco/cirurgias?estado=concluida');if(!r)return;
+  var tbody=document.getElementById('tabela-concluidas');
+  if(!r.dados||!r.dados.length){tbody.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--mut);padding:20px;">Sem cirurgias concluídas</td></tr>';return;}
+  tbody.innerHTML=r.dados.map(function(c){
+    return '<tr tabindex="0"><td style="font-weight:600;">'+esc(c.nome)+'</td><td>'+esc(c.tipo_cirurgia||'—')+'</td>'+
+      '<td>'+esc(c.cirurgiao||'—')+'</td><td>'+esc(c.sala||'—')+'</td>'+
+      '<td style="font-family:var(--fm);font-size:12px;">'+esc(c.data_prog||'—')+'</td>'+
+      '<td style="font-family:var(--fm);font-size:12px;">'+esc(c.hora_fim||'—')+'</td>'+
+      '<td style="font-size:12px;">'+esc(c.complicacoes||'Nenhuma')+'</td>'+
+      '<td><button class="btn btn-danger btn-sm" onclick="eliminar(\''+c.id+'\')">✕</button></td></tr>';
+  }).join('');
+}
+
+function carregarTudo(){carregarStats();carregarCirurgias();carregarProgramadas();carregarConcluidas();}
+
+function abrirNovaCirurgia(){
+  document.getElementById('b-id').value='';
+  document.getElementById('modal-cir-titulo').textContent='Nova Cirurgia';
+  ['b-nome','b-nup','b-cirurgiao','b-anestesista','b-sala','b-diag'].forEach(function(f){document.getElementById(f).value='';});
+  document.getElementById('b-sexo').value='';document.getElementById('b-idade').value='';
+  document.getElementById('b-urgencia').value='electiva';document.getElementById('b-anestesia').value='geral';
+  document.getElementById('b-data').value=dataActual;document.getElementById('b-hora').value='';
+  abrirModal('modal-cirurgia');
+}
+
+async function guardarCirurgia(){
+  var id=document.getElementById('b-id').value;
+  var dados={nome:document.getElementById('b-nome').value.trim(),nup:document.getElementById('b-nup').value.trim(),
+    sexo:document.getElementById('b-sexo').value,idade:parseInt(document.getElementById('b-idade').value)||null,
+    tipo_cirurgia:document.getElementById('b-tipo').value.trim(),urgencia:document.getElementById('b-urgencia').value,
+    anestesia:document.getElementById('b-anestesia').value,cirurgiao:document.getElementById('b-cirurgiao').value.trim(),
+    anestesista:document.getElementById('b-anestesista').value.trim(),data_prog:document.getElementById('b-data').value||dataActual,
+    hora_inicio:document.getElementById('b-hora').value,sala:document.getElementById('b-sala').value.trim(),
+    diagnostico:document.getElementById('b-diag').value.trim()};
+  var r=id?await api('PUT','/api/bloco/cirurgias/'+id,dados):await api('POST','/api/bloco/cirurgias',dados);
+  if(r){toast(id?'Cirurgia actualizada':'Cirurgia programada com sucesso',id?'edit':'save');fecharModal('modal-cirurgia');carregarTudo();}
+}
+
+function abrirActualizar(bid,nome){
+  document.getElementById('a-bid').value=bid;
+  document.getElementById('a-nome-label').textContent=nome;
+  document.getElementById('a-estado').value='em_curso';
+  document.getElementById('a-hora-fim').value='';
+  document.getElementById('a-complicacoes').value='';
+  document.getElementById('a-obs').value='';
+  abrirModal('modal-actualizar');
+}
+
+async function guardarActualizacao(){
+  var bid=document.getElementById('a-bid').value;
+  var dados={estado:document.getElementById('a-estado').value,hora_fim:document.getElementById('a-hora-fim').value,
+    complicacoes:document.getElementById('a-complicacoes').value.trim(),observacoes:document.getElementById('a-obs').value.trim()};
+  var r=await api('PUT','/api/bloco/cirurgias/'+bid,dados);
+  if(r){toast('Cirurgia actualizada com sucesso','edit');fecharModal('modal-actualizar');carregarTudo();}
+}
+
+async function eliminar(id){
+  if(!confirm('Eliminar esta cirurgia?'))return;
+  var r=await api('DELETE','/api/bloco/cirurgias/'+id);
+  if(r){toast('Cirurgia eliminada','del');carregarTudo();}
+}
+
+document.addEventListener('DOMContentLoaded',function(){carregarStats();carregarCirurgias();});
+</script>
+{% endblock %}

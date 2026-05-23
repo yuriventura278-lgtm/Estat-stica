@@ -12,21 +12,17 @@
       letter-spacing:1px;padding:8px 8px 4px;">🩸 Hemoterapia</div>
 
     <button class="nav-btn active" id="nav-home"        onclick="mostrarTab('home',this)">🏠 Início</button>
-    <button class="nav-btn"        id="nav-dadivas"     onclick="mostrarTab('dadivas',this)">💉 Dádivas</button>
-    <button class="nav-btn"        id="nav-transfusoes" onclick="mostrarTab('transfusoes',this)">🔴 Transfusões</button>
+    <button class="nav-btn"        id="nav-dadivas"     onclick="mostrarTab('dadivas',this)">🩸 Dádivas</button>
+    <button class="nav-btn"        id="nav-transfusoes" onclick="mostrarTab('transfusoes',this)">💉 Transfusões</button>
+    <button class="nav-btn"        id="nav-stock"       onclick="mostrarTab('stock',this)">📊 Stock</button>
 
     <div style="margin-top:auto;padding-top:16px;border-top:1px solid var(--bd);">
-      <!-- Filtro de datas para estatísticas -->
-      <div class="form-group" style="margin-bottom:6px;">
-        <label>Período: Início</label>
-        <input type="date" id="data-inicio" style="padding:6px 10px;border:1px solid var(--bd);border-radius:8px;font-size:12px;">
-      </div>
       <div class="form-group" style="margin-bottom:8px;">
-        <label>Período: Fim</label>
-        <input type="date" id="data-fim" style="padding:6px 10px;border:1px solid var(--bd);border-radius:8px;font-size:12px;">
+        <label>Data</label>
+        <input type="date" id="data-sel" value="{{ hoje }}"
+          style="padding:7px 10px;border:1px solid var(--bd);border-radius:8px;font-size:12px;"
+          onchange="mudarData(this.value)">
       </div>
-      <button class="btn btn-outline btn-sm" style="width:100%;justify-content:center;margin-bottom:6px;"
-        onclick="carregarEstatisticas()">🔄 Actualizar</button>
       <button class="btn btn-outline btn-sm" style="width:100%;justify-content:center;"
         onclick="exportarDados()">📥 Exportar JSON</button>
     </div>
@@ -39,15 +35,15 @@
     <div id="tab-home" class="tab-pane">
       <h2 style="font-size:17px;font-weight:700;margin-bottom:16px;">🩸 Serviço de Hemoterapia</h2>
 
-      <!-- Estatísticas principais -->
+      <!-- Estatísticas do dia -->
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:24px;">
         <div class="card" style="text-align:center;padding:16px;">
           <div style="font-size:28px;font-family:var(--fm);font-weight:700;color:var(--acc);" id="stat-dadivas">—</div>
-          <div style="font-size:11px;color:var(--mut);margin-top:4px;">Dádivas (mês)</div>
+          <div style="font-size:11px;color:var(--mut);margin-top:4px;">Dádivas Hoje</div>
         </div>
         <div class="card" style="text-align:center;padding:16px;">
           <div style="font-size:28px;font-family:var(--fm);font-weight:700;color:var(--red);" id="stat-transfusoes">—</div>
-          <div style="font-size:11px;color:var(--mut);margin-top:4px;">Transfusões (mês)</div>
+          <div style="font-size:11px;color:var(--mut);margin-top:4px;">Transfusões Hoje</div>
         </div>
         <div class="card" style="text-align:center;padding:16px;">
           <div style="font-size:28px;font-family:var(--fm);font-weight:700;color:var(--amb);" id="stat-critico">—</div>
@@ -122,6 +118,22 @@
             <tr><td colspan="8" style="text-align:center;color:var(--mut);padding:24px;">A carregar...</td></tr>
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- ── TAB: STOCK ────────────────────────────────────────── -->
+    <div id="tab-stock" class="tab-pane" style="display:none;">
+      <h2 style="font-size:17px;font-weight:700;margin-bottom:16px;">📊 Stock de Sangue</h2>
+      <div class="card">
+        <div class="card-title">📦 Inventário por Grupo Sanguíneo</div>
+        <div id="stock-tab-container" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:12px;">
+          <div style="text-align:center;color:var(--mut);grid-column:1/-1;padding:16px;">A carregar stock...</div>
+        </div>
+        <p style="margin-top:12px;font-size:11px;color:var(--mut);">
+          <span style="color:var(--grn);font-weight:700;">Verde</span> ≥ 5 unidades &nbsp;·&nbsp;
+          <span style="color:var(--amb);font-weight:700;">Âmbar</span> 2–4 unidades &nbsp;·&nbsp;
+          <span style="color:var(--red);font-weight:700;">Vermelho</span> &lt; 2 unidades
+        </p>
       </div>
     </div>
 
