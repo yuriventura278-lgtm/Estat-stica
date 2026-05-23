@@ -406,6 +406,7 @@ async function carregarEstatisticas() {
   document.getElementById('stat-urgentes').textContent    = d.urgentes    ?? '—';
   document.getElementById('stat-emergencias').textContent = d.emergencias ?? '—';
   document.getElementById('stat-concluidas').textContent  = d.concluidas  ?? '—';
+  document.getElementById('stat-canceladas').textContent  = d.canceladas  ?? '—';
 }
 
 /* ─── Carregar cirurgias do dia (lista/timeline) ─────────── */
@@ -436,8 +437,16 @@ async function carregarCirurgiasHoje() {
 
 /* ─── Carregar lista de todas as cirurgias ───────────────── */
 async function carregarCirurgias() {
-  var data = document.getElementById('filtro-data').value || dataActual;
-  var r = await api('GET', '/api/bloco/cirurgias?data=' + data);
+  var data    = document.getElementById('filtro-data').value || dataActual;
+  var urgencia = document.getElementById('filtro-urgencia').value;
+  var estado   = document.getElementById('filtro-estado').value;
+  var url = '/api/bloco/cirurgias';
+  var p = [];
+  if(data)     p.push('data='     + data);
+  if(urgencia) p.push('urgencia=' + urgencia);
+  if(estado)   p.push('estado='   + estado);
+  if(p.length) url += '?' + p.join('&');
+  var r = await api('GET', url);
   if(!r) return;
   var tbody = document.getElementById('tabela-cirurgias');
   if(!r.dados || !r.dados.length) {
@@ -484,6 +493,31 @@ async function carregarProgramadas() {
         '<button class="btn btn-outline btn-sm" onclick="abrirModalActualizar(\''+d.id+'\',\''+esc(d.nome)+'\')">Actualizar</button> ' +
         '<button class="btn btn-danger btn-sm" onclick="eliminarCirurgia(\''+d.id+'\')">✕</button>' +
       '</td>' +
+    '</tr>';
+  }).join('');
+}
+
+/* ─── Carregar cirurgias concluídas ──────────────────────── */
+async function carregarConcluidas() {
+  var r = await api('GET', '/api/bloco/cirurgias?estado=concluida');
+  if(!r) return;
+  var tbody = document.getElementById('tabela-concluidas');
+  if(!r.dados || !r.dados.length) {
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--mut);padding:24px;">Sem cirurgias concluídas</td></tr>';
+    return;
+  }
+  tbody.innerHTML = r.dados.map(function(d){
+    return '<tr tabindex="0">' +
+      '<td style="font-weight:600;">'+esc(d.nome)+'</td>' +
+      '<td>'+esc(d.tipo_cirurgia||'—')+'</td>' +
+      '<td>'+badgeUrgencia(d.urgencia)+'</td>' +
+      '<td>'+esc(d.cirurgiao||'—')+'</td>' +
+      '<td>'+esc(d.sala||'—')+'</td>' +
+      '<td style="font-family:var(--fm);font-size:12px;">'+(d.data_programada||d.data||'—')+'</td>' +
+      '<td style="font-family:var(--fm);font-size:12px;">'+(d.hora_inicio||'—')+'</td>' +
+      '<td style="font-family:var(--fm);font-size:12px;">'+(d.hora_fim||'—')+'</td>' +
+      '<td style="font-size:12px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+esc(d.complicacoes||'—')+'</td>' +
+      '<td><button class="btn btn-danger btn-sm" onclick="eliminarCirurgia(\''+d.id+'\')">✕</button></td>' +
     '</tr>';
   }).join('');
 }
