@@ -116,6 +116,8 @@ function initKeyboardNav(){
 <script src="hprenda-db.js"></script>
 <script src="hprenda-crud.js"></script>
 <script src="hprenda-export.js"></script>
+<script src="hprenda-analytics.js"></script>
+<script src="hprenda-grid.js"></script>
 
 <style>
 :root {
@@ -811,7 +813,8 @@ if(!window._fb) window._fb = {
     <a href="estatistica.html" class="btn btn-sm no-print" style="background:rgba(6,182,212,0.18);color:#06b6d4;border:1px solid rgba(6,182,212,0.35);font-size:12px;text-decoration:none;padding:6px 12px;border-radius:6px;font-weight:500;">📊 Estatística</a>
     <a href="login.html" class="btn btn-sm no-print" style="background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.6);border:1px solid rgba(255,255,255,0.15);font-size:12px;text-decoration:none;padding:6px 12px;border-radius:6px;font-weight:500;">🔐 Login</a>
     <button class="btn btn-ghost btn-sm no-print" onclick="saveAllData()">💾 Guardar</button>
-    <button class="btn btn-primary btn-sm no-print" onclick="showSection('monitoring')">📊 Monitorização</button>
+    <button class="btn btn-ghost btn-sm no-print" onclick="showSection('db-grid')">🗄️ Dados</button>
+    <button class="btn btn-primary btn-sm no-print" onclick="showSection('analytics')">🔬 Análise</button>
     <button class="btn btn-ghost btn-sm no-print" onclick="showSection('export')">📤 Exportar</button>
   </div>
 </div>
@@ -850,9 +853,21 @@ if(!window._fb) window._fb = {
     <div class="sidebar-divider"></div>
 
     <div class="sidebar-section">
-      <div class="sidebar-label">Monitorização</div>
+      <div class="sidebar-label">Base de Dados</div>
+      <button class="nav-item" onclick="showSection('db-grid')">
+        <span class="nav-icon">🗄️</span> Tabela de Dados
+      </button>
+    </div>
+
+    <div class="sidebar-divider"></div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Análise</div>
+      <button class="nav-item" onclick="showSection('analytics')">
+        <span class="nav-icon">🔬</span> Análise Crítica
+      </button>
       <button class="nav-item" onclick="showSection('monitoring')">
-        <span class="nav-icon">📊</span> Dashboard Analytics
+        <span class="nav-icon">📊</span> Monitorização
       </button>
       <button class="nav-item" onclick="showSection('historico')">
         <span class="nav-icon">📅</span> Histórico
@@ -1246,6 +1261,140 @@ if(!window._fb) window._fb = {
       </div>
     </div>
 
+    <!-- ══ BASE DE DADOS — TABELA EXCEL ══ -->
+    <div id="sec-db-grid" class="section">
+      <div class="page-header">
+        <div>
+          <div class="page-title">🗄️ Base de Dados — Tabela de Dados</div>
+          <div class="page-sub">Visualize, edite e elimine registos históricos directamente na tabela</div>
+        </div>
+      </div>
+      <div id="hp-grid-container"></div>
+    </div>
+
+    <!-- ══ ANÁLISE CRÍTICA ══ -->
+    <div id="sec-analytics" class="section">
+      <div class="page-header">
+        <div>
+          <div class="page-title">🔬 Análise Crítica e Comparativa</div>
+          <div class="page-sub">Indicadores de desempenho, comparação entre períodos e diagnóstico automático</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <label style="font-size:12px;font-weight:600;color:var(--text-muted)">Período:</label>
+          <select id="analytics-period" class="btn btn-outline" style="padding:7px 12px;font-size:13px;" onchange="renderAnalytics()">
+            <option value="dia">Diário</option>
+            <option value="semana">Semanal</option>
+            <option value="mes" selected>Mensal</option>
+            <option value="trimestre">Trimestral</option>
+            <option value="semestre">Semestral</option>
+            <option value="ano">Anual</option>
+          </select>
+          <input type="date" id="analytics-ref-date" class="btn btn-outline" style="padding:7px 12px;font-size:13px;" onchange="renderAnalytics()">
+          <button class="btn btn-primary btn-sm" onclick="renderAnalytics()">🔄 Actualizar</button>
+        </div>
+      </div>
+
+      <!-- KPI INDICATORS -->
+      <div id="analytics-kpi-grid" class="kpi-grid"></div>
+
+      <!-- COMPARATIVE TABLE -->
+      <div class="card" style="margin-bottom:20px;">
+        <div class="card-header">
+          <div class="card-title">📊 Comparação de Períodos</div>
+          <div id="analytics-period-labels" class="card-subtitle"></div>
+        </div>
+        <div class="card-body" style="padding:0;overflow-x:auto;">
+          <table id="analytics-compare-table" style="width:100%;border-collapse:collapse;min-width:600px;font-size:13px;">
+            <thead>
+              <tr style="background:#f8f9fb;border-bottom:2px solid #e5e7eb;">
+                <th style="padding:12px 16px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;">Indicador</th>
+                <th style="padding:12px 16px;text-align:right;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;" id="analytics-col-current">Período Actual</th>
+                <th style="padding:12px 16px;text-align:right;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;" id="analytics-col-baseline">Período Base</th>
+                <th style="padding:12px 16px;text-align:right;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;">Variação</th>
+                <th style="padding:12px 16px;text-align:center;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;">Estado</th>
+              </tr>
+            </thead>
+            <tbody id="analytics-compare-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- PER-SPECIALTY TABLE -->
+      <div class="card" style="margin-bottom:20px;">
+        <div class="card-header">
+          <div class="card-title">🩺 Por Especialidade — Período Actual</div>
+        </div>
+        <div class="card-body" style="padding:0;overflow-x:auto;">
+          <table id="analytics-esp-table" style="width:100%;border-collapse:collapse;min-width:700px;font-size:12px;">
+            <thead>
+              <tr style="background:#1a56db;color:#fff;">
+                <th style="padding:10px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;">Especialidade</th>
+                <th style="padding:10px 14px;text-align:center;">Agend.</th>
+                <th style="padding:10px 14px;text-align:center;">Realiz.</th>
+                <th style="padding:10px 14px;text-align:center;">Cancel.</th>
+                <th style="padding:10px 14px;text-align:center;">&lt;15 A</th>
+                <th style="padding:10px 14px;text-align:center;">&gt;15 A</th>
+                <th style="padding:10px 14px;text-align:center;">% Realiz.</th>
+                <th style="padding:10px 14px;text-align:center;">% Cancel.</th>
+                <th style="padding:10px 14px;text-align:center;">Estado</th>
+              </tr>
+            </thead>
+            <tbody id="analytics-esp-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- NARRATIVE BLOCK -->
+      <div class="card" style="margin-bottom:20px;">
+        <div class="card-header">
+          <div class="card-title">📝 Diagnóstico Automático</div>
+          <div class="card-subtitle">Análise gerada automaticamente com base nos dados do período</div>
+        </div>
+        <div class="card-body" style="padding:24px;">
+          <div id="analytics-narrative" style="font-size:14px;line-height:1.8;color:var(--text);white-space:pre-wrap;font-family:'Inter',sans-serif;"></div>
+        </div>
+      </div>
+
+      <!-- PROCEDURES & MATERIALS MINI-TABLES -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;" class="analytics-two-col">
+        <div class="card">
+          <div class="card-header"><div class="card-title">⚕️ Procedimentos</div></div>
+          <div class="card-body" style="padding:0;overflow-x:auto;">
+            <table id="analytics-proc-table" style="width:100%;border-collapse:collapse;font-size:12px;">
+              <thead><tr style="background:#059669;color:#fff;">
+                <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;">Procedimento</th>
+                <th style="padding:8px 12px;text-align:center;">Manhã</th>
+                <th style="padding:8px 12px;text-align:center;">Tarde</th>
+                <th style="padding:8px 12px;text-align:center;">Total</th>
+              </tr></thead>
+              <tbody id="analytics-proc-body"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">🧰 Materiais</div></div>
+          <div class="card-body" style="padding:0;overflow-x:auto;">
+            <table id="analytics-mat-table" style="width:100%;border-collapse:collapse;font-size:12px;">
+              <thead><tr style="background:#d97706;color:#fff;">
+                <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;">Material</th>
+                <th style="padding:8px 12px;text-align:center;">Stock</th>
+                <th style="padding:8px 12px;text-align:center;">Usado</th>
+                <th style="padding:8px 12px;text-align:center;">Saldo</th>
+                <th style="padding:8px 12px;text-align:center;">Cobertura</th>
+              </tr></thead>
+              <tbody id="analytics-mat-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div id="analytics-empty" style="display:none;text-align:center;padding:60px 20px;color:var(--text-muted);">
+        <div style="font-size:48px;margin-bottom:16px;">📭</div>
+        <div style="font-size:18px;font-weight:600;margin-bottom:8px;">Sem dados para este período</div>
+        <div style="font-size:13px;">Registe dados nas secções de Consultas, Procedimentos e Material e guarde-os.</div>
+      </div>
+    </div>
+
   </div><!-- /main -->
 </div><!-- /layout -->
 
@@ -1317,12 +1466,14 @@ function showSection(id) {
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.getElementById('sec-'+id).classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  const map = {dashboard:0,consultas:1,procedimentos:2,material:3,monitoring:5,historico:6,export:7};
+  const map = {dashboard:0,consultas:1,procedimentos:2,material:3,'db-grid':5,analytics:6,monitoring:8,historico:9,export:10};
   const items = document.querySelectorAll('.nav-item');
   if (map[id] !== undefined && items[map[id]]) items[map[id]].classList.add('active');
   if (id === 'historico') renderHistory('dia');
   if (id === 'dashboard') { updateDashboard(); renderDashboardCharts(); }
   if (id === 'monitoring') renderMonitoring();
+  if (id === 'db-grid') renderDBGrid();
+  if (id === 'analytics') renderAnalytics();
   closeMobileSidebar();
 }
 
@@ -2201,6 +2352,229 @@ buildProcTable();
 buildMatTable();
 updateDashboard();
 initKeyboardNav();
+
+// ── Analytics ref date init ──────────────────────────────
+(function(){
+  const el = document.getElementById('analytics-ref-date');
+  if (el) el.value = todayKey();
+})();
+
+// ══════════════════════════════════════════════════════════
+// DB GRID — renders the Excel-like editable table
+// ══════════════════════════════════════════════════════════
+function renderDBGrid() {
+  if (window.GridHP && window.GridHP.init) {
+    GridHP.init('hp-grid-container', { type: 'summary' });
+  } else {
+    document.getElementById('hp-grid-container').innerHTML =
+      '<div style="padding:40px;text-align:center;color:var(--text-muted)">A carregar módulo de tabela...</div>';
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// ANALYTICS — renders the critical analysis section
+// ══════════════════════════════════════════════════════════
+function renderAnalytics() {
+  const mode = document.getElementById('analytics-period')?.value || 'mes';
+  const refDate = document.getElementById('analytics-ref-date')?.value || todayKey();
+
+  const hasFns = window.buildPeriodStats && window.getDateRange && window.buildComparativeStats &&
+                 window.scoreKPIs && window.generateNarrative;
+
+  if (!hasFns) {
+    document.getElementById('analytics-narrative').textContent =
+      'Módulo de análise ainda a carregar. Tente novamente em instantes.';
+    return;
+  }
+
+  const currentDates = getDateRange(mode, refDate);
+  const baselineDates = getBaselineDateRange(mode, refDate);
+  const currentStats = buildPeriodStats(currentDates);
+  const baselineStats = buildPeriodStats(baselineDates);
+  const comparative = buildComparativeStats(currentStats, baselineStats);
+  const kpiScores = scoreKPIs(currentStats);
+  const narrative = generateNarrative(currentStats, comparative,
+    _analytics_periodLabel(mode, refDate), _analytics_baselineLabel(mode, refDate));
+
+  const hasData = currentDates.length > 0;
+  document.getElementById('analytics-empty').style.display = hasData ? 'none' : 'block';
+  ['analytics-kpi-grid','analytics-compare-table','analytics-esp-table',
+   'analytics-narrative','analytics-proc-table','analytics-mat-table'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.closest('.card') ? el.closest('.card').style.display = hasData ? '' : 'none'
+                                : (el.style.display = hasData ? '' : 'none');
+  });
+  if (!hasData) return;
+
+  // ── KPI Cards ────────────────────────────────────────────
+  const kpiDefs = [
+    { key:'realizacao', label:'Taxa de Realização', value: _pct(currentStats.taxaRealizacao), icon:'✅', color: kpiScores.realizacao },
+    { key:'cancelamento', label:'Taxa de Cancelamento', value: _pct(currentStats.taxaCancelamento), icon:'❌', color: kpiScores.cancelamento },
+    { key:'consultas', label:'Consultas Realizadas', value: currentStats.totalRealizadas, icon:'🩺', color:'blue' },
+    { key:'agendadas', label:'Consultas Agendadas', value: currentStats.totalAgendadas, icon:'📋', color:'blue' },
+    { key:'proc', label:'Procedimentos', value: currentStats.totalProc, icon:'⚕️', color:'green' },
+    { key:'procDia', label:'Proc. / Dia', value: currentStats.procPorDia.toFixed(1), icon:'📈', color: kpiScores.procPorDia },
+    { key:'stock', label:'Cobertura de Stock', value: _pct(currentStats.stockCobertura), icon:'🧰', color: kpiScores.stockCobertura },
+    { key:'dias', label:'Dias c/ Dados', value: currentStats.numDays, icon:'📅', color:'blue' },
+  ];
+  const colorMap = { green:'var(--green)', amber:'var(--amber)', red:'var(--red)', blue:'var(--blue)', purple:'var(--purple)' };
+  const kpiGrid = document.getElementById('analytics-kpi-grid');
+  kpiGrid.innerHTML = kpiDefs.map(k => `
+    <div class="kpi ${k.color==='green'?'green':k.color==='amber'?'amber':k.color==='red'?'red':k.color==='purple'?'purple':''}">
+      <span class="kpi-icon">${k.icon}</span>
+      <div class="kpi-label">${k.label}</div>
+      <div class="kpi-value">${k.value}</div>
+      <div class="kpi-sub">Período: ${_analytics_periodLabel(mode, refDate)}</div>
+    </div>`).join('');
+
+  // ── Comparative table ─────────────────────────────────────
+  document.getElementById('analytics-col-current').textContent = _analytics_periodLabel(mode, refDate);
+  document.getElementById('analytics-col-baseline').textContent = _analytics_baselineLabel(mode, refDate);
+  document.getElementById('analytics-period-labels').textContent =
+    `${_analytics_periodLabel(mode, refDate)} vs ${_analytics_baselineLabel(mode, refDate)}`;
+
+  const _compRow = (label, cur, bas, compKey, invertDelta, kpiKey) => {
+    const comp = comparative[compKey] || {};
+    const pct = comp.pct != null ? comp.pct : (bas > 0 ? (cur - bas) / bas * 100 : (cur > 0 ? 100 : 0));
+    const dir = comp.direction || (Math.abs(pct) < 2 ? 'stable' : pct > 0 ? 'up' : 'down');
+    const deltaGood = invertDelta ? dir === 'down' : dir === 'up';
+    const deltaColor = dir === 'stable' ? '#6b7280' : (deltaGood ? '#059669' : '#dc2626');
+    const arrow = dir === 'up' ? '↑' : dir === 'down' ? '↓' : '→';
+    const kpiColors = { green:'#059669', amber:'#d97706', red:'#dc2626' };
+    const kpiLabels = { green:'BOM', amber:'ATENÇÃO', red:'CRÍTICO' };
+    const badge = kpiKey && kpiScores[kpiKey]
+      ? `<span style="background:${kpiColors[kpiScores[kpiKey]]}20;color:${kpiColors[kpiScores[kpiKey]]};padding:3px 8px;border-radius:4px;font-size:10px;font-weight:700;">${kpiLabels[kpiScores[kpiKey]]}</span>`
+      : '';
+    const deltaHtml = baselineStats.numDays > 0
+      ? `<span style="color:${deltaColor};font-weight:600;">${arrow} ${Math.abs(pct).toFixed(1)}%</span>`
+      : '<span style="color:#9ca3af;">—</span>';
+    return { label, cur, bas, deltaHtml, badge };
+  };
+  const compareRows = [
+    _compRow('Consultas Agendadas',      currentStats.totalAgendadas,             baselineStats.totalAgendadas,             'totalAgendadas',   false, null),
+    _compRow('Consultas Realizadas',     currentStats.totalRealizadas,            baselineStats.totalRealizadas,            'totalConsultas',   false, null),
+    _compRow('Consultas Canceladas',     currentStats.totalCanceladas,            baselineStats.totalCanceladas,            'totalCanceladas',  true,  null),
+    _compRow('Taxa de Realização',       _pct(currentStats.taxaRealizacao),       _pct(baselineStats.taxaRealizacao),       'realizacao',       false, 'realizacao'),
+    _compRow('Taxa de Cancelamento',     _pct(currentStats.taxaCancelamento),     _pct(baselineStats.taxaCancelamento),     'cancelamento',     true,  'cancelamento'),
+    _compRow('Total Procedimentos',      currentStats.totalProc,                  baselineStats.totalProc,                  'totalProc',        false, null),
+    _compRow('Procedimentos/Dia',        currentStats.procPorDia.toFixed(1),      baselineStats.procPorDia.toFixed(1),      'procPorDia',       false, 'procPorDia'),
+    _compRow('Cobertura de Stock',       _pct(currentStats.stockCobertura),       _pct(baselineStats.stockCobertura),       'stockCobertura',   false, 'stockCobertura'),
+  ];
+  document.getElementById('analytics-compare-body').innerHTML = compareRows.map((r, idx) =>
+    `<tr style="${idx%2===0?'background:#fafafa':''}">
+      <td style="padding:10px 16px;font-weight:500;">${r.label}</td>
+      <td style="padding:10px 16px;text-align:right;font-weight:700;">${r.cur}</td>
+      <td style="padding:10px 16px;text-align:right;color:#6b7280;">${baselineStats.numDays > 0 ? r.bas : '—'}</td>
+      <td style="padding:10px 16px;text-align:right;">${r.deltaHtml}</td>
+      <td style="padding:10px 16px;text-align:center;">${r.badge}</td>
+    </tr>`
+  ).join('');
+
+  // ── By Specialty ──────────────────────────────────────────
+  const statusBadge = (taxaReal) => {
+    const s = scoreKPIs({taxaRealizacao: taxaReal, taxaCancelamento:0, stockCobertura:100, procPorDia:20}).realizacao;
+    const colors = { green:'#059669', amber:'#d97706', red:'#dc2626' };
+    const labels = { green:'✓', amber:'!', red:'✗' };
+    return `<span style="background:${colors[s]}20;color:${colors[s]};padding:2px 6px;border-radius:4px;font-size:11px;font-weight:700;">${labels[s]}</span>`;
+  };
+  const ESPECIALIDADES_LOCAL = ['Medicina Interna','Ortopedia','Cirurgia Geral','Proctologia','Cardiologia','Reumatologia','Estomatologia','Oftalmologia','Optometria','Anestesiologia','Maxilo Facial','Neurocirurgia','Gastroenterologia','Neurologia','Otorrinolaringologia'];
+  document.getElementById('analytics-esp-body').innerHTML = ESPECIALIDADES_LOCAL.map((esp, i) => {
+    const d = currentStats.byEspecialidade[esp] || {ag:0,re:0,ca:0,m15:0,M15:0,taxaReal:0,taxaCanc:0};
+    if (d.ag === 0 && d.re === 0) return '';
+    return `<tr style="${i%2===0?'background:#fafafa':''}">
+      <td style="padding:8px 14px;font-weight:500;">${esp}</td>
+      <td style="padding:8px 14px;text-align:center;">${d.ag}</td>
+      <td style="padding:8px 14px;text-align:center;font-weight:700;color:#059669;">${d.re}</td>
+      <td style="padding:8px 14px;text-align:center;color:#dc2626;">${d.ca}</td>
+      <td style="padding:8px 14px;text-align:center;">${d.m15}</td>
+      <td style="padding:8px 14px;text-align:center;">${d.M15}</td>
+      <td style="padding:8px 14px;text-align:center;">${_pct(d.taxaReal)}</td>
+      <td style="padding:8px 14px;text-align:center;">${_pct(d.taxaCanc)}</td>
+      <td style="padding:8px 14px;text-align:center;">${statusBadge(d.taxaReal)}</td>
+    </tr>`;
+  }).join('') + `<tr style="background:#0f172a;color:#fff;font-weight:700;">
+    <td style="padding:10px 14px;">TOTAL</td>
+    <td style="padding:10px 14px;text-align:center;">${currentStats.totalAgendadas}</td>
+    <td style="padding:10px 14px;text-align:center;">${currentStats.totalRealizadas}</td>
+    <td style="padding:10px 14px;text-align:center;">${currentStats.totalCanceladas}</td>
+    <td style="padding:10px 14px;text-align:center;">${currentStats.totalMenor15}</td>
+    <td style="padding:10px 14px;text-align:center;">${currentStats.totalMaior15}</td>
+    <td style="padding:10px 14px;text-align:center;">${_pct(currentStats.taxaRealizacao)}</td>
+    <td style="padding:10px 14px;text-align:center;">${_pct(currentStats.taxaCancelamento)}</td>
+    <td></td>
+  </tr>`;
+
+  // ── Procedures table ──────────────────────────────────────
+  const PROCEDIMENTOS_LOCAL = ['Curativos feitos','Pontos retirados','Gessos retirados','Gessos aplicados','Algálias retiradas','Talas colocadas','Talas retiradas','Injeções','Infiltrações','Exodontia simples','Exodontia complicada'];
+  let tPm=0, tPt=0;
+  document.getElementById('analytics-proc-body').innerHTML = PROCEDIMENTOS_LOCAL.map((proc,i) => {
+    const d = currentStats.byProcedimento[proc] || {manha:0,tarde:0,total:0};
+    tPm+=d.manha; tPt+=d.tarde;
+    return `<tr style="${i%2===0?'':'background:#f9fafb'}">
+      <td style="padding:7px 12px;">${proc}</td>
+      <td style="padding:7px 12px;text-align:center;">${d.manha}</td>
+      <td style="padding:7px 12px;text-align:center;">${d.tarde}</td>
+      <td style="padding:7px 12px;text-align:center;font-weight:700;">${d.total}</td>
+    </tr>`;
+  }).join('') + `<tr style="background:#059669;color:#fff;font-weight:700;">
+    <td style="padding:8px 12px;">TOTAL</td><td style="padding:8px 12px;text-align:center;">${tPm}</td>
+    <td style="padding:8px 12px;text-align:center;">${tPt}</td><td style="padding:8px 12px;text-align:center;">${tPm+tPt}</td>
+  </tr>`;
+
+  // ── Materials table ───────────────────────────────────────
+  const MATERIAIS_LOCAL = ['Fitas de glicemia','Rolo de gesso','Ligadura','Seringas','Ampolas injectáveis','Compressas','Bisturi','Sacos de colectores','Luvas descartáveis','Algodão','Soro fisiológico','Algália'];
+  document.getElementById('analytics-mat-body').innerHTML = MATERIAIS_LOCAL.map((mat,i) => {
+    const d = currentStats.byMaterial[mat] || {stock:0,usado:0,saldo:0,pctConsumo:0};
+    const cob = d.stock > 0 ? (1 - d.usado/d.stock)*100 : 100;
+    const cobScore = scoreKPIs({taxaRealizacao:85,taxaCancelamento:5,stockCobertura:cob,procPorDia:15}).stockCobertura;
+    const cobColor = {green:'#059669',amber:'#d97706',red:'#dc2626'}[cobScore];
+    return `<tr style="${i%2===0?'':'background:#f9fafb'}">
+      <td style="padding:7px 12px;">${mat}</td>
+      <td style="padding:7px 12px;text-align:center;">${d.stock}</td>
+      <td style="padding:7px 12px;text-align:center;">${d.usado}</td>
+      <td style="padding:7px 12px;text-align:center;font-weight:700;">${d.saldo}</td>
+      <td style="padding:7px 12px;text-align:center;color:${cobColor};font-weight:600;">${_pct(cob)}</td>
+    </tr>`;
+  }).join('');
+
+  // ── Narrative ──────────────────────────────────────────────
+  document.getElementById('analytics-narrative').textContent = narrative;
+}
+
+function _pct(n) {
+  if (n == null || isNaN(n)) return '—';
+  return n.toFixed(1).replace('.', ',') + '%';
+}
+
+function _analytics_periodLabel(mode, refDate) {
+  const PT_MONTHS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const d = new Date(refDate + 'T00:00:00');
+  const y = d.getFullYear(), m = d.getMonth(), day = d.getDate();
+  if (mode === 'dia') return `${day} de ${PT_MONTHS[m]} de ${y}`;
+  if (mode === 'semana') {
+    const mon = new Date(d); mon.setDate(d.getDate() - ((d.getDay()+6)%7));
+    const sun = new Date(mon); sun.setDate(mon.getDate()+6);
+    return `Sem. ${mon.getDate()}/${mon.getMonth()+1}–${sun.getDate()}/${sun.getMonth()+1}/${y}`;
+  }
+  if (mode === 'mes') return `${PT_MONTHS[m]} ${y}`;
+  if (mode === 'trimestre') return `T${Math.floor(m/3)+1} ${y}`;
+  if (mode === 'semestre') return `${m<6?'1.º':'2.º'} Semestre ${y}`;
+  if (mode === 'ano') return `Ano ${y}`;
+  return refDate;
+}
+
+function _analytics_baselineLabel(mode, refDate) {
+  const PT_MONTHS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const d = new Date(refDate + 'T00:00:00');
+  const y = d.getFullYear(), m = d.getMonth();
+  if (mode === 'dia') return 'Mesma semana anterior';
+  if (mode === 'semana') return 'Semana anterior';
+  if (mode === 'mes') return `${PT_MONTHS[m]} ${y-1}`;
+  if (mode === 'trimestre') return `T${Math.floor(m/3)+1} ${y-1}`;
+  if (mode === 'semestre') return `${m<6?'1.º':'2.º'} Sem. ${y-1}`;
+  if (mode === 'ano') return `Ano ${y-1}`;
+  return 'Período anterior';
+}
 
 // Load today's saved data if exists
 if(safeGet(storageKey('consultas',today))) loadDay(today);
