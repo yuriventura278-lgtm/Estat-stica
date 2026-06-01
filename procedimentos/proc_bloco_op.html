@@ -491,8 +491,13 @@ header{position:fixed;top:0;left:0;right:0;z-index:200;height:var(--hdr-h);paddi
         <label>Serviço</label><select id="rpt-day-spec"><option value="all">Todos</option></select>
         <button class="btn-load" onclick="loadDiario()">Carregar</button>
         <button class="btn-load" onclick="exportDiarioPDF()"><svg class="svc-icon" aria-hidden="true"><use href="#i-pdf"/></svg> Exportar PDF</button>
+        <button class="email-btn" onclick="emailReport('rpt-day-content','Resumo Diário')"><svg class="svc-icon" aria-hidden="true"><use href="#i-notes"/></svg> Email</button>
       </div>
       <div id="rpt-day-content"><div class="no-data">Seleccione uma data e clique em Carregar.</div></div>
+      <div id="rpt-day-chart-wrap" class="chart-wrap" style="display:none">
+  <div class="chart-canvas-wrap"><canvas id="rpt-day-chart"></canvas></div>
+  <div class="interp-box" id="rpt-day-interp"></div>
+</div>
     </div>
 
     <div class="section" id="sec-semanal">
@@ -503,8 +508,13 @@ header{position:fixed;top:0;left:0;right:0;z-index:200;height:var(--hdr-h);paddi
         <label>Serviço</label><select id="sem-spec"><option value="all">Todos</option></select>
         <button class="btn-load" onclick="loadSemanal()">Carregar</button>
         <button class="btn-load" onclick="exportSemanalPDF()"><svg class="svc-icon" aria-hidden="true"><use href="#i-pdf"/></svg> Exportar PDF</button>
+        <button class="email-btn" onclick="emailReport('sem-content','Semanal')"><svg class="svc-icon" aria-hidden="true"><use href="#i-notes"/></svg> Email</button>
       </div>
       <div id="sem-content"><div class="no-data">Seleccione o intervalo e clique em Carregar.</div></div>
+      <div id="sem-chart-wrap" class="chart-wrap" style="display:none">
+  <div class="chart-canvas-wrap"><canvas id="sem-chart"></canvas></div>
+  <div class="interp-box" id="sem-interp"></div>
+</div>
     </div>
 
     <div class="section" id="sec-mensal">
@@ -514,8 +524,13 @@ header{position:fixed;top:0;left:0;right:0;z-index:200;height:var(--hdr-h);paddi
         <label>Serviço</label><select id="men-spec"><option value="all">Todos</option></select>
         <button class="btn-load" onclick="loadMensal()">Carregar</button>
         <button class="btn-load" onclick="exportMensalPDF()"><svg class="svc-icon" aria-hidden="true"><use href="#i-pdf"/></svg> Exportar PDF</button>
+        <button class="email-btn" onclick="emailReport('men-content','Mensal')"><svg class="svc-icon" aria-hidden="true"><use href="#i-notes"/></svg> Email</button>
       </div>
       <div id="men-content"><div class="no-data">Seleccione o mês e clique em Carregar.</div></div>
+      <div id="men-chart-wrap" class="chart-wrap" style="display:none">
+  <div class="chart-canvas-wrap"><canvas id="men-chart"></canvas></div>
+  <div class="interp-box" id="men-interp"></div>
+</div>
     </div>
 
     <div class="section" id="sec-trimestral">
@@ -527,8 +542,13 @@ header{position:fixed;top:0;left:0;right:0;z-index:200;height:var(--hdr-h);paddi
         <label>Serviço</label><select id="tri-spec"><option value="all">Todos</option></select>
         <button class="btn-load" onclick="loadTrimestral()">Carregar</button>
         <button class="btn-load" onclick="exportTrimestralPDF()"><svg class="svc-icon" aria-hidden="true"><use href="#i-pdf"/></svg> Exportar PDF</button>
+        <button class="email-btn" onclick="emailReport('tri-content','Trimestral')"><svg class="svc-icon" aria-hidden="true"><use href="#i-notes"/></svg> Email</button>
       </div>
       <div id="tri-content"><div class="no-data">Seleccione o trimestre e clique em Carregar.</div></div>
+      <div id="tri-chart-wrap" class="chart-wrap" style="display:none">
+  <div class="chart-canvas-wrap"><canvas id="tri-chart"></canvas></div>
+  <div class="interp-box" id="tri-interp"></div>
+</div>
     </div>
 
     <div class="section" id="sec-semestral">
@@ -540,8 +560,13 @@ header{position:fixed;top:0;left:0;right:0;z-index:200;height:var(--hdr-h);paddi
         <label>Serviço</label><select id="seme-spec"><option value="all">Todos</option></select>
         <button class="btn-load" onclick="loadSemestral()">Carregar</button>
         <button class="btn-load" onclick="exportSemestralPDF()"><svg class="svc-icon" aria-hidden="true"><use href="#i-pdf"/></svg> Exportar PDF</button>
+        <button class="email-btn" onclick="emailReport('seme-content','Semestral')"><svg class="svc-icon" aria-hidden="true"><use href="#i-notes"/></svg> Email</button>
       </div>
       <div id="seme-content"><div class="no-data">Seleccione o semestre e clique em Carregar.</div></div>
+      <div id="seme-chart-wrap" class="chart-wrap" style="display:none">
+  <div class="chart-canvas-wrap"><canvas id="seme-chart"></canvas></div>
+  <div class="interp-box" id="seme-interp"></div>
+</div>
     </div>
 
     <div class="section" id="sec-anual">
@@ -551,8 +576,13 @@ header{position:fixed;top:0;left:0;right:0;z-index:200;height:var(--hdr-h);paddi
         <label>Serviço</label><select id="anu-spec"><option value="all">Todos</option></select>
         <button class="btn-load" onclick="loadAnual()">Carregar</button>
         <button class="btn-load" onclick="exportAnualPDF()"><svg class="svc-icon" aria-hidden="true"><use href="#i-pdf"/></svg> Exportar PDF</button>
+        <button class="email-btn" onclick="emailReport('anu-content','Anual')"><svg class="svc-icon" aria-hidden="true"><use href="#i-notes"/></svg> Email</button>
       </div>
       <div id="anu-content"><div class="no-data">Introduza o ano e clique em Carregar.</div></div>
+      <div id="anu-chart-wrap" class="chart-wrap" style="display:none">
+  <div class="chart-canvas-wrap"><canvas id="anu-chart"></canvas></div>
+  <div class="interp-box" id="anu-interp"></div>
+</div>
     </div>
 
     <div class="section" id="sec-comparacao">
@@ -577,8 +607,13 @@ header{position:fixed;top:0;left:0;right:0;z-index:200;height:var(--hdr-h);paddi
           <select id="cmp-spec"><option value="all">Todos</option></select>
         </div>
         <button class="btn-load" style="align-self:flex-end;" onclick="loadComparacao()">Comparar</button>
+        <button class="email-btn" onclick="emailReport('cmp-content','Comparação')"><svg class="svc-icon" aria-hidden="true"><use href="#i-notes"/></svg> Email</button>
       </div>
       <div id="cmp-content"><div class="no-data">Seleccione dois períodos e clique em Comparar.</div></div>
+      <div id="cmp-chart-wrap" class="chart-wrap" style="display:none">
+  <div class="chart-canvas-wrap"><canvas id="cmp-chart"></canvas></div>
+  <div class="interp-box" id="cmp-interp"></div>
+</div>
     </div>
   </main>
 </div>
@@ -1904,6 +1939,245 @@ document.getElementById('active-label').textContent = SPECIALTIES[0].label;
   }, 1000);
   splash.addEventListener('animationend', ()=>{ splash.remove(); });
 })();
+
+
+// ════ RELATÓRIOS AVANÇADOS — gráficos · interpretação · email ════
+
+// Chart.js lazy loader
+var _cjsReady = false, _cjsCbs = [];
+function _cjs(cb) {
+  if (_cjsReady) { cb(); return; }
+  _cjsCbs.push(cb);
+  if (_cjsCbs.length > 1) return;
+  var s = document.createElement('script');
+  s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js';
+  s.onload = function() { _cjsReady = true; _cjsCbs.forEach(function(f){f();}); _cjsCbs = []; };
+  document.head.appendChild(s);
+}
+
+var _ci = {};
+function _destroyChart(id) { if (_ci[id]) { _ci[id].destroy(); delete _ci[id]; } }
+
+// Paleta clínica
+var _CP = {
+  day:    'rgba(74,107,148,0.72)',   dayB:   'rgba(74,107,148,1)',
+  night:  'rgba(140,150,168,0.45)',  nightB: 'rgba(120,130,148,1)',
+  cmpB:   'rgba(5,150,105,0.55)',    cmpBB:  'rgba(5,150,105,1)',
+  grid:   'rgba(0,0,0,0.055)',       text:   '#6b6b6b'
+};
+
+function _mkOpts(horiz) {
+  var ax = horiz ? 'y' : 'x';
+  return {
+    indexAxis: ax, responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { labels: { font:{family:'Inter',size:11}, color:_CP.text, boxWidth:10, padding:14 } },
+      tooltip: { backgroundColor:'#fff', borderColor:'rgba(0,0,0,.08)', borderWidth:1,
+        titleColor:'#0a0a0a', bodyColor:_CP.text,
+        titleFont:{family:'Inter',weight:'600',size:11}, bodyFont:{family:'IBM Plex Mono',size:11} }
+    },
+    scales: {
+      x: { grid:{color:_CP.grid}, ticks:{font:{family:horiz?'IBM Plex Mono':'Inter',size:10},color:_CP.text,maxRotation:horiz?0:38} },
+      y: { grid:{color:_CP.grid}, ticks:{font:{family:horiz?'Inter':'IBM Plex Mono',size:10},color:_CP.text}, beginAtZero:true }
+    }
+  };
+}
+
+// Extrai dados das tabelas renderizadas no DOM
+function _extractData(containerId) {
+  var wrap = document.getElementById(containerId);
+  if (!wrap) return null;
+  var tables = wrap.querySelectorAll('.rpt-table');
+  var catData=[], procData=[], totalD=0, totalN=0;
+  tables.forEach(function(tbl) {
+    var heads = Array.from(tbl.querySelectorAll('th')).map(function(h){return h.textContent.trim().toLowerCase();});
+    var isProc = heads.indexOf('procedimento') >= 0;
+    var isCat  = heads.indexOf('categoria') >= 0 && !isProc;
+    tbl.querySelectorAll('tbody tr:not(.rpt-total-row)').forEach(function(tr) {
+      var cells = tr.querySelectorAll('td');
+      if (isProc && cells.length >= 4) {
+        var d2=parseInt(cells[2].textContent)||0, n2=parseInt(cells[3].textContent)||0;
+        procData.push({name:cells[0].textContent.trim(), d:d2, n:n2, t:d2+n2});
+      } else if (isCat && cells.length >= 3) {
+        var d1=parseInt(cells[1].textContent)||0, n1=parseInt(cells[2].textContent)||0;
+        catData.push({name:cells[0].textContent.replace(/[^\w\s\-\/çãõàéíóúâêîôûäëïöü ]/gi,'').trim(), d:d1, n:n1, t:d1+n1});
+      }
+    });
+    var tot = tbl.querySelector('.rpt-total-row');
+    if (tot && isCat) {
+      var tc=tot.querySelectorAll('td');
+      if (tc.length>=3){ totalD=parseInt(tc[1].textContent)||totalD; totalN=parseInt(tc[2].textContent)||totalN; }
+    }
+  });
+  if (!procData.length && !catData.length) return null;
+  return {catData:catData, procData:procData, totalD:totalD, totalN:totalN, grand:totalD+totalN};
+}
+
+// Texto de interpretação
+function _interp(data, periodLabel) {
+  if (!data || !data.grand)
+    return '<em style="color:var(--muted);font-style:italic">Sem dados para interpretação.</em>';
+  var pD = Math.round(data.totalD / data.grand * 100);
+  var top3 = data.procData.slice(0,3).sort(function(a,b){return b.t-a.t;});
+  var txt = '<strong>' + data.grand.toLocaleString('pt-PT') + '</strong> procedimentos';
+  if (periodLabel) txt += ' em <em>' + periodLabel + '</em>';
+  txt += '. Diurno: <strong style="color:var(--accent)">' + data.totalD + ' (' + pD + '%)</strong>';
+  txt += ' · Nocturno: <strong style="color:var(--muted)">' + data.totalN + ' (' + (100-pD) + '%)</strong>.';
+  if (top3.length) {
+    txt += ' Mais frequentes: ' + top3.map(function(p){return '<em>'+p.name+'</em>&thinsp;('+p.t+')';}).join(', ') + '.';
+  }
+  if (data.totalD > data.totalN * 1.8)
+    txt += ' <span style="font-size:.64em;color:var(--accent)">↑ Actividade diurna predominante.</span>';
+  else if (data.totalN > data.totalD * 1.8)
+    txt += ' <span style="font-size:.64em;color:var(--muted)">↑ Actividade nocturna predominante.</span>';
+  return txt;
+}
+
+function _showWrap(wid, iid, html) {
+  var w=document.getElementById(wid); if(w) w.style.display='';
+  var i=document.getElementById(iid); if(i) i.innerHTML=html;
+}
+
+function _drawBarChart(chartId, data, horiz) {
+  _destroyChart(chartId);
+  var rows = (data.procData.length ? data.procData : data.catData).slice(0,10);
+  var labels = rows.map(function(r){return r.name.length>26?r.name.slice(0,26)+'…':r.name;});
+  _ci[chartId] = new Chart(document.getElementById(chartId), {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [
+        {label:'Turno Dia',   data:rows.map(function(r){return r.d;}), backgroundColor:_CP.day,   borderColor:_CP.dayB,   borderWidth:1},
+        {label:'Turno Noite', data:rows.map(function(r){return r.n;}), backgroundColor:_CP.night, borderColor:_CP.nightB, borderWidth:1}
+      ]
+    },
+    options: _mkOpts(horiz !== false)
+  });
+}
+
+// Patch renderReport para injectar gráficos após render
+var _origRR = typeof renderReport === 'function' ? renderReport : null;
+if (_origRR) {
+  renderReport = function(containerId, dates, title, colorClass, filterSpec) {
+    _origRR(containerId, dates, title, colorClass, filterSpec);
+    var MAP = {
+      'rpt-day-content':['rpt-day-chart','rpt-day-chart-wrap','rpt-day-interp'],
+      'sem-content':    ['sem-chart',    'sem-chart-wrap',    'sem-interp'],
+      'men-content':    ['men-chart',    'men-chart-wrap',    'men-interp'],
+      'tri-content':    ['tri-chart',    'tri-chart-wrap',    'tri-interp'],
+      'seme-content':   ['seme-chart',   'seme-chart-wrap',   'seme-interp'],
+      'anu-content':    ['anu-chart',    'anu-chart-wrap',    'anu-interp']
+    };
+    var ids = MAP[containerId];
+    if (!ids) return;
+    setTimeout(function() {
+      var data = _extractData(containerId);
+      if (!data) return;
+      _showWrap(ids[1], ids[2], _interp(data, title));
+      _cjs(function(){ _drawBarChart(ids[0], data, true); });
+    }, 90);
+  };
+}
+
+// Patch loadComparacao
+var _origLC = typeof loadComparacao === 'function' ? loadComparacao : null;
+if (_origLC) {
+  loadComparacao = function() {
+    _origLC();
+    setTimeout(function() { _renderCmpChart(); }, 120);
+  };
+}
+
+function _renderCmpChart() {
+  var wrap = document.getElementById('cmp-content');
+  if (!wrap) return;
+  var tbls = wrap.querySelectorAll('.rpt-table');
+  if (!tbls.length) return;
+  var tbl = tbls[0];
+  var heads = Array.from(tbl.querySelectorAll('th')).map(function(h){return h.textContent.trim();});
+  var rows  = Array.from(tbl.querySelectorAll('tbody tr:not(.rpt-total-row)'));
+  var labels=[], dA=[], dB=[];
+  rows.forEach(function(tr) {
+    var cells=tr.querySelectorAll('td');
+    if (cells.length<3) return;
+    labels.push(cells[0].textContent.replace(/[^\w\s\-\/çãõàéíóúâêîôûäëïöü ]/gi,'').trim().slice(0,26));
+    dA.push(parseInt(cells[1].textContent)||0);
+    dB.push(parseInt(cells[2].textContent)||0);
+  });
+  if (!labels.length) return;
+  var top = Math.min(labels.length, 10);
+  var tA=dA.reduce(function(s,v){return s+v;},0), tB=dB.reduce(function(s,v){return s+v;},0);
+  var diff=tB-tA, pct=tA?Math.round(Math.abs(diff)/tA*100):0;
+  var itxt = 'Período A: <strong>'+tA+'</strong> · Período B: <strong>'+tB+'</strong>. ';
+  if      (diff>0) itxt+='<strong style="color:var(--green)">▲ +'+diff+' (+'+pct+'%)</strong>';
+  else if (diff<0) itxt+='<strong style="color:var(--danger)">▼ '+diff+' (−'+pct+'%)</strong>';
+  else             itxt+='Sem variação.';
+  _showWrap('cmp-chart-wrap','cmp-interp', itxt);
+  _cjs(function(){
+    _destroyChart('cmp-chart');
+    _ci['cmp-chart'] = new Chart(document.getElementById('cmp-chart'), {
+      type:'bar',
+      data:{
+        labels: labels.slice(0,top),
+        datasets:[
+          {label:heads[1]||'Período A', data:dA.slice(0,top), backgroundColor:_CP.day,  borderColor:_CP.dayB,  borderWidth:1},
+          {label:heads[2]||'Período B', data:dB.slice(0,top), backgroundColor:_CP.cmpB, borderColor:_CP.cmpBB, borderWidth:1}
+        ]
+      },
+      options: _mkOpts(true)
+    });
+  });
+}
+
+// Enviar por email
+function emailReport(contentId, subject) {
+  var data = _extractData(contentId);
+  if (!data || !data.grand) { showToast('Carregue um relatório primeiro.'); return; }
+  var spec  = (document.getElementById('active-label')||{}).textContent || 'Serviço';
+  var date  = (document.getElementById('date-disp')||{}).textContent    || '';
+  var top10 = data.procData.slice(0,10).sort(function(a,b){return b.t-a.t;});
+  var body  = 'Relatório: ' + subject + '\nServiço: ' + spec + '  ' + date + '\n';
+  body += '────────────────────────────────────────\n';
+  body += 'Total procedimentos : ' + data.grand + '\n';
+  body += 'Turno diurno        : ' + data.totalD + '\n';
+  body += 'Turno nocturno      : ' + data.totalN + '\n';
+  body += '────────────────────────────────────────\n';
+  if (top10.length) {
+    body += 'Top procedimentos:\n';
+    top10.forEach(function(p,i){
+      var idx = ('  '+(i+1)).slice(-2);
+      body += idx + '. ' + p.name.slice(0,32) + '  D:'+p.d+'  N:'+p.n+'  T:'+p.t+'\n';
+    });
+  }
+  body += '────────────────────────────────────────\nHospital do Prenda — Luanda, Angola\n';
+  window.location.href = 'mailto:?subject='
+    + encodeURIComponent(subject + ' — ' + spec)
+    + '&body=' + encodeURIComponent(body);
+}
+
+// CSS dos componentes avançados
+(function(){
+  var s = document.createElement('style');
+  s.textContent = [
+    '.chart-wrap{margin-top:16px;padding:16px 18px;background:#fff;',
+    'border:1px solid oklch(92% 0.003 50);border-radius:6px;}',
+    '.chart-canvas-wrap{position:relative;height:260px;}',
+    '.interp-box{margin-top:13px;padding:11px 15px;',
+    'background:oklch(97% 0.01 230);border:1px solid oklch(91% 0.02 230);',
+    'border-radius:5px;font-family:Inter,sans-serif;font-size:.71rem;',
+    'line-height:1.65;color:#6b6b6b;}',
+    '.email-btn{padding:5px 10px;border-radius:4px;cursor:pointer;',
+    'font-family:Inter,sans-serif;font-size:.57rem;font-weight:600;',
+    'letter-spacing:.4px;text-transform:uppercase;',
+    'background:transparent;border:1px solid oklch(89% 0.03 230);',
+    'color:oklch(45% 0.08 230);transition:all .13s;',
+    'display:inline-flex;align-items:center;gap:4px;}',
+    '.email-btn:hover{background:oklch(97% 0.01 230);}',
+    '.email-btn .svc-icon{width:12px;height:12px;}'
+  ].join('');
+  document.head.appendChild(s);
+})();
+// ════ FIM RELATÓRIOS AVANÇADOS ════
 
 </script>
 </body>
