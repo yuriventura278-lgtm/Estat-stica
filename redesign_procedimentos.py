@@ -153,7 +153,7 @@ NEW_CSS = '''<style>
   --green:#047857;--purple:#5b21b6;--orange:#c2410c;
   --font-head:'Inter',sans-serif;
   --font-body:'IBM Plex Mono',monospace;
-  --nav-w:220px;--hdr-h:56px;
+  --nav-w:220px;--hdr-h:56px;--staff-h:38px;--top-h:calc(var(--hdr-h) + var(--staff-h));
 }
 
 /* SVG ICON HELPERS */
@@ -171,22 +171,23 @@ NEW_CSS = '''<style>
 .med-notice .svc-icon{width:14px;height:14px;flex-shrink:0;margin-top:1px;color:var(--accent);}
 .sync-info .svc-icon{width:12px;height:12px;color:var(--green);}
 
-/* SPLASH */
-#splash{position:fixed;inset:0;z-index:9999;background:#fff;
-  display:flex;align-items:center;justify-content:center;
-  animation:splashOut .35s ease forwards 1.5s;}
-@keyframes splashOut{from{opacity:1}to{opacity:0;visibility:hidden;pointer-events:none}}
-.splash-inner{display:flex;flex-direction:column;align-items:center;text-align:center;}
-.splash-mark{width:44px;height:44px;border-radius:9px;background:var(--accent);color:#fff;
-  font-family:var(--font-head);font-size:1rem;font-weight:800;letter-spacing:-.5px;
-  display:flex;align-items:center;justify-content:center;margin-bottom:18px;}
+/* SPLASH — anel de progresso circular */
+#splash{position:fixed;inset:0;z-index:9999;background:var(--bg);
+  display:flex;align-items:center;justify-content:center;}
+.splash-inner{display:flex;flex-direction:column;align-items:center;text-align:center;gap:14px;}
+.splash-img-ring{position:relative;width:100px;height:100px;flex-shrink:0;}
+.splash-img-circle{position:absolute;inset:8px;border-radius:50%;overflow:hidden;
+  background:var(--surface);border:1px solid var(--border);}
+.splash-img-circle img{width:100%;height:100%;object-fit:cover;}
+.splash-progress-svg{position:absolute;inset:0;width:100px;height:100px;transform:rotate(-90deg);}
+.spl-ring-bg{fill:none;stroke:var(--border);stroke-width:4;}
+.spl-ring-fg{fill:none;stroke:var(--accent);stroke-width:4;stroke-linecap:round;}
 .splash-hosp-lbl{font-family:var(--font-head);font-size:.55rem;font-weight:600;
-  letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+  letter-spacing:.18em;text-transform:uppercase;color:var(--muted);}
 .splash-svc-lbl{font-family:var(--font-head);font-size:.95rem;font-weight:700;color:var(--text);
-  margin-bottom:18px;max-width:300px;line-height:1.35;}
-.splash-rule{width:28px;height:1.5px;background:var(--accent);
-  animation:splashRule .5s ease forwards .3s;transform:scaleX(0);transform-origin:left;}
-@keyframes splashRule{to{transform:scaleX(1)}}
+  max-width:300px;line-height:1.35;}
+.splash-pct{font-family:var(--font-body);font-size:.65rem;color:var(--accent);
+  font-weight:600;letter-spacing:.05em;}
 /* esconde elementos do splash original */
 .splash-logo-wrap,.splash-hospital,.splash-name,.splash-country,.splash-divider,
 .splash-dept,.splash-title,.splash-sub,.splash-service,.splash-bar-wrap,.splash-timer{display:none!important;}
@@ -220,10 +221,10 @@ header{position:fixed;top:0;left:0;right:0;z-index:200;height:var(--hdr-h);paddi
   padding:3px 8px;border-radius:4px;white-space:nowrap;display:inline-flex;align-items:center;gap:4px;}
 
 /* LAYOUT */
-.app-shell{display:flex;padding-top:var(--hdr-h);min-height:100vh;}
+.app-shell{display:flex;padding-top:var(--top-h);min-height:100vh;}
 
 /* SIDEBAR */
-.sidebar{position:fixed;top:var(--hdr-h);left:0;bottom:0;width:var(--nav-w);
+.sidebar{position:fixed;top:var(--top-h);left:0;bottom:0;width:var(--nav-w);
   background:var(--surface);border-right:1px solid var(--border);
   overflow-y:auto;z-index:100;display:flex;flex-direction:column;}
 .sidebar::-webkit-scrollbar{width:3px;}
@@ -438,25 +439,81 @@ header{position:fixed;top:0;left:0;right:0;z-index:200;height:var(--hdr-h);paddi
   .save-bar{left:0;}
   .spec-totals{display:none;}
 }
+
+/* STAFF BAR */
+.staff-bar{position:fixed;top:var(--hdr-h);left:0;right:0;z-index:190;
+  height:var(--staff-h);background:oklch(97% 0.01 230);
+  border-bottom:1px solid var(--accent-ring);
+  display:flex;align-items:center;gap:12px;padding:0 20px;
+  font-family:var(--font-head);}
+.staff-lbl{font-size:.48rem;color:var(--muted);font-weight:600;
+  text-transform:uppercase;letter-spacing:1.5px;white-space:nowrap;}
+.staff-sep{color:var(--border);font-size:.8rem;margin:0 2px;}
+.staff-inp{background:transparent;border:none;border-bottom:1px solid var(--border);
+  color:var(--text);font-family:var(--font-head);font-size:.68rem;
+  padding:2px 6px;outline:none;min-width:150px;max-width:210px;
+  transition:border-color .13s;}
+.staff-inp:focus{border-bottom-color:var(--accent);}
+.staff-inp::placeholder{color:var(--muted);opacity:.55;}
+
+/* DARK MODE */
+html.dark{
+  --bg:#0c0f14;--surface:#141820;--surface2:#0f1520;
+  --border:#1e2840;--text:#e2e8f0;--muted:#64748b;
+  --accent:oklch(62% 0.12 230);
+  --accent-tint:rgba(59,130,246,.1);
+  --accent-ring:rgba(59,130,246,.25);
+}
+html.dark header,html.dark .sidebar,html.dark .save-bar{background:var(--surface);}
+html.dark .staff-bar{background:rgba(59,130,246,.06);border-bottom-color:var(--border);}
+html.dark .sb-hdr{background:var(--surface);}
+html.dark .card{background:var(--surface);}
+html.dark .modal-box{background:var(--surface);}
+html.dark .btn-out{background:var(--surface);}
+html.dark .tot-box.night,.html.dark .t-box.night{background:#1a1f2e;border-color:var(--border);}
+html.dark .t-box.night{background:#1a1f2e;border-color:var(--border);}
+html.dark .proc-row:hover{background:rgba(255,255,255,.03);}
+html.dark .rpt-table tbody tr:hover{background:rgba(255,255,255,.03);}
+html.dark .hdr-date input[type=date]{background:var(--surface);}
+html.dark .period-row input,.html.dark .period-row select{background:var(--surface);}
+html.dark .period-row input,.period-row select{background:var(--surface);}
+html.dark #theme-toggle{color:var(--accent);border-color:var(--accent-ring)!important;}
 </style>'''
 
 # ─────────────────────────────────────────────────────────────────────────────
-# NOVO SPLASH HTML
+# SPLASH COM ANEL DE PROGRESSO CIRCULAR (5 segundos)
 # ─────────────────────────────────────────────────────────────────────────────
-NEW_SPLASH = '''<div id="splash">
-  <div class="splash-inner">
-    <div class="splash-mark">HP</div>
-    <p class="splash-hosp-lbl">Hospital do Prenda · Luanda</p>
-    <h1 class="splash-svc-lbl">Serviço de Procedimentos de Enfermagem</h1>
-    <div class="splash-rule"></div>
-  </div>
-  <div id="splash-timer" style="display:none"></div>
-</div>'''
+_CIRC = 263.9  # 2*π*42  (r=42, viewBox 100×100)
+
+def make_splash(hosp_img_src):
+    return (
+        '<div id="splash">\n'
+        '  <div class="splash-inner">\n'
+        '    <div class="splash-img-ring">\n'
+        '      <div class="splash-img-circle">\n'
+        f'        <img src="{hosp_img_src}" alt="Hospital do Prenda">\n'
+        '      </div>\n'
+        '      <svg class="splash-progress-svg" viewBox="0 0 100 100">\n'
+        '        <circle class="spl-ring-bg" cx="50" cy="50" r="42"/>\n'
+        f'        <circle class="spl-ring-fg" id="spl-ring" cx="50" cy="50" r="42"'
+        f' stroke-dasharray="{_CIRC}" stroke-dashoffset="{_CIRC}"/>\n'
+        '      </svg>\n'
+        '    </div>\n'
+        '    <p class="splash-hosp-lbl">Hospital do Prenda · Luanda</p>\n'
+        '    <h1 class="splash-svc-lbl" id="splash-svc-title">Serviço de Procedimentos de Enfermagem</h1>\n'
+        '    <div class="splash-pct" id="spl-pct">0%</div>\n'
+        '  </div>\n'
+        '</div>'
+    )
 
 # ─────────────────────────────────────────────────────────────────────────────
 # TRANSFORMAÇÃO PRINCIPAL
 # ─────────────────────────────────────────────────────────────────────────────
 def transform(content):
+    # 0. Extract hospital image (base64 JPEG embedded in splash)
+    m = re.search(r'src="(data:image/jpeg;base64,[^"]{200,})"', content)
+    hosp_img = m.group(1) if m else 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs='
+
     # 1. Font link
     content = content.replace(
         'family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500',
@@ -466,11 +523,36 @@ def transform(content):
     # 2. CSS block
     content = re.sub(r'<style>.*?</style>', NEW_CSS, content, flags=re.DOTALL)
 
-    # 3. Splash
-    content = re.sub(r'<div id="splash">.*?(?=\n<header>)', NEW_SPLASH, content, flags=re.DOTALL)
+    # 2b. FOUC prevention — apply dark class before render
+    fouc = '<script>if(localStorage.getItem("theme")==="dark")document.documentElement.classList.add("dark");</script>'
+    content = content.replace('</head>', fouc + '\n</head>', 1)
+
+    # 3. Splash — circular ring with hospital photo
+    content = re.sub(r'<div id="splash">.*?(?=\n<header>)', make_splash(hosp_img), content, flags=re.DOTALL)
 
     # 4. SVG sprite — logo pequeno no header (preserva mas esconde a img)
     content = content.replace('<body>\n', '<body>\n' + SVG_SPRITE + '\n', 1)
+
+    # 4b. Staff bar — below header, before app-shell
+    staff_bar = (
+        '<div class="staff-bar">'
+        '<span class="staff-lbl">Profissional</span>'
+        '<input type="text" id="inp-profissional" class="staff-inp" '
+        'placeholder="Nome do profissional" autocomplete="name" oninput="saveStaffInfo()">'
+        '<span class="staff-sep">·</span>'
+        '<span class="staff-lbl">Chefe de Turno</span>'
+        '<input type="text" id="inp-chefe" class="staff-inp" '
+        'placeholder="Nome do chefe de turno" autocomplete="name" oninput="saveStaffInfo()">'
+        '</div>'
+    )
+    content = content.replace('<div class="app-shell">', staff_bar + '\n<div class="app-shell">', 1)
+
+    # 4c. Theme toggle button in header
+    theme_btn = (
+        f'<button class="btn-h btn-out" id="theme-toggle" onclick="toggleTheme()" title="Tema claro/escuro">'
+        f'{icon("i-moon")} Tema</button>'
+    )
+    content = content.replace('<div class="hdr-right">', '<div class="hdr-right">\n        ' + theme_btn, 1)
 
     # 5. Botões estáticos — emojis → SVG
     btn_map = [
@@ -774,8 +856,12 @@ function emailReport(contentId, subject) {
   if (!data || !data.grand) { showToast('Carregue um relatório primeiro.'); return; }
   var spec  = (document.getElementById('active-label')||{}).textContent || 'Serviço';
   var date  = (document.getElementById('date-disp')||{}).textContent    || '';
+  var staffRaw = localStorage.getItem('_staff');
+  var staff = staffRaw ? JSON.parse(staffRaw) : {};
   var top10 = data.procData.slice(0,10).sort(function(a,b){return b.t-a.t;});
   var body  = 'Relatório: ' + subject + '\nServiço: ' + spec + '  ' + date + '\n';
+  body += 'Profissional       : ' + (staff.profissional || 'N/D') + '\n';
+  body += 'Chefe de turno     : ' + (staff.chefe || 'N/D') + '\n';
   body += '────────────────────────────────────────\n';
   body += 'Total procedimentos : ' + data.grand + '\n';
   body += 'Turno diurno        : ' + data.totalD + '\n';
@@ -788,31 +874,139 @@ function emailReport(contentId, subject) {
       body += idx + '. ' + p.name.slice(0,32) + '  D:'+p.d+'  N:'+p.n+'  T:'+p.t+'\n';
     });
   }
+  // Stats
+  var vals = data.procData.map(function(p){return p.t;}).filter(function(v){return v>0;});
+  if (vals.length) {
+    var st = _calcStats(vals);
+    body += '────────────────────────────────────────\n';
+    body += 'Estatísticas (por procedimento activo):\n';
+    body += '  Média   : '+st.mean+'\n  Mediana : '+st.median+'\n  Moda    : '+st.mode+'\n';
+    body += '  Mínimo  : '+st.min+'\n  Máximo  : '+st.max+'\n  N       : '+st.n+'\n';
+  }
   body += '────────────────────────────────────────\nHospital do Prenda — Luanda, Angola\n';
   window.location.href = 'mailto:?subject='
     + encodeURIComponent(subject + ' — ' + spec)
     + '&body=' + encodeURIComponent(body);
 }
 
+// ────── ESTATÍSTICAS ──────
+function _calcStats(vals) {
+  if (!vals || !vals.length) return null;
+  var sorted = vals.slice().sort(function(a,b){return a-b;});
+  var n = sorted.length;
+  var sum = sorted.reduce(function(s,v){return s+v;},0);
+  var mean = Math.round(sum/n*10)/10;
+  var med = n%2===0 ? (sorted[n/2-1]+sorted[n/2])/2 : sorted[Math.floor(n/2)];
+  var freq={}, maxF=0, mode=sorted[0];
+  sorted.forEach(function(v){freq[v]=(freq[v]||0)+1; if(freq[v]>maxF){maxF=freq[v];mode=v;}});
+  return {mean:mean, median:med, mode:mode, min:sorted[0], max:sorted[n-1], n:n};
+}
+function _statsHtml(data) {
+  if (!data || !data.procData || !data.procData.length) return '';
+  var vals = data.procData.map(function(p){return p.t;}).filter(function(v){return v>0;});
+  if (!vals.length) return '';
+  var s = _calcStats(vals);
+  if (!s) return '';
+  return '<div class="stats-row">'
+    + '<div class="stat-item"><div class="stat-lbl">Média</div><div class="stat-val">'+s.mean+'</div></div>'
+    + '<div class="stat-item"><div class="stat-lbl">Mediana</div><div class="stat-val">'+s.median+'</div></div>'
+    + '<div class="stat-item"><div class="stat-lbl">Moda</div><div class="stat-val">'+s.mode+'</div></div>'
+    + '<div class="stat-item"><div class="stat-lbl">Mínimo</div><div class="stat-val">'+s.min+'</div></div>'
+    + '<div class="stat-item"><div class="stat-lbl">Máximo</div><div class="stat-val">'+s.max+'</div></div>'
+    + '<div class="stat-item"><div class="stat-lbl">N procs</div><div class="stat-val">'+s.n+'</div></div>'
+    + '</div>';
+}
+// Patch _interp to append stats
+(function(){
+  var _origInterp = _interp;
+  _interp = function(data, periodLabel) {
+    return _origInterp(data, periodLabel) + _statsHtml(data);
+  };
+})();
+
+// ────── TEMA CLARO / ESCURO ──────
+function toggleTheme() {
+  var dark = document.documentElement.classList.toggle('dark');
+  localStorage.setItem('theme', dark ? 'dark' : 'light');
+  var btn = document.getElementById('theme-toggle');
+  if (btn) {
+    btn.title = dark ? 'Mudar para tema claro' : 'Mudar para tema escuro';
+  }
+  // Update chart colours
+  Object.keys(_ci).forEach(function(id){ if(_ci[id]) _ci[id].update(); });
+}
+
+// ────── STAFF INFO ──────
+function loadStaffInfo() {
+  var raw = localStorage.getItem('_staff');
+  var d = raw ? JSON.parse(raw) : {};
+  var pi = document.getElementById('inp-profissional');
+  var ci = document.getElementById('inp-chefe');
+  if (pi) pi.value = d.profissional || '';
+  if (ci) ci.value = d.chefe || '';
+}
+function saveStaffInfo() {
+  var pi = document.getElementById('inp-profissional');
+  var ci = document.getElementById('inp-chefe');
+  localStorage.setItem('_staff', JSON.stringify({
+    profissional: pi ? pi.value.trim() : '',
+    chefe: ci ? ci.value.trim() : ''
+  }));
+}
+setTimeout(loadStaffInfo, 80);
+
+// ────── SPLASH RING ANIMATION ──────
+(function(){
+  var DURATION = 5000;
+  var ring = document.getElementById('spl-ring');
+  var pct  = document.getElementById('spl-pct');
+  var CIRC = 263.9;
+  if (!ring) return;
+  var start = null;
+  function step(ts) {
+    if (!start) start = ts;
+    var p = Math.min((ts - start) / DURATION, 1);
+    var ease = p < .5 ? 2*p*p : -1+(4-2*p)*p;
+    ring.style.strokeDashoffset = CIRC * (1 - ease);
+    if (pct) pct.textContent = Math.round(ease * 100) + '%';
+    if (p < 1) { requestAnimationFrame(step); return; }
+    var splash = document.getElementById('splash');
+    if (splash) {
+      splash.style.transition = 'opacity .45s';
+      splash.style.opacity = '0';
+      setTimeout(function(){ splash.style.display = 'none'; }, 450);
+    }
+  }
+  requestAnimationFrame(step);
+})();
+
 // CSS dos componentes avançados
 (function(){
   var s = document.createElement('style');
   s.textContent = [
-    '.chart-wrap{margin-top:16px;padding:16px 18px;background:#fff;',
-    'border:1px solid oklch(92% 0.003 50);border-radius:6px;}',
+    '.chart-wrap{margin-top:16px;padding:16px 18px;background:var(--surface);',
+    'border:1px solid var(--border);border-radius:6px;}',
     '.chart-canvas-wrap{position:relative;height:260px;}',
     '.interp-box{margin-top:13px;padding:11px 15px;',
-    'background:oklch(97% 0.01 230);border:1px solid oklch(91% 0.02 230);',
+    'background:var(--accent-tint);border:1px solid var(--accent-ring);',
     'border-radius:5px;font-family:Inter,sans-serif;font-size:.71rem;',
-    'line-height:1.65;color:#6b6b6b;}',
+    'line-height:1.65;color:var(--muted);}',
     '.email-btn{padding:5px 10px;border-radius:4px;cursor:pointer;',
     'font-family:Inter,sans-serif;font-size:.57rem;font-weight:600;',
     'letter-spacing:.4px;text-transform:uppercase;',
-    'background:transparent;border:1px solid oklch(89% 0.03 230);',
-    'color:oklch(45% 0.08 230);transition:all .13s;',
+    'background:transparent;border:1px solid var(--accent-ring);',
+    'color:var(--accent);transition:all .13s;',
     'display:inline-flex;align-items:center;gap:4px;}',
-    '.email-btn:hover{background:oklch(97% 0.01 230);}',
-    '.email-btn .svc-icon{width:12px;height:12px;}'
+    '.email-btn:hover{background:var(--accent-tint);}',
+    '.email-btn .svc-icon{width:12px;height:12px;}',
+    '.stats-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;',
+    'padding-top:10px;border-top:1px solid var(--border);}',
+    '.stat-item{background:var(--surface);border:1px solid var(--border);',
+    'border-radius:4px;padding:7px 12px;text-align:center;min-width:76px;}',
+    '.stat-lbl{font-family:Inter,sans-serif;font-size:.42rem;font-weight:600;',
+    'text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:3px;}',
+    '.stat-val{font-family:"IBM Plex Mono",monospace;font-size:.92rem;',
+    'font-weight:500;color:var(--text);}'
   ].join('');
   document.head.appendChild(s);
 })();
@@ -866,35 +1060,26 @@ def inject_advanced_reports(content):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# CONFIGURAÇÃO DOS FICHEIROS
+# CONFIGURAÇÃO DOS FICHEIROS — 17 serviços totalmente independentes
 # ─────────────────────────────────────────────────────────────────────────────
-INDIVIDUAL = [
-    ('ortopedia',      'Ortopedia',            'i-bone'),
-    ('cuid_intermedio','Cuidados Intermédios',  'i-bed'),
-    ('uci',            'UCI',                  'i-heart'),
-    ('cirurgia',       'Cirurgia',             'i-scalpel'),
-    ('maxilo',         'Maxilo Facial',        'i-tooth'),
-    ('consulta_ext',   'Consulta Externa',     'i-clipboard'),
-    ('nefrologia',     'Nefrologia',           'i-droplet'),
-    ('hosp_dia',       'Hospital de Dia',      'i-calendar'),
-    ('neurocirurgia',  'Neurocirurgia',        'i-brain'),
-    ('otorrino',       'Otorrinolaringologia', 'i-ear'),
-    ('banco_urg',      'Banco de Urgência',    'i-cross-sq'),
-]
-
-GROUPS = [
-    (
-        'bloco_op', 'Bloco Operatório',
-        [('bloco_op','Bloco Operatório','i-lamp'),
-         ('bloco_urgente','Bloco Op. Urgente','i-cross-sq'),
-         ('bloco_electiva','Bloco Op. Electiva','i-calendar')]
-    ),
-    (
-        'medicina', 'Medicina',
-        [('med_homem','Medicina Homem','i-notes'),
-         ('med_mulher','Medicina Mulher','i-notes'),
-         ('medicina','Medicina (Auto)','i-pill')]
-    ),
+ALL_SERVICES = [
+    ('ortopedia',      'Ortopedia',             'i-bone'),
+    ('cuid_intermedio','Cuidados Intermédios',   'i-bed'),
+    ('uci',            'UCI',                   'i-heart'),
+    ('cirurgia',       'Cirurgia',              'i-scalpel'),
+    ('maxilo',         'Maxilo Facial',         'i-tooth'),
+    ('consulta_ext',   'Consulta Externa',      'i-clipboard'),
+    ('nefrologia',     'Nefrologia',            'i-droplet'),
+    ('hosp_dia',       'Hospital de Dia',       'i-calendar'),
+    ('neurocirurgia',  'Neurocirurgia',         'i-brain'),
+    ('otorrino',       'Otorrinolaringologia',  'i-ear'),
+    ('banco_urg',      'Banco de Urgência',     'i-cross-sq'),
+    ('bloco_op',       'Bloco Operatório',      'i-lamp'),
+    ('bloco_urgente',  'Bloco Op. Urgente',     'i-cross-sq'),
+    ('bloco_electiva', 'Bloco Op. Electiva',    'i-calendar'),
+    ('med_homem',      'Medicina Homem',        'i-notes'),
+    ('med_mulher',     'Medicina Mulher',       'i-notes'),
+    ('medicina',       'Medicina (Auto)',       'i-pill'),
 ]
 
 specialties_pattern = re.compile(r'const SPECIALTIES = \[.*?\];', re.DOTALL)
@@ -909,7 +1094,7 @@ def make_specialties_js(entries):
     return '\n'.join(lines)
 
 
-def generate(content, label, filename, entries):
+def generate(content, label, filename, entries, fix_readonly=False):
     new_array = make_specialties_js(entries)
     out = specialties_pattern.sub(new_array, content)
     # Title
@@ -917,11 +1102,26 @@ def generate(content, label, filename, entries):
         '<title>Serviço de Procedimentos de Enfermagem</title>',
         f'<title>Procedimentos do Serviço de {label}</title>'
     )
-    # Splash service label (in h1.splash-svc-lbl)
+    # Splash service label
     out = out.replace(
         'Serviço de Procedimentos de Enfermagem',
         f'Procedimentos do Serviço de {label}'
     )
+    # Remove readonly restrictions for standalone files
+    if fix_readonly:
+        out = out.replace(
+            "const isReadonly = sp.id === 'medicina' || sp.id === 'bloco_op';",
+            "const isReadonly = false;"
+        )
+        out = out.replace(
+            "if(sp.id === 'medicina' || sp.id === 'bloco_op') return; // calculado — não guardar",
+            ""
+        )
+        out = re.sub(
+            r"if\s*\(\s*sp\.id\s*===\s*'medicina'\s*\|\|\s*sp\.id\s*===\s*'bloco_op'\s*\)\s*return\s*;",
+            "",
+            out
+        )
     path = os.path.join(OUT, filename)
     with open(path, 'w', encoding='utf-8') as f:
         f.write(out)
@@ -940,13 +1140,12 @@ transformed = transform(original)
 
 os.makedirs(OUT, exist_ok=True)
 
-print('A gerar ficheiros individuais…')
-for sid, label, ico in INDIVIDUAL:
-    generate(transformed, label, f'proc_{sid}.html', [(sid, label, ico)])
+print('A gerar 17 ficheiros individuais…')
+for sid, label, ico in ALL_SERVICES:
+    generate(transformed, label, f'proc_{sid}.html', [(sid, label, ico)], fix_readonly=True)
 
-print('A gerar ficheiros combinados…')
-for fid, label, entries in GROUPS:
-    generate(transformed, label, f'proc_{fid}.html', entries)
+print('A gerar ficheiro com todos os serviços…')
+generate(transformed, 'Todos os Serviços', 'proc_todos_servicos.html', ALL_SERVICES)
 
-total = len(INDIVIDUAL) + len(GROUPS)
+total = len(ALL_SERVICES) + 1
 print(f'\n✓ {total} ficheiros gerados em {OUT}/')

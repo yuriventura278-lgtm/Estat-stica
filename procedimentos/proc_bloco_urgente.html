@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Procedimentos do Serviço de UCI</title>
+<title>Procedimentos do Serviço de Bloco Op. Urgente</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
@@ -481,7 +481,7 @@ html.dark #theme-toggle{color:var(--accent);border-color:var(--accent-ring)!impo
       </svg>
     </div>
     <p class="splash-hosp-lbl">Hospital do Prenda · Luanda</p>
-    <h1 class="splash-svc-lbl" id="splash-svc-title">Procedimentos do Serviço de UCI</h1>
+    <h1 class="splash-svc-lbl" id="splash-svc-title">Procedimentos do Serviço de Bloco Op. Urgente</h1>
     <div class="splash-pct" id="spl-pct">0%</div>
   </div>
 </div>
@@ -697,7 +697,7 @@ html.dark #theme-toggle{color:var(--accent);border-color:var(--accent-ring)!impo
 //  DADOS — igual ao original
 // ════════════════════════════════════════════════════════════
 const SPECIALTIES = [
-  { id:'uci', label:'UCI', icon:'<svg class="svc-icon" aria-hidden="true"><use href="#i-heart"/></svg>' },
+  { id:'bloco_urgente', label:'Bloco Op. Urgente', icon:'<svg class="svc-icon" aria-hidden="true"><use href="#i-cross-sq"/></svg>' },
 ];
 
 const CATEGORIES = [
@@ -1488,7 +1488,7 @@ function exportPDF() {
   doc.setFont('helvetica','bold'); doc.setFontSize(13); doc.setTextColor(255);
   doc.text('HOSPITAL PRENDA', ML+22, 12);
   doc.setFontSize(8); doc.setFont('helvetica','normal');
-  doc.text('Procedimentos do Serviço de UCI', ML+22, 18);
+  doc.text('Procedimentos do Serviço de Bloco Op. Urgente', ML+22, 18);
   doc.text(`Data: ${dateStr}  |  Gerado: ${geradoEm}`, ML+22, 24);
   doc.setTextColor(0);
 
@@ -1585,7 +1585,7 @@ function buildReportPDF(dates, titleLine1, titleLine2, specLabel, filename) {
   doc.setFont('helvetica','bold'); doc.setFontSize(13); doc.setTextColor(255);
   doc.text('HOSPITAL PRENDA', ML+22, 13);
   doc.setFontSize(8); doc.setFont('helvetica','normal');
-  doc.text('Procedimentos do Serviço de UCI', ML+22, 19);
+  doc.text('Procedimentos do Serviço de Bloco Op. Urgente', ML+22, 19);
   doc.text(titleLine1, ML+22, 25);
   // right side: periodo label
   doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(147,197,253);
@@ -1686,7 +1686,7 @@ function exportDiarioPDF() {
   doc.setFont('helvetica','bold'); doc.setFontSize(13); doc.setTextColor(255);
   doc.text('HOSPITAL PRENDA', ML+22, 13);
   doc.setFontSize(8); doc.setFont('helvetica','normal');
-  doc.text('Procedimentos do Serviço de UCI', ML+22, 19);
+  doc.text('Procedimentos do Serviço de Bloco Op. Urgente', ML+22, 19);
   doc.text(`Data: ${dateStr}  |  Gerado: ${geradoEm}`, ML+22, 25);
   doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(147,197,253);
   doc.text('RESUMO DIÁRIO', PW - MR, 13, {align:'right'});
