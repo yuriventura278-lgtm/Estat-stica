@@ -308,8 +308,35 @@ html.dark #theme-toggle{color:#60a5fa!important;}
   transition:border-color .13s;}
 .hp-staff-inp::placeholder{opacity:.5;}
 .hp-staff-inp:focus{border-bottom-color:rgba(0,212,170,.8);}
+
+/* ── HP STATISTICAL ANALYSIS ── */
+.hp-analysis-wrap{margin-top:20px;border-radius:12px;overflow:hidden;
+  border:1px solid rgba(0,212,170,.2);}
+.hp-analysis-title{font-size:.68rem;font-weight:700;letter-spacing:.09em;
+  text-transform:uppercase;padding:13px 18px;
+  background:rgba(0,212,170,.08);border-bottom:1px solid rgba(0,212,170,.15);
+  color:var(--text,#e2e8f0);}
+html.light .hp-analysis-title{color:#1e293b;background:rgba(0,180,150,.07);}
+.hp-stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));
+  gap:8px;padding:14px 16px;}
+.hp-stat{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);
+  border-radius:8px;padding:10px 8px;text-align:center;}
+html.light .hp-stat{background:#f8fafc;border-color:#e2e8f0;}
+.hp-stat-label{font-size:.46rem;text-transform:uppercase;letter-spacing:.12em;
+  color:rgba(148,163,184,.8);margin-bottom:5px;
+  font-family:var(--font-head,var(--fh,Inter,sans-serif));}
+html.light .hp-stat-label{color:#94a3b8;}
+.hp-stat-val{font-size:1.25rem;font-weight:700;color:var(--text,#e2e8f0);font-family:monospace;}
+html.light .hp-stat-val{color:#1e293b;}
+.hp-chart-wrap{padding:12px 16px;height:200px;position:relative;}
+.hp-interp-box{margin:0 16px 16px;padding:12px 16px;
+  background:rgba(0,212,170,.06);border-left:3px solid #00d4aa;
+  border-radius:0 8px 8px 0;font-size:.68rem;line-height:1.75;
+  color:var(--text,#cbd5e1);}
+html.light .hp-interp-box{background:rgba(0,180,150,.05);color:#1e293b;}
 </style>
 <script>if(localStorage.getItem("theme")==="dark")document.documentElement.classList.add("dark");</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
 <body>
 
@@ -1961,6 +1988,130 @@ function toggleTheme(){
   var btn=document.getElementById('theme-toggle');
   if(btn)btn.title=dark?'Mudar para tema claro':'Mudar para tema escuro';
 }
+</script>
+<script>
+
+// ── HP STATISTICAL ANALYSIS ENGINE ──
+var _hpCharts={};
+function _hpCalcStats(vals){
+  if(!vals||!vals.length)return null;
+  var n=vals.length,sum=vals.reduce(function(a,b){return a+b;},0),mean=sum/n;
+  var sorted=vals.slice().sort(function(a,b){return a-b;});
+  var mid=Math.floor(n/2),median=n%2?sorted[mid]:(sorted[mid-1]+sorted[mid])/2;
+  var freq={};vals.forEach(function(v){freq[v]=(freq[v]||0)+1;});
+  var maxF=Math.max.apply(null,Object.values(freq));
+  var modes=Object.keys(freq).filter(function(k){return freq[k]===maxF;})
+    .map(Number).sort(function(a,b){return a-b;});
+  var variance=vals.reduce(function(s,v){return s+(v-mean)*(v-mean);},0)/n;
+  return{n:n,sum:sum,mean:+(mean.toFixed(2)),median:+(median.toFixed(2)),
+    mode:modes,min:sorted[0],max:sorted[n-1],std:+(Math.sqrt(variance).toFixed(2))};
+}
+function _hpStatsHtml(s){
+  if(!s)return '';
+  var modeStr=s.mode.length>3?s.mode.slice(0,3).join('/')+'+':s.mode.join('/');
+  return '<div class="hp-stats-grid">'
+    +'<div class="hp-stat"><div class="hp-stat-label">N dias</div><div class="hp-stat-val">'+s.n+'</div></div>'
+    +'<div class="hp-stat"><div class="hp-stat-label">Média</div><div class="hp-stat-val">'+s.mean+'</div></div>'
+    +'<div class="hp-stat"><div class="hp-stat-label">Mediana</div><div class="hp-stat-val">'+s.median+'</div></div>'
+    +'<div class="hp-stat"><div class="hp-stat-label">Moda</div><div class="hp-stat-val">'+modeStr+'</div></div>'
+    +'<div class="hp-stat"><div class="hp-stat-label">Mínimo</div><div class="hp-stat-val">'+s.min+'</div></div>'
+    +'<div class="hp-stat"><div class="hp-stat-label">Máximo</div><div class="hp-stat-val">'+s.max+'</div></div>'
+    +'<div class="hp-stat"><div class="hp-stat-label">Desv. Pad.</div><div class="hp-stat-val">'+s.std+'</div></div>'
+    +'<div class="hp-stat"><div class="hp-stat-label">Total</div><div class="hp-stat-val">'+s.sum+'</div></div>'
+    +'</div>';
+}
+function _hpInterpText(s,label){
+  if(!s||s.n<2)return '<em>Insuficientes dados para análise estatística (mínimo 2 dias com registos).</em>';
+  var cv=s.mean>0?+(s.std/s.mean*100).toFixed(1):0;
+  var stab=cv<15?'baixa — fluxo estável':cv<30?'moderada — ligeira irregularidade':'elevada — fluxo irregular';
+  var symm=(s.n>=4&&Math.abs(s.mean-s.median)>s.std*0.5)
+    ?'distribuição assimétrica, com dias de valores atípicos'
+    :'distribuição aproximadamente simétrica';
+  var modeStr=s.mode.length===1
+    ?'O valor mais frequente foi <strong>'+s.mode[0]+'</strong>.'
+    :'Os valores mais frequentes foram <strong>'+s.mode.slice(0,3).join(', ')+'</strong>.';
+  return '<strong>Leitura e Análise:</strong> Analisados <strong>'+s.n+'</strong> dias'
+    +' com registos de <em>'+label+'</em>.'
+    +' Média diária de <strong>'+s.mean+'</strong> (mediana: <strong>'+s.median+'</strong>),'
+    +' entre <strong>'+s.min+'</strong> e <strong>'+s.max+'</strong>.'
+    +' Desvio padrão <strong>'+s.std+'</strong> (CV='+cv+'%) — variabilidade '+stab+'.'
+    +' '+modeStr
+    +' Observa-se '+symm+'.'
+    +' Total acumulado no período: <strong>'+s.sum+'</strong>.';
+}
+function _hpDrawChart(cid,labels,datasets){
+  var canvas=document.getElementById(cid);
+  if(!canvas||typeof Chart==='undefined')return;
+  if(_hpCharts[cid]){try{_hpCharts[cid].destroy();}catch(e){}delete _hpCharts[cid];}
+  var isDark=!document.documentElement.classList.contains('light');
+  var gridCol=isDark?'rgba(148,163,184,.1)':'rgba(0,0,0,.06)';
+  var tickCol=isDark?'#94a3b8':'#64748b';
+  _hpCharts[cid]=new Chart(canvas.getContext('2d'),{
+    type:'bar',
+    data:{labels:labels,datasets:datasets},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{display:datasets.length>1,
+          labels:{color:tickCol,font:{size:10},boxWidth:10,padding:8}},
+        tooltip:{backgroundColor:'rgba(15,23,42,.9)',titleColor:'#e2e8f0',
+          bodyColor:'#cbd5e1',cornerRadius:6,padding:8}
+      },
+      scales:{
+        x:{ticks:{color:tickCol,maxRotation:55,font:{size:9}},
+           grid:{color:gridCol}},
+        y:{ticks:{color:tickCol,font:{size:10}},
+           grid:{color:gridCol},beginAtZero:true}
+      },
+      animation:{duration:500}
+    }
+  });
+}
+function _hpAppendAnalysis(container,labels,valSets,title){
+  if(!container||!labels||!labels.length||!valSets||!valSets.length)return;
+  var mainVals=valSets[0].data;
+  var s=_hpCalcStats(mainVals);
+  if(!s||s.n<1)return;
+  var cid='hpc'+(Math.random().toString(36).slice(2,8));
+  var palette=['rgba(0,212,170,.75)','rgba(59,130,246,.75)','rgba(245,158,11,.75)',
+               'rgba(239,68,68,.75)','rgba(139,92,246,.75)'];
+  var borders=['#00d4aa','#3b82f6','#f59e0b','#ef4444','#8b5cf6'];
+  var datasets=valSets.map(function(vs,i){return{
+    label:vs.label,data:vs.data,
+    backgroundColor:palette[i%palette.length],
+    borderColor:borders[i%borders.length],
+    borderWidth:1.5,borderRadius:3
+  };});
+  var wrap=document.createElement('div');
+  wrap.className='hp-analysis-wrap';
+  wrap.innerHTML=
+    '<div class="hp-analysis-title">📊 Análise Estatística · '+title+'</div>'
+    +_hpStatsHtml(s)
+    +'<div class="hp-chart-wrap"><canvas id="'+cid+'"></canvas></div>'
+    +'<div class="hp-interp-box">'+_hpInterpText(s,title)+'</div>';
+  container.appendChild(wrap);
+  setTimeout(function(){_hpDrawChart(cid,labels,datasets);},80);
+}
+
+// ── LABORATÓRIO — análise estatística ──
+(function(){
+  var _orig=renderLabStats;
+  renderLabStats=function(allData,period){
+    _orig(allData,period);
+    var container=document.getElementById('lab-stats-content');
+    if(!container||!allData||!Object.keys(allData).length)return;
+    var dates=_getLabDatesForPeriod(period);
+    var fd=dates.filter(function(d){return allData&&allData[d];});
+    if(fd.length<2)return;
+    var totals=fd.map(function(d){var a=_aggregateLabDates([d],allData);return a._grandBu+a._grandInt;});
+    var buVals=fd.map(function(d){var a=_aggregateLabDates([d],allData);return a._grandBu;});
+    var intVals=fd.map(function(d){var a=_aggregateLabDates([d],allData);return a._grandInt;});
+    var lbls=fd.map(function(d){return d.slice(8,10)+'/'+d.slice(5,7);});
+    _hpAppendAnalysis(container,lbls,
+      [{label:'Total',data:totals},{label:'B.Urgência',data:buVals},{label:'Internamento',data:intVals}],
+      'Total de Exames por Dia');
+  };
+})();
 </script>
 </body>
 </html>

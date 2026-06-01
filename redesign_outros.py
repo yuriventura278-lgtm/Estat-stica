@@ -5,6 +5,7 @@ Aplica as actualizações visuais aos 5 serviços adicionais:
   • Botão de tema claro/escuro com preferência em localStorage
   • Barra de staff (nome do profissional + chefe de turno)
   • Prevenção de FOUC (flash of unstyled content)
+  • Análise estatística com gráficos Chart.js + medidas + leitura/interpretação
 """
 
 import re
@@ -13,25 +14,23 @@ import os
 UPLOADS = '/root/.claude/uploads/039233f2-2ff9-45a6-bc34-cf6cd2d282ab'
 OUT     = '/home/user/Estat-stica/procedimentos'
 
-# (source_file, output_file, service_label, theme_default)
-# theme_default: 'light' = page is light by default (add dark mode)
-#                'dark'  = page is dark by default (add light mode)
+# (source_file, output_file, service_label, theme_default, file_type)
 FILES = [
-    ('43558ce6-blocooperatorio2.html', 'proc_bloco_operatorio2.html', 'Serviço de Bloco Operatório', 'dark'),
-    ('7b3a412c-laboratorio4.html',     'proc_laboratorio.html',       'Serviço de Laboratório',      'light'),
-    ('90a3f128-consultaexterna.html',  'proc_consulta_externa2.html', 'Consulta Externa',            'dark_nav'),
-    ('ee69e8a1-imagiologia5.html',     'proc_imagiologia.html',       'Serviço de Imagiologia',      'light'),
-    ('f2665fdb-fisioterapia111.html',  'proc_fisioterapia.html',      'Serviço de Fisioterapia',     'light'),
+    ('43558ce6-blocooperatorio2.html', 'proc_bloco_operatorio2.html', 'Serviço de Bloco Operatório', 'dark',     'bloco_op2'),
+    ('7b3a412c-laboratorio4.html',     'proc_laboratorio.html',       'Serviço de Laboratório',      'light',    'lab'),
+    ('90a3f128-consultaexterna.html',  'proc_consulta_externa2.html', 'Consulta Externa',            'dark_nav', 'consulta_ext'),
+    ('ee69e8a1-imagiologia5.html',     'proc_imagiologia.html',       'Serviço de Imagiologia',      'light',    'imag'),
+    ('f2665fdb-fisioterapia111.html',  'proc_fisioterapia.html',      'Serviço de Fisioterapia',     'light',    'fisio'),
 ]
 
-# Extra files from additional uploads
 FILES_EXTRA = [
     ('/root/.claude/uploads/3eaa2d18-9bc1-4442-91a7-7c598dcde8ce/8b6b05f4-Cirurgia_Geral1.html',
-     'proc_cirurgia_geral.html', 'Cirurgia Geral', 'light_cg'),
+     'proc_cirurgia_geral.html', 'Cirurgia Geral', 'light_cg', 'cirurgia'),
 ]
 
 _CIRC = 263.9  # 2π × 42  (viewBox 100×100, r=42)
 
+CHARTJS_CDN = '<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>'
 
 # ─── helpers ─────────────────────────────────────────────────────────────────
 
@@ -80,6 +79,314 @@ SPLASH_CSS = '''
 .splash-pct{font-size:.65rem;color:#00d4aa;font-weight:600;letter-spacing:.05em;
   font-family:var(--font-body,var(--fb,monospace));}
 '''
+
+# ── Statistical analysis CSS ─────────────────────────────────────────────────
+
+ANALYSIS_CSS = '''
+/* ── HP STATISTICAL ANALYSIS ── */
+.hp-analysis-wrap{margin-top:20px;border-radius:12px;overflow:hidden;
+  border:1px solid rgba(0,212,170,.2);}
+.hp-analysis-title{font-size:.68rem;font-weight:700;letter-spacing:.09em;
+  text-transform:uppercase;padding:13px 18px;
+  background:rgba(0,212,170,.08);border-bottom:1px solid rgba(0,212,170,.15);
+  color:var(--text,#e2e8f0);}
+html.light .hp-analysis-title{color:#1e293b;background:rgba(0,180,150,.07);}
+.hp-stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));
+  gap:8px;padding:14px 16px;}
+.hp-stat{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);
+  border-radius:8px;padding:10px 8px;text-align:center;}
+html.light .hp-stat{background:#f8fafc;border-color:#e2e8f0;}
+.hp-stat-label{font-size:.46rem;text-transform:uppercase;letter-spacing:.12em;
+  color:rgba(148,163,184,.8);margin-bottom:5px;
+  font-family:var(--font-head,var(--fh,Inter,sans-serif));}
+html.light .hp-stat-label{color:#94a3b8;}
+.hp-stat-val{font-size:1.25rem;font-weight:700;color:var(--text,#e2e8f0);font-family:monospace;}
+html.light .hp-stat-val{color:#1e293b;}
+.hp-chart-wrap{padding:12px 16px;height:200px;position:relative;}
+.hp-interp-box{margin:0 16px 16px;padding:12px 16px;
+  background:rgba(0,212,170,.06);border-left:3px solid #00d4aa;
+  border-radius:0 8px 8px 0;font-size:.68rem;line-height:1.75;
+  color:var(--text,#cbd5e1);}
+html.light .hp-interp-box{background:rgba(0,180,150,.05);color:#1e293b;}
+'''
+
+# ── Common analysis JS ────────────────────────────────────────────────────────
+
+COMMON_ANALYSIS_JS = r'''
+// ── HP STATISTICAL ANALYSIS ENGINE ──
+var _hpCharts={};
+function _hpCalcStats(vals){
+  if(!vals||!vals.length)return null;
+  var n=vals.length,sum=vals.reduce(function(a,b){return a+b;},0),mean=sum/n;
+  var sorted=vals.slice().sort(function(a,b){return a-b;});
+  var mid=Math.floor(n/2),median=n%2?sorted[mid]:(sorted[mid-1]+sorted[mid])/2;
+  var freq={};vals.forEach(function(v){freq[v]=(freq[v]||0)+1;});
+  var maxF=Math.max.apply(null,Object.values(freq));
+  var modes=Object.keys(freq).filter(function(k){return freq[k]===maxF;})
+    .map(Number).sort(function(a,b){return a-b;});
+  var variance=vals.reduce(function(s,v){return s+(v-mean)*(v-mean);},0)/n;
+  return{n:n,sum:sum,mean:+(mean.toFixed(2)),median:+(median.toFixed(2)),
+    mode:modes,min:sorted[0],max:sorted[n-1],std:+(Math.sqrt(variance).toFixed(2))};
+}
+function _hpStatsHtml(s){
+  if(!s)return '';
+  var modeStr=s.mode.length>3?s.mode.slice(0,3).join('/')+'+':s.mode.join('/');
+  return '<div class="hp-stats-grid">'
+    +'<div class="hp-stat"><div class="hp-stat-label">N dias</div><div class="hp-stat-val">'+s.n+'</div></div>'
+    +'<div class="hp-stat"><div class="hp-stat-label">Média</div><div class="hp-stat-val">'+s.mean+'</div></div>'
+    +'<div class="hp-stat"><div class="hp-stat-label">Mediana</div><div class="hp-stat-val">'+s.median+'</div></div>'
+    +'<div class="hp-stat"><div class="hp-stat-label">Moda</div><div class="hp-stat-val">'+modeStr+'</div></div>'
+    +'<div class="hp-stat"><div class="hp-stat-label">Mínimo</div><div class="hp-stat-val">'+s.min+'</div></div>'
+    +'<div class="hp-stat"><div class="hp-stat-label">Máximo</div><div class="hp-stat-val">'+s.max+'</div></div>'
+    +'<div class="hp-stat"><div class="hp-stat-label">Desv. Pad.</div><div class="hp-stat-val">'+s.std+'</div></div>'
+    +'<div class="hp-stat"><div class="hp-stat-label">Total</div><div class="hp-stat-val">'+s.sum+'</div></div>'
+    +'</div>';
+}
+function _hpInterpText(s,label){
+  if(!s||s.n<2)return '<em>Insuficientes dados para análise estatística (mínimo 2 dias com registos).</em>';
+  var cv=s.mean>0?+(s.std/s.mean*100).toFixed(1):0;
+  var stab=cv<15?'baixa — fluxo estável':cv<30?'moderada — ligeira irregularidade':'elevada — fluxo irregular';
+  var symm=(s.n>=4&&Math.abs(s.mean-s.median)>s.std*0.5)
+    ?'distribuição assimétrica, com dias de valores atípicos'
+    :'distribuição aproximadamente simétrica';
+  var modeStr=s.mode.length===1
+    ?'O valor mais frequente foi <strong>'+s.mode[0]+'</strong>.'
+    :'Os valores mais frequentes foram <strong>'+s.mode.slice(0,3).join(', ')+'</strong>.';
+  return '<strong>Leitura e Análise:</strong> Analisados <strong>'+s.n+'</strong> dias'
+    +' com registos de <em>'+label+'</em>.'
+    +' Média diária de <strong>'+s.mean+'</strong> (mediana: <strong>'+s.median+'</strong>),'
+    +' entre <strong>'+s.min+'</strong> e <strong>'+s.max+'</strong>.'
+    +' Desvio padrão <strong>'+s.std+'</strong> (CV='+cv+'%) — variabilidade '+stab+'.'
+    +' '+modeStr
+    +' Observa-se '+symm+'.'
+    +' Total acumulado no período: <strong>'+s.sum+'</strong>.';
+}
+function _hpDrawChart(cid,labels,datasets){
+  var canvas=document.getElementById(cid);
+  if(!canvas||typeof Chart==='undefined')return;
+  if(_hpCharts[cid]){try{_hpCharts[cid].destroy();}catch(e){}delete _hpCharts[cid];}
+  var isDark=!document.documentElement.classList.contains('light');
+  var gridCol=isDark?'rgba(148,163,184,.1)':'rgba(0,0,0,.06)';
+  var tickCol=isDark?'#94a3b8':'#64748b';
+  _hpCharts[cid]=new Chart(canvas.getContext('2d'),{
+    type:'bar',
+    data:{labels:labels,datasets:datasets},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{display:datasets.length>1,
+          labels:{color:tickCol,font:{size:10},boxWidth:10,padding:8}},
+        tooltip:{backgroundColor:'rgba(15,23,42,.9)',titleColor:'#e2e8f0',
+          bodyColor:'#cbd5e1',cornerRadius:6,padding:8}
+      },
+      scales:{
+        x:{ticks:{color:tickCol,maxRotation:55,font:{size:9}},
+           grid:{color:gridCol}},
+        y:{ticks:{color:tickCol,font:{size:10}},
+           grid:{color:gridCol},beginAtZero:true}
+      },
+      animation:{duration:500}
+    }
+  });
+}
+function _hpAppendAnalysis(container,labels,valSets,title){
+  if(!container||!labels||!labels.length||!valSets||!valSets.length)return;
+  var mainVals=valSets[0].data;
+  var s=_hpCalcStats(mainVals);
+  if(!s||s.n<1)return;
+  var cid='hpc'+(Math.random().toString(36).slice(2,8));
+  var palette=['rgba(0,212,170,.75)','rgba(59,130,246,.75)','rgba(245,158,11,.75)',
+               'rgba(239,68,68,.75)','rgba(139,92,246,.75)'];
+  var borders=['#00d4aa','#3b82f6','#f59e0b','#ef4444','#8b5cf6'];
+  var datasets=valSets.map(function(vs,i){return{
+    label:vs.label,data:vs.data,
+    backgroundColor:palette[i%palette.length],
+    borderColor:borders[i%borders.length],
+    borderWidth:1.5,borderRadius:3
+  };});
+  var wrap=document.createElement('div');
+  wrap.className='hp-analysis-wrap';
+  wrap.innerHTML=
+    '<div class="hp-analysis-title">📊 Análise Estatística · '+title+'</div>'
+    +_hpStatsHtml(s)
+    +'<div class="hp-chart-wrap"><canvas id="'+cid+'"></canvas></div>'
+    +'<div class="hp-interp-box">'+_hpInterpText(s,title)+'</div>';
+  container.appendChild(wrap);
+  setTimeout(function(){_hpDrawChart(cid,labels,datasets);},80);
+}
+'''
+
+# ── Per-file render-function patches ─────────────────────────────────────────
+
+ANALYSIS_PATCH_LAB = r'''
+// ── LABORATÓRIO — análise estatística ──
+(function(){
+  var _orig=renderLabStats;
+  renderLabStats=function(allData,period){
+    _orig(allData,period);
+    var container=document.getElementById('lab-stats-content');
+    if(!container||!allData||!Object.keys(allData).length)return;
+    var dates=_getLabDatesForPeriod(period);
+    var fd=dates.filter(function(d){return allData&&allData[d];});
+    if(fd.length<2)return;
+    var totals=fd.map(function(d){var a=_aggregateLabDates([d],allData);return a._grandBu+a._grandInt;});
+    var buVals=fd.map(function(d){var a=_aggregateLabDates([d],allData);return a._grandBu;});
+    var intVals=fd.map(function(d){var a=_aggregateLabDates([d],allData);return a._grandInt;});
+    var lbls=fd.map(function(d){return d.slice(8,10)+'/'+d.slice(5,7);});
+    _hpAppendAnalysis(container,lbls,
+      [{label:'Total',data:totals},{label:'B.Urgência',data:buVals},{label:'Internamento',data:intVals}],
+      'Total de Exames por Dia');
+  };
+})();
+'''
+
+ANALYSIS_PATCH_IMAG = r'''
+// ── IMAGIOLOGIA — análise estatística ──
+(function(){
+  var _orig=renderStats;
+  renderStats=function(allData,period){
+    _orig(allData,period);
+    var container=document.getElementById('stats-content');
+    if(!container||!allData||!Object.keys(allData).length)return;
+    var dates=_getDatesForPeriod(period);
+    var fd=dates.filter(function(d){return allData&&allData[d];});
+    if(fd.length<2)return;
+    var totals=fd.map(function(d){var a=_aggregate([d],allData);return a._grandBu+a._grandAut+a._grandInt;});
+    var buVals=fd.map(function(d){var a=_aggregate([d],allData);return a._grandBu;});
+    var autVals=fd.map(function(d){var a=_aggregate([d],allData);return a._grandAut;});
+    var intVals=fd.map(function(d){var a=_aggregate([d],allData);return a._grandInt;});
+    var lbls=fd.map(function(d){return d.slice(8,10)+'/'+d.slice(5,7);});
+    _hpAppendAnalysis(container,lbls,
+      [{label:'Total',data:totals},{label:'B.Urgência',data:buVals},
+       {label:'Autorizados',data:autVals},{label:'Internamentos',data:intVals}],
+      'Total de Exames por Dia');
+  };
+})();
+'''
+
+ANALYSIS_PATCH_FISIO = r'''
+// ── FISIOTERAPIA — análise estatística ──
+(function(){
+  var _orig=renderFisioStats;
+  renderFisioStats=function(allData,period){
+    _orig(allData,period);
+    var container=document.getElementById('fisio-stats-content');
+    if(!container||!allData||!Object.keys(allData).length)return;
+    var dates=_getFsDatesForPeriod(period);
+    var fd=dates.filter(function(d){return allData&&allData[d];});
+    if(fd.length<2)return;
+    var totals=fd.map(function(d){var a=_aggregateFsioDates([d],allData);return a._intTotal+a._extTotal;});
+    var intVals=fd.map(function(d){var a=_aggregateFsioDates([d],allData);return a._intTotal;});
+    var extVals=fd.map(function(d){var a=_aggregateFsioDates([d],allData);return a._extTotal;});
+    var lbls=fd.map(function(d){return d.slice(8,10)+'/'+d.slice(5,7);});
+    _hpAppendAnalysis(container,lbls,
+      [{label:'Total',data:totals},{label:'Internos',data:intVals},{label:'Externos',data:extVals}],
+      'Total de Doentes por Dia');
+  };
+})();
+'''
+
+ANALYSIS_PATCH_BLOCO_OP2 = r'''
+// ── BLOCO OPERATÓRIO 2 — análise estatística ──
+(function(){
+  var _orig=renderStats;
+  renderStats=function(allData,period){
+    _orig(allData,period);
+    var container=document.getElementById('stats-content');
+    if(!container||!allData||!Object.keys(allData).length)return;
+    var range=_getDateRange(period);
+    var fk=Object.keys(allData).filter(function(k){
+      var d=_dateKeyToDate(k);return d>=range.start&&d<=range.end;
+    }).sort();
+    if(fk.length<2)return;
+    var urgVals=fk.map(function(k){
+      return((allData[k].surgeries&&allData[k].surgeries.urg)||[]).length;});
+    var eletVals=fk.map(function(k){
+      return((allData[k].surgeries&&allData[k].surgeries.elet)||[]).length;});
+    var totals=fk.map(function(k,i){return urgVals[i]+eletVals[i];});
+    var lbls=fk.map(function(k){return k.slice(6,8)+'/'+k.slice(4,6);});
+    _hpAppendAnalysis(container,lbls,
+      [{label:'Total',data:totals},{label:'Urgentes',data:urgVals},{label:'Eletivas',data:eletVals}],
+      'Total de Cirurgias por Dia');
+  };
+})();
+'''
+
+ANALYSIS_PATCH_CONSULTA_EXT = r'''
+// ── CONSULTA EXTERNA — análise estatística ──
+(function(){
+  var _orig=renderMonitorPeriod;
+  renderMonitorPeriod=function(mode){
+    _orig(mode);
+    var monDiv=document.getElementById('monitor-'+mode);
+    if(!monDiv)return;
+    var prev=monDiv.querySelector('.hp-analysis-wrap');
+    if(prev)prev.remove();
+    var today=todayKey();
+    var allDates=JSON.parse(localStorage.getItem('prenda_saved_dates')||'[]');
+    var dates=[];
+    if(mode==='dia'){
+      dates=allDates.includes(today)?[today]:[];
+    } else if(mode==='semana'){
+      var mon=weekOf(today);
+      var sat=new Date(mon+'T00:00:00');sat.setDate(sat.getDate()+6);
+      dates=allDates.filter(function(d){return d>=mon&&d<=sat.toISOString().slice(0,10);});
+    } else if(mode==='mes'){
+      var m=today.slice(0,7);
+      dates=allDates.filter(function(d){return d.startsWith(m);});
+    }
+    if(dates.length<2)return;
+    var totals=dates.map(function(d){
+      var c=JSON.parse(localStorage.getItem(storageKey('consultas',d))||'{}');
+      return Object.values(c).reduce(function(s,v){return s+(v.re||0);},0);
+    });
+    var lbls=dates.map(function(d){return d.slice(8,10)+'/'+d.slice(5,7);});
+    _hpAppendAnalysis(monDiv,lbls,
+      [{label:'Consultas Realizadas',data:totals}],
+      'Consultas Realizadas por Dia');
+  };
+})();
+'''
+
+ANALYSIS_PATCH_CIRURGIA = r'''
+// ── CIRURGIA GERAL — análise estatística ──
+(function(){
+  var _orig=loadMov;
+  loadMov=function(){
+    _orig();
+    var el=document.getElementById('mov-out');
+    if(!el)return;
+    var dates=getMPDates();
+    if(!dates||dates.length<2)return;
+    var daysWithData=dates.filter(function(d){
+      var mv=calcMovDia(d);
+      return mv.tent>0||mv.tsai>0||mv.dp>0;
+    });
+    if(daysWithData.length<2)return;
+    var admVals=daysWithData.map(function(d){return calcMovDia(d).tent||0;});
+    var saiVals=daysWithData.map(function(d){return calcMovDia(d).tsai||0;});
+    var dpVals=daysWithData.map(function(d){return calcMovDia(d).dp||0;});
+    var lbls=daysWithData.map(function(d){return d.slice(8,10)+'/'+d.slice(5,7);});
+    _hpAppendAnalysis(el,lbls,
+      [{label:'Admitidos',data:admVals},
+       {label:'Saídos',data:saiVals},
+       {label:'Dias Doente',data:dpVals}],
+      'Movimento Hospitalar por Dia');
+  };
+})();
+'''
+
+
+def get_analysis_js(file_type):
+    return {
+        'lab':         ANALYSIS_PATCH_LAB,
+        'imag':        ANALYSIS_PATCH_IMAG,
+        'fisio':       ANALYSIS_PATCH_FISIO,
+        'bloco_op2':   ANALYSIS_PATCH_BLOCO_OP2,
+        'consulta_ext':ANALYSIS_PATCH_CONSULTA_EXT,
+        'cirurgia':    ANALYSIS_PATCH_CIRURGIA,
+    }.get(file_type, '')
+
 
 SPLASH_RING_JS = r'''
 // ── SPLASH RING ──
@@ -157,7 +464,6 @@ def staff_bar_css(staff_h=38, header_h_var='var(--header-h)', bg='rgba(0,100,80,
 
 # ─── per-theme extras ─────────────────────────────────────────────────────────
 
-# For LIGHT default pages (fisio, imag, lab): add dark mode + light staff bar
 DARK_MODE_LIGHT_PAGES = '''
 /* ── DARK MODE ── */
 html.dark{
@@ -189,7 +495,6 @@ function toggleTheme(){
 FOUC_LIGHT = '<script>if(localStorage.getItem("theme")==="dark")document.documentElement.classList.add("dark");</script>'
 
 
-# For DARK default page (bloco_op): add light mode
 LIGHT_MODE_DARK_PAGES = '''
 /* ── LIGHT MODE ── */
 html.light{
@@ -222,7 +527,6 @@ function toggleTheme(){
 FOUC_DARK = '<script>if(localStorage.getItem("theme")==="light")document.documentElement.classList.add("light");</script>'
 
 
-# For consulta externa (dark nav, light content)
 DARK_MODE_DARK_NAV = '''
 /* ── DARK MODE ── */
 html.dark .main{background:#0c0f14!important;color:#e2e8f0!important;}
@@ -247,7 +551,6 @@ function toggleTheme(){
 }
 '''
 
-# Cirurgia Geral uses --hh, --sw, --s1, --s2, --bd, --txt, --mut, .shell, .hr
 DARK_MODE_CG = '''
 /* ── DARK MODE (Cirurgia Geral) ── */
 html.dark{
@@ -273,13 +576,12 @@ SVG_SUN  = '<svg style="display:inline-block;width:13px;height:13px;stroke:curre
 
 # ─── main transformer ─────────────────────────────────────────────────────────
 
-def transform(content, service_label, theme_default):
+def transform(content, service_label, theme_default, file_type=None):
     hosp_img = extract_hosp_img(content)
     new_splash = make_splash_html(hosp_img, service_label)
 
     # ── 1. Replace / inject splash ──────────────────────────────────────────
     if 'id="splash"' in content:
-        # Replace existing splash (everything from <div id="splash"> up to just before <header> or <div class="layout">)
         content = re.sub(
             r'<div id="splash">.*?(?=\n<header>|\n\n<header>|\n<div class="layout">|\n<div id="app)',
             new_splash,
@@ -287,19 +589,15 @@ def transform(content, service_label, theme_default):
             flags=re.DOTALL
         )
     else:
-        # consulta externa — inject splash at start of body
         content = content.replace('<body>\n', f'<body>\n{new_splash}\n', 1)
         if '<body>\n' + new_splash not in content:
             content = content.replace('<body>', f'<body>\n{new_splash}', 1)
 
-    # ── 2. Inject splash CSS (replace existing splash CSS block or append) ──
-    # Remove the auto-hide animation from #splash (critical — would fight our 5s ring)
+    # ── 2. Inject splash CSS ─────────────────────────────────────────────────
     content = re.sub(r'\s*animation\s*:\s*splashFadeOut[^;]+;', '', content)
-    # Remove all old @keyframes for splash animations
     content = re.sub(r'@keyframes\s+splashFadeOut\s*\{[^}]+\}', '', content)
     content = re.sub(r'@keyframes\s+splashRing\s*\{[^}]+\}', '', content)
     content = re.sub(r'@keyframes\s+splashProgress\s*\{[^}]+\}', '', content)
-    # Hide old splash sub-elements (they'll be replaced by our new HTML)
     OLD_SPLASH_CLASSES = (
         r'\.(splash-logo-wrap|splash-logo-ring|splash-logo-img|splash-logo|splash-hospital|'
         r'splash-name|splash-country|splash-divider|splash-dept|splash-title|splash-sub|'
@@ -308,10 +606,9 @@ def transform(content, service_label, theme_default):
         r'\s*\{[^}]+\}'
     )
     content = re.sub(OLD_SPLASH_CLASSES, '', content)
-    # Add new splash CSS just before </style>
     content = content.replace('</style>', SPLASH_CSS + '</style>', 1)
 
-    # ── 3. Theme CSS + staff bar CSS ────────────────────────────────────────
+    # ── 3. Theme CSS + staff bar CSS + analysis CSS ──────────────────────────
     if theme_default == 'light':
         extra_css = DARK_MODE_LIGHT_PAGES
         staff_css = staff_bar_css(
@@ -334,7 +631,7 @@ def transform(content, service_label, theme_default):
         )
     elif theme_default == 'dark':
         extra_css = LIGHT_MODE_DARK_PAGES
-        staff_css = staff_bar_css()  # dark defaults
+        staff_css = staff_bar_css()
     else:  # dark_nav (consulta externa)
         extra_css = DARK_MODE_DARK_NAV
         staff_css = staff_bar_css(
@@ -346,7 +643,7 @@ def transform(content, service_label, theme_default):
             inp_border='rgba(255,255,255,.2)'
         )
 
-    content = content.replace('</style>', extra_css + staff_css + '</style>', 1)
+    content = content.replace('</style>', extra_css + staff_css + ANALYSIS_CSS + '</style>', 1)
 
     # ── 4. FOUC prevention in <head> ────────────────────────────────────────
     if theme_default in ('light', 'dark_nav', 'light_cg'):
@@ -355,7 +652,11 @@ def transform(content, service_label, theme_default):
         fouc = FOUC_DARK
     content = content.replace('</head>', fouc + '\n</head>', 1)
 
-    # ── 5. Theme toggle button in header ────────────────────────────────────
+    # ── 5. Chart.js CDN in <head> (skip cirurgia_geral which already has it) ─
+    if file_type != 'cirurgia' and CHARTJS_CDN not in content:
+        content = content.replace('</head>', CHARTJS_CDN + '\n</head>', 1)
+
+    # ── 6. Theme toggle button in header ────────────────────────────────────
     if theme_default == 'dark':
         icon = SVG_SUN
         title = 'Mudar para tema claro'
@@ -372,25 +673,20 @@ def transform(content, service_label, theme_default):
         f'{icon} Tema</button>'
     )
 
-    # Try all known header-right patterns
     for btn_area in ['<div class="header-right">', '<div class="topbar-right">', '<div class="hr">']:
         if btn_area in content:
             content = content.replace(btn_area, btn_area + '\n    ' + theme_btn, 1)
             break
 
-    # ── 6. Staff bar injection ───────────────────────────────────────────────
+    # ── 7. Staff bar injection ───────────────────────────────────────────────
     sb = staff_bar_html()
     if theme_default == 'dark_nav':
-        # After closing </div> of topbar div
         content = content.replace('</div>\n\n<div class="sidebar-overlay"',
                                   f'</div>\n{sb}\n<div class="sidebar-overlay"', 1)
-        # Shift sidebar top and layout min-height
         content = content.replace('top: 62px;', 'top: 100px;')
         content = content.replace('min-height: calc(100vh - 62px)', 'min-height: calc(100vh - 100px)')
     else:
-        # After </header>
         content = content.replace('\n<header>', '\n' + sb + '\n<header>', 1)
-        # Adjust sidebar and shell/main top offsets — handle both --header-h and --hh variants
         for hvar in ('--header-h', '--hh'):
             content = content.replace(
                 f'top:var({hvar});', f'top:calc(var({hvar}) + 38px);')
@@ -401,7 +697,7 @@ def transform(content, service_label, theme_default):
             content = content.replace(
                 f'padding-top: var({hvar})', f'padding-top: calc(var({hvar}) + 38px)')
 
-    # ── 7. Inject JS before </body> ──────────────────────────────────────────
+    # ── 8. Inject JS before </body> ──────────────────────────────────────────
     if theme_default in ('light', 'light_cg'):
         toggle_js = DARK_TOGGLE_JS_LIGHT
     elif theme_default == 'dark':
@@ -409,15 +705,17 @@ def transform(content, service_label, theme_default):
     else:
         toggle_js = DARK_TOGGLE_JS_DARK_NAV
 
-    inject_js = (
-        '<script>\n'
-        + SPLASH_RING_JS
-        + STAFF_JS
-        + toggle_js
-        + '</script>\n'
-        '</body>'
-    )
-    content = content.replace('</body>', inject_js, 1)
+    # Base JS (splash + staff + theme toggle)
+    base_js = '<script>\n' + SPLASH_RING_JS + STAFF_JS + toggle_js + '</script>\n'
+
+    # Analysis JS (common utilities + file-specific patch)
+    analysis_patch = get_analysis_js(file_type) if file_type else ''
+    if analysis_patch:
+        analysis_js = '<script>\n' + COMMON_ANALYSIS_JS + analysis_patch + '</script>\n'
+    else:
+        analysis_js = ''
+
+    content = content.replace('</body>', base_js + analysis_js + '</body>', 1)
 
     return content
 
@@ -426,15 +724,15 @@ def transform(content, service_label, theme_default):
 
 os.makedirs(OUT, exist_ok=True)
 
-all_files = [(os.path.join(UPLOADS, s), d, l, t) for s,d,l,t in FILES]
-all_files += [(s, d, l, t) for s,d,l,t in FILES_EXTRA]
+all_files = [(os.path.join(UPLOADS, s), d, l, t, ft) for s, d, l, t, ft in FILES]
+all_files += [(s, d, l, t, ft) for s, d, l, t, ft in FILES_EXTRA]
 
-for src_path, out_name, label, theme in all_files:
+for src_path, out_name, label, theme, ftype in all_files:
     out_path = os.path.join(OUT, out_name)
     print(f'A processar {os.path.basename(src_path)}…')
     with open(src_path, 'r', encoding='utf-8') as f:
         content = f.read()
-    content = transform(content, label, theme)
+    content = transform(content, label, theme, ftype)
     with open(out_path, 'w', encoding='utf-8') as f:
         f.write(content)
     print(f'  ✓  {out_name}')
