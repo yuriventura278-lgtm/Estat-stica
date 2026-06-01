@@ -24,6 +24,12 @@ FILES = [
     ('f2665fdb-fisioterapia111.html',  'proc_fisioterapia.html',      'Serviço de Fisioterapia',     'light'),
 ]
 
+# Extra files from additional uploads
+FILES_EXTRA = [
+    ('/root/.claude/uploads/3eaa2d18-9bc1-4442-91a7-7c598dcde8ce/8b6b05f4-Cirurgia_Geral1.html',
+     'proc_cirurgia_geral.html', 'Cirurgia Geral', 'light_cg'),
+]
+
 _CIRC = 263.9  # 2π × 42  (viewBox 100×100, r=42)
 
 
@@ -241,6 +247,23 @@ function toggleTheme(){
 }
 '''
 
+# Cirurgia Geral uses --hh, --sw, --s1, --s2, --bd, --txt, --mut, .shell, .hr
+DARK_MODE_CG = '''
+/* ── DARK MODE (Cirurgia Geral) ── */
+html.dark{
+  --bg:#0c0f14!important;--s1:#141820!important;--s2:#0f1520!important;
+  --bd:rgba(30,40,64,0.8)!important;--txt:#e2e8f0!important;--mut:#64748b!important;
+}
+html.dark body{background:#0c0f14!important;color:#e2e8f0!important;}
+html.dark header{background:#141820!important;border-bottom-color:#1e2840!important;box-shadow:none!important;}
+html.dark .sidebar{background:#141820!important;border-right-color:#1e2840!important;}
+html.dark .di{background:#0f1520!important;color:#e2e8f0!important;border-color:#1e2840!important;}
+html.dark .hp-staff-bar{background:rgba(20,24,32,.95)!important;border-bottom-color:#1e2840!important;}
+html.dark .hp-staff-inp{color:#e2e8f0!important;border-bottom-color:#1e2840!important;}
+html.dark .hp-staff-lbl{color:#64748b!important;}
+html.dark #theme-toggle{color:#60a5fa!important;border-color:#1e2840!important;}
+'''
+
 
 # ─── SVG icons for buttons ────────────────────────────────────────────────────
 
@@ -299,6 +322,16 @@ def transform(content, service_label, theme_default):
             inp_color='var(--text,#0f172a)',
             inp_border='oklch(85% .02 200)'
         )
+    elif theme_default == 'light_cg':
+        extra_css = DARK_MODE_CG
+        staff_css = staff_bar_css(
+            header_h_var='var(--hh)',
+            bg='oklch(97% .01 220)',
+            border='oklch(88% .03 220)',
+            label_color='var(--mut,#64748b)',
+            inp_color='var(--txt,#1a1a2e)',
+            inp_border='oklch(84% .03 220)'
+        )
     elif theme_default == 'dark':
         extra_css = LIGHT_MODE_DARK_PAGES
         staff_css = staff_bar_css()  # dark defaults
@@ -316,7 +349,7 @@ def transform(content, service_label, theme_default):
     content = content.replace('</style>', extra_css + staff_css + '</style>', 1)
 
     # ── 4. FOUC prevention in <head> ────────────────────────────────────────
-    if theme_default == 'light' or theme_default == 'dark_nav':
+    if theme_default in ('light', 'dark_nav', 'light_cg'):
         fouc = FOUC_LIGHT
     else:
         fouc = FOUC_DARK
@@ -339,8 +372,8 @@ def transform(content, service_label, theme_default):
         f'{icon} Tema</button>'
     )
 
-    # Try header-right first, then topbar-right
-    for btn_area in ['<div class="header-right">', '<div class="topbar-right">']:
+    # Try all known header-right patterns
+    for btn_area in ['<div class="header-right">', '<div class="topbar-right">', '<div class="hr">']:
         if btn_area in content:
             content = content.replace(btn_area, btn_area + '\n    ' + theme_btn, 1)
             break
@@ -357,18 +390,19 @@ def transform(content, service_label, theme_default):
     else:
         # After </header>
         content = content.replace('\n<header>', '\n' + sb + '\n<header>', 1)
-        # Adjust sidebar and main-content top offsets
-        content = content.replace(
-            'top:var(--header-h);', 'top:calc(var(--header-h) + 38px);')
-        content = content.replace(
-            'top: var(--header-h);', 'top: calc(var(--header-h) + 38px);')
-        content = content.replace(
-            'padding-top:var(--header-h)', 'padding-top:calc(var(--header-h) + 38px)')
-        content = content.replace(
-            'padding-top: var(--header-h)', 'padding-top: calc(var(--header-h) + 38px)')
+        # Adjust sidebar and shell/main top offsets — handle both --header-h and --hh variants
+        for hvar in ('--header-h', '--hh'):
+            content = content.replace(
+                f'top:var({hvar});', f'top:calc(var({hvar}) + 38px);')
+            content = content.replace(
+                f'top: var({hvar});', f'top: calc(var({hvar}) + 38px);')
+            content = content.replace(
+                f'padding-top:var({hvar})', f'padding-top:calc(var({hvar}) + 38px)')
+            content = content.replace(
+                f'padding-top: var({hvar})', f'padding-top: calc(var({hvar}) + 38px)')
 
     # ── 7. Inject JS before </body> ──────────────────────────────────────────
-    if theme_default == 'light':
+    if theme_default in ('light', 'light_cg'):
         toggle_js = DARK_TOGGLE_JS_LIGHT
     elif theme_default == 'dark':
         toggle_js = LIGHT_TOGGLE_JS_DARK
@@ -392,10 +426,12 @@ def transform(content, service_label, theme_default):
 
 os.makedirs(OUT, exist_ok=True)
 
-for src_name, out_name, label, theme in FILES:
-    src_path = os.path.join(UPLOADS, src_name)
+all_files = [(os.path.join(UPLOADS, s), d, l, t) for s,d,l,t in FILES]
+all_files += [(s, d, l, t) for s,d,l,t in FILES_EXTRA]
+
+for src_path, out_name, label, theme in all_files:
     out_path = os.path.join(OUT, out_name)
-    print(f'A processar {src_name}…')
+    print(f'A processar {os.path.basename(src_path)}…')
     with open(src_path, 'r', encoding='utf-8') as f:
         content = f.read()
     content = transform(content, label, theme)
@@ -403,4 +439,4 @@ for src_name, out_name, label, theme in FILES:
         f.write(content)
     print(f'  ✓  {out_name}')
 
-print(f'\n✓ {len(FILES)} ficheiros gerados em {OUT}/')
+print(f'\n✓ {len(all_files)} ficheiros gerados em {OUT}/')
