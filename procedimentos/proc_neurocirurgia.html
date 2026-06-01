@@ -1594,6 +1594,7 @@ function buildReportPDF(dates, titleLine1, titleLine2, specLabel, filename) {
   doc.text(`Serviço: ${specLabel}`, PW - MR, 19, {align:'right'});
   doc.text(`Gerado: ${geradoEm}`, PW - MR, 25, {align:'right'});
   doc.setTextColor(0);
+  (function(){try{var _raw=localStorage.getItem('_staff');if(!_raw)return;var _st=JSON.parse(_raw);var _parts=[];if(_st.profissional)_parts.push('Enf.: '+_st.profissional);if(_st.chefe)_parts.push('Chefe: '+_st.chefe);if(!_parts.length)return;doc.setFont('helvetica','italic');doc.setFontSize(6.5);doc.setTextColor(180,210,255);doc.text(_parts.join('  ·  '),PW-MR,29,{align:'right'});doc.setTextColor(0);}catch(e){}})();
   let cy = 38;
 
   // ── Summary boxes
@@ -1650,6 +1651,40 @@ function buildReportPDF(dates, titleLine1, titleLine2, specLabel, filename) {
     });
   }
 
+  // ── Medidas Estatísticas
+  if(typeof _calcStats==='function'&&typeof pRows!=='undefined'&&pRows.length>0){
+    var _sv=pRows.map(function(r){return r[3];});
+    var _ss=_calcStats(_sv);
+    if(_ss){
+      var _sy=(doc.lastAutoTable?doc.lastAutoTable.finalY:cy)+8;
+      if(_sy>PH-55){doc.addPage();_sy=14;}
+      doc.setFillColor(55,65,110);
+      doc.roundedRect(ML,_sy,CW,7,1.5,1.5,'F');
+      doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(255);
+      doc.text('MEDIDAS ESTATÍSTICAS (por procedimento activo)',ML+4,_sy+5);
+      doc.setTextColor(0);_sy+=10;
+      doc.autoTable({startY:_sy,
+        head:[['Medida','Valor','Descrição']],
+        body:[
+          ['Média',String(_ss.mean),'Valor médio por tipo de procedimento activo'],
+          ['Mediana',String(_ss.median),'Valor central da distribuição'],
+          ['Moda',String(_ss.mode),'Valor com maior frequência'],
+          ['Mínimo',String(_ss.min),'Menor número registado num tipo'],
+          ['Máximo',String(_ss.max),'Maior número registado num tipo'],
+          ['N activos',String(_ss.n),'Tipos de procedimentos com registos']
+        ],
+        margin:{left:ML,right:MR},
+        styles:{fontSize:8.5,cellPadding:2.5},
+        headStyles:{fillColor:[55,65,110],textColor:255,fontStyle:'bold'},
+        columnStyles:{
+          0:{halign:'left',cellWidth:CW*.22,fontStyle:'bold'},
+          1:{halign:'center',cellWidth:CW*.15,fontStyle:'bold'},
+          2:{halign:'left'}
+        },
+        alternateRowStyles:{fillColor:[245,247,255]}
+      });
+    }
+  }
   // ── Footer
   const total = doc.internal.getNumberOfPages();
   for(let i=1;i<=total;i++){
@@ -1693,6 +1728,7 @@ function exportDiarioPDF() {
   doc.setFont('helvetica','normal'); doc.setFontSize(7);
   doc.text(`Serviço: ${specLabel}`, PW - MR, 19, {align:'right'});
   doc.setTextColor(0);
+  (function(){try{var _raw=localStorage.getItem('_staff');if(!_raw)return;var _st=JSON.parse(_raw);var _parts=[];if(_st.profissional)_parts.push('Enf.: '+_st.profissional);if(_st.chefe)_parts.push('Chefe: '+_st.chefe);if(!_parts.length)return;doc.setFont('helvetica','italic');doc.setFontSize(6.5);doc.setTextColor(180,210,255);doc.text(_parts.join('  ·  '),PW-MR,29,{align:'right'});doc.setTextColor(0);}catch(e){}})();
   let cy = 38;
   doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(60);
   doc.text('RESUMO DO DIA', ML, cy); cy += 5;
@@ -1734,6 +1770,40 @@ function exportDiarioPDF() {
       columnStyles:{0:{halign:'left',cellWidth:CW*.58},1:{halign:'center'},2:{halign:'center'},3:{halign:'center',fontStyle:'bold'}},
       alternateRowStyles:{fillColor:[245,249,255]}
     });
+  }
+  // ── Medidas Estatísticas
+  if(typeof _calcStats==='function'&&typeof pRows!=='undefined'&&pRows.length>0){
+    var _sv=pRows.map(function(r){return r[3];});
+    var _ss=_calcStats(_sv);
+    if(_ss){
+      var _sy=(doc.lastAutoTable?doc.lastAutoTable.finalY:cy)+8;
+      if(_sy>PH-55){doc.addPage();_sy=14;}
+      doc.setFillColor(55,65,110);
+      doc.roundedRect(ML,_sy,CW,7,1.5,1.5,'F');
+      doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(255);
+      doc.text('MEDIDAS ESTATÍSTICAS (por procedimento activo)',ML+4,_sy+5);
+      doc.setTextColor(0);_sy+=10;
+      doc.autoTable({startY:_sy,
+        head:[['Medida','Valor','Descrição']],
+        body:[
+          ['Média',String(_ss.mean),'Valor médio por tipo de procedimento activo'],
+          ['Mediana',String(_ss.median),'Valor central da distribuição'],
+          ['Moda',String(_ss.mode),'Valor com maior frequência'],
+          ['Mínimo',String(_ss.min),'Menor número registado num tipo'],
+          ['Máximo',String(_ss.max),'Maior número registado num tipo'],
+          ['N activos',String(_ss.n),'Tipos de procedimentos com registos']
+        ],
+        margin:{left:ML,right:MR},
+        styles:{fontSize:8.5,cellPadding:2.5},
+        headStyles:{fillColor:[55,65,110],textColor:255,fontStyle:'bold'},
+        columnStyles:{
+          0:{halign:'left',cellWidth:CW*.22,fontStyle:'bold'},
+          1:{halign:'center',cellWidth:CW*.15,fontStyle:'bold'},
+          2:{halign:'left'}
+        },
+        alternateRowStyles:{fillColor:[245,247,255]}
+      });
+    }
   }
   const total=doc.internal.getNumberOfPages();
   for(let i=1;i<=total;i++){

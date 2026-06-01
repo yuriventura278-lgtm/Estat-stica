@@ -1056,6 +1056,73 @@ def inject_advanced_reports(content):
     # 4. Injecta JS avançado antes de </script>
     content = content.replace('\n</script>\n</body>', '\n' + ADVANCED_JS + '\n</script>\n</body>', 1)
 
+    # 5. Staff info line in PDF header (both buildReportPDF and exportDiarioPDF)
+    STAFF_PDF = (
+        "  doc.setTextColor(0);\n"
+        "  (function(){try{"
+        "var _raw=localStorage.getItem('_staff');if(!_raw)return;"
+        "var _st=JSON.parse(_raw);var _parts=[];"
+        "if(_st.profissional)_parts.push('Enf.: '+_st.profissional);"
+        "if(_st.chefe)_parts.push('Chefe: '+_st.chefe);"
+        "if(!_parts.length)return;"
+        "doc.setFont('helvetica','italic');doc.setFontSize(6.5);doc.setTextColor(180,210,255);"
+        "doc.text(_parts.join('  ·  '),PW-MR,29,{align:'right'});"
+        "doc.setTextColor(0);}catch(e){}})();\n"
+        "  let cy = 38;"
+    )
+    content = content.replace(
+        "  doc.setTextColor(0);\n  let cy = 38;",
+        STAFF_PDF,
+        2  # two occurrences: buildReportPDF + exportDiarioPDF
+    )
+
+    # 6. Stats section before footer in buildReportPDF
+    STATS_BLOCK = (
+        "  // ── Medidas Estatísticas\n"
+        "  if(typeof _calcStats==='function'&&typeof pRows!=='undefined'&&pRows.length>0){\n"
+        "    var _sv=pRows.map(function(r){return r[3];});\n"
+        "    var _ss=_calcStats(_sv);\n"
+        "    if(_ss){\n"
+        "      var _sy=(doc.lastAutoTable?doc.lastAutoTable.finalY:cy)+8;\n"
+        "      if(_sy>PH-55){doc.addPage();_sy=14;}\n"
+        "      doc.setFillColor(55,65,110);\n"
+        "      doc.roundedRect(ML,_sy,CW,7,1.5,1.5,'F');\n"
+        "      doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(255);\n"
+        "      doc.text('MEDIDAS ESTATÍSTICAS (por procedimento activo)',ML+4,_sy+5);\n"
+        "      doc.setTextColor(0);_sy+=10;\n"
+        "      doc.autoTable({startY:_sy,\n"
+        "        head:[['Medida','Valor','Descrição']],\n"
+        "        body:[\n"
+        "          ['Média',String(_ss.mean),'Valor médio por tipo de procedimento activo'],\n"
+        "          ['Mediana',String(_ss.median),'Valor central da distribuição'],\n"
+        "          ['Moda',String(_ss.mode),'Valor com maior frequência'],\n"
+        "          ['Mínimo',String(_ss.min),'Menor número registado num tipo'],\n"
+        "          ['Máximo',String(_ss.max),'Maior número registado num tipo'],\n"
+        "          ['N activos',String(_ss.n),'Tipos de procedimentos com registos']\n"
+        "        ],\n"
+        "        margin:{left:ML,right:MR},\n"
+        "        styles:{fontSize:8.5,cellPadding:2.5},\n"
+        "        headStyles:{fillColor:[55,65,110],textColor:255,fontStyle:'bold'},\n"
+        "        columnStyles:{\n"
+        "          0:{halign:'left',cellWidth:CW*.22,fontStyle:'bold'},\n"
+        "          1:{halign:'center',cellWidth:CW*.15,fontStyle:'bold'},\n"
+        "          2:{halign:'left'}\n"
+        "        },\n"
+        "        alternateRowStyles:{fillColor:[245,247,255]}\n"
+        "      });\n"
+        "    }\n"
+        "  }\n"
+    )
+    content = content.replace(
+        "  // ── Footer\n  const total = doc.internal.getNumberOfPages();",
+        STATS_BLOCK + "  // ── Footer\n  const total = doc.internal.getNumberOfPages();"
+    )
+    # Same for exportDiarioPDF (different spacing)
+    content = content.replace(
+        "  const total=doc.internal.getNumberOfPages();\n  for(let i=1;i<=total;i++){",
+        STATS_BLOCK + "  const total=doc.internal.getNumberOfPages();\n  for(let i=1;i<=total;i++){"
+    )
+
     return content
 
 
