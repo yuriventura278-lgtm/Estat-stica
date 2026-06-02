@@ -811,6 +811,7 @@ function doLogin(){
   sessionStorage.setItem('hp_prof',prof.nome);
   document.getElementById('login-modal').style.display='none';
   document.getElementById('staff-prof-name').textContent=prof.nome;
+  toast('Bem-vindo(a), '+prof.nome+'!','info');
   initRegisto();
 }
 function checkSession(){
