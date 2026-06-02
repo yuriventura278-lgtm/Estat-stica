@@ -332,6 +332,24 @@ MODAL_VOLTOU = """
 </div>
 """
 
+MODAL_IC_RESOLVE = """
+<div id="modal-ic-resolve" class="modal-overlay" style="display:none;">
+  <div class="modal" style="max-width:440px;">
+    <div class="modal-title">Marcar como Resolvida</div>
+    <p style="font-size:.72rem;color:var(--muted);margin-bottom:14px;">Descreva como a intercorrencia foi resolvida (opcional).</p>
+    <div class="field-group" style="margin-bottom:14px;">
+      <label>Descricao da Resolucao</label>
+      <input type="text" id="ic-resolve-obs" placeholder="Como foi resolvida..."
+             onkeydown="if(event.key==='Enter')confirmarResolverIC()">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="document.getElementById('modal-ic-resolve').style.display='none'">Cancelar</button>
+      <button class="btn btn-primary" style="background:#059669;" onclick="confirmarResolverIC()">Confirmar</button>
+    </div>
+  </div>
+</div>
+"""
+
 SEC_DG = """
 <section id="sec-dg" class="section active">
   <div class="page-header">
@@ -628,6 +646,69 @@ SEC_RH = """
 </section>
 """
 
+SEC_INTERCORRENCIAS = """
+<section id="sec-intercorrencias" class="section">
+  <div class="page-header">
+    <div class="page-title">Intercorrencias do Servico</div>
+    <div class="page-sub">Registo de ocorrencias e incidentes no servico da secretaria</div>
+  </div>
+  <div class="card">
+    <div class="card-title">Registar Intercorrencia</div>
+    <div class="form-grid">
+      <div class="field-group">
+        <label>Tipo de Intercorrencia *</label>
+        <select id="ic-tipo">
+          <option>Incidente com Utente</option>
+          <option>Falha de Equipamento</option>
+          <option>Ausencia de Funcionario</option>
+          <option>Problema de Comunicacao</option>
+          <option>Falta de Material</option>
+          <option>Visita Institucional</option>
+          <option>Situacao de Urgencia</option>
+          <option>Outro</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <label>Area / Servico Afectado *</label>
+        <input type="text" id="ic-area" placeholder="Area ou servico afectado...">
+      </div>
+      <div class="field-group span2">
+        <label>Descricao da Intercorrencia *</label>
+        <textarea id="ic-descricao" rows="3" placeholder="Descreva o que aconteceu..."></textarea>
+      </div>
+      <div class="field-group">
+        <label>Data *</label>
+        <input type="date" id="ic-data">
+      </div>
+      <div class="field-group">
+        <label>Hora</label>
+        <input type="time" id="ic-hora">
+      </div>
+    </div>
+    <div style="margin-top:12px;display:flex;gap:7px;">
+      <button class="btn btn-primary btn-sm" onclick="registarIntercorrencia()">Registar</button>
+      <button class="btn btn-outline btn-sm" onclick="clearIC()">Limpar</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="filter-bar" style="flex-wrap:wrap;gap:8px;">
+      <div class="field-group" style="min-width:160px;">
+        <label>Filtrar por data</label>
+        <input type="date" id="ic-filter-data" onchange="renderIntercorrencias()">
+      </div>
+      <div style="display:flex;gap:6px;align-items:flex-end;flex-wrap:wrap;">
+        <button class="btn btn-sm" id="ic-btn-todos" onclick="setICFilter('todos')" style="background:var(--accent);color:#fff;">Todos</button>
+        <button class="btn btn-outline btn-sm" id="ic-btn-pendentes" onclick="setICFilter('pendentes')">Pendentes</button>
+        <button class="btn btn-outline btn-sm" id="ic-btn-resolvidos" onclick="setICFilter('resolvidos')">Resolvidos</button>
+        <button class="btn btn-outline btn-sm" onclick="exportICPDF()">Exportar PDF</button>
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('ic-filter-data').value='';renderIntercorrencias()">Limpar Data</button>
+      </div>
+    </div>
+    <div id="ic-list" class="doc-list"><div class="no-data">Nenhuma intercorrencia registada.</div></div>
+  </div>
+</section>
+"""
+
 SEC_STATS = """
 <section id="sec-stats" class="section">
   <div class="page-header">
@@ -878,6 +959,7 @@ function showSection(id){
   if(id==='sec-stats')renderStats();
   if(id==='sec-definicoes')renderDefinicoes();
   if(id==='sec-rh')renderRH();
+  if(id==='sec-intercorrencias')renderIntercorrencias();
 }
 function showArea(key){
   document.querySelectorAll('.section').forEach(function(s){s.classList.remove('active');});
@@ -1611,57 +1693,177 @@ function exportarDados(){
 
 // ═══ PDF EXPORT ═══
 function exportPDF(period){
+  if(typeof jspdf==='undefined'){toast('Biblioteca PDF a carregar, aguarde e tente novamente','err');return;}
   var docs=getDocs();
-  var f,t;
+  var f,t,periodoLabel;
   if(period==='custom'){
     f=(document.getElementById('stats-from')||{}).value||'';
     t=(document.getElementById('stats-to')||{}).value||todayKey();
+    periodoLabel='Periodo Seleccionado';
   } else {
     var range=getDateRange(period);f=range.start;t=range.end;
+    periodoLabel={'hoje':'Diario','semana':'Semanal','mes':'Mensal','trimestre':'Trimestral','semestre':'Semestral','ano':'Anual'}[period]||period;
   }
   if(f)docs=docs.filter(function(d){return d.data>=f&&d.data<=t;});
-  var labels={'hoje':'Diario','semana':'Semanal','mes':'Mensal','trimestre':'Trimestral','semestre':'Semestral','ano':'Anual','custom':'Periodo Seleccionado'};
-  var periodoLabel=labels[period]||period;
-  var rows=docs.map(function(d){
-    return '<tr><td>'+fmtNum(d.numProcesso,d.ano)+'</td><td>'+fmtDate(d.data)+'</td>'
-      +'<td>'+(d.instituicao||'')+'</td><td>'+(d.tipoDoc||'')+(d.tipoDocExtra?' — '+d.tipoDocExtra:'')+'</td>'
-      +'<td>'+(d.assunto||'')+(d.assuntoExtra?' — '+d.assuntoExtra:'')+'</td>'
-      +'<td>'+(d.despacho?(d.despacho.area||'Despachado'):'<em>Sem despacho</em>')+'</td>'
-      +'<td>'+(d.profissional||'')+'</td></tr>';
-  }).join('');
   var total=docs.length;
-  var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Secretaria Geral — '+periodoLabel+'</title>'
-    +'<style>*{margin:0;padding:0;box-sizing:border-box;}body{font-family:Arial,sans-serif;font-size:10.5px;padding:18mm 16mm;color:#1a1a2e;}'
-    +'h1{font-size:15px;font-weight:700;margin-bottom:3px;}h2{font-size:11px;font-weight:400;color:#555;margin-bottom:14px;}'
-    +'table{width:100%;border-collapse:collapse;margin-top:8px;}'
-    +'th{background:#1a56db;color:#fff;padding:6px 8px;text-align:left;font-size:9.5px;white-space:nowrap;}'
-    +'td{padding:5px 8px;border-bottom:1px solid #e0e0e0;font-size:9.5px;vertical-align:top;}'
-    +'tr:nth-child(even){background:#f0f4ff;}'
-    +'.kpi{display:inline-block;background:#f0f4ff;border:1px solid #c8d5f0;border-radius:6px;padding:6px 14px;margin-right:8px;margin-bottom:10px;font-size:10px;}'
-    +'.kpi strong{display:block;font-size:15px;color:#1a56db;}'
-    +'.footer{margin-top:14px;font-size:8.5px;color:#999;text-align:right;border-top:1px solid #e0e0e0;padding-top:6px;}'
-    +'@media print{body{padding:10mm;}}'
-    +'</style></head><body>'
-    +'<h1>Hospital do Prenda — Secretaria Geral</h1>'
-    +'<h2>Relatorio '+periodoLabel+' &nbsp;|&nbsp; '+fmtDate(f)+' ate '+fmtDate(t)+'</h2>'
-    +'<div><span class="kpi"><strong>'+total+'</strong>Total</span>'
-    +'<span class="kpi"><strong>'+docs.filter(function(d){return d.despacho;}).length+'</strong>Despachados</span>'
-    +'<span class="kpi"><strong>'+docs.filter(function(d){return !d.despacho;}).length+'</strong>Pendentes</span>'
-    +'<span class="kpi"><strong>'+docs.filter(function(d){return d.recepcao;}).length+'</strong>Recebidos pela Area</span>'
-    +'</div>'
-    +'<table><thead><tr><th>Processo</th><th>Data</th><th>Instituicao</th><th>Tipo Doc.</th><th>Assunto</th><th>Despacho</th><th>Profissional</th></tr></thead>'
-    +'<tbody>'+(rows||'<tr><td colspan="7" style="text-align:center;padding:16px;color:#999;">Nenhum documento neste periodo</td></tr>')+'</tbody></table>'
-    +'<div class="footer">Exportado em '+new Date().toLocaleString('pt-PT')+' por '+(currentProfissional||'Secretaria')+'</div>'
-    +'</body></html>';
-  var w=window.open('','_blank','width=960,height=720');
-  if(!w){toast('Active popups para exportar PDF','err');return;}
-  w.document.write(html);w.document.close();
-  w.onload=function(){w.focus();w.print();};
+  var desp=docs.filter(function(d){return d.despacho;}).length;
+  var pend=total-desp;
+  var recv=docs.filter(function(d){return d.recepcao;}).length;
+  var doc=new jspdf.jsPDF({orientation:'landscape'});
+  doc.setFontSize(14);doc.setFont('helvetica','bold');
+  doc.text('Hospital do Prenda — Secretaria Geral',14,14);
+  doc.setFontSize(9);doc.setFont('helvetica','normal');doc.setTextColor(80);
+  doc.text('Relatorio '+periodoLabel+'  |  '+fmtDate(f)+' ate '+fmtDate(t),14,21);
+  doc.text('Total: '+total+'   Despachados: '+desp+'   Pendentes: '+pend+'   Recebidos: '+recv,14,27);
+  doc.setTextColor(0);
+  var rows=docs.map(function(d){
+    return [
+      fmtNum(d.numProcesso,d.ano),
+      fmtDate(d.data),
+      (d.instituicao||'').substring(0,30),
+      (d.tipoDoc||'')+(d.tipoDocExtra?' ('+d.tipoDocExtra+')':''),
+      (d.assunto||'').substring(0,28),
+      d.despacho?(d.despacho.area||'').substring(0,22):'Pendente',
+      (d.profissional||'')
+    ];
+  });
+  doc.autoTable({
+    startY:32,
+    head:[['Processo','Data','Instituicao','Tipo Doc.','Assunto','Despacho','Profissional']],
+    body:rows,
+    styles:{fontSize:7.5,cellPadding:2},
+    headStyles:{fillColor:[26,86,219],textColor:255,fontStyle:'bold'},
+    alternateRowStyles:{fillColor:[240,244,255]},
+    columnStyles:{0:{cellWidth:22},1:{cellWidth:20},5:{cellWidth:30}}
+  });
+  var fname='secretaria_'+period+'_'+todayKey()+'.pdf';
+  doc.save(fname);
+  toast('PDF guardado: '+fname,'info');
+}
+
+// ═══ INTERCORRENCIAS ═══
+var IC_KEY='hp_intercorrencias', icFilter='todos', icResolveId=null;
+function getICs(){var r=localStorage.getItem(IC_KEY);return r?JSON.parse(r):[];}
+function saveICs(d){localStorage.setItem(IC_KEY,JSON.stringify(d));}
+function registarIntercorrencia(){
+  if(!currentProfissional){toast('Faca login primeiro','err');return;}
+  var tipo=(document.getElementById('ic-tipo')||{}).value||'';
+  var area=((document.getElementById('ic-area')||{}).value||'').trim();
+  var desc=((document.getElementById('ic-descricao')||{}).value||'').trim();
+  var data=(document.getElementById('ic-data')||{}).value||'';
+  var hora=(document.getElementById('ic-hora')||{}).value||fmtTime();
+  if(!area||!desc||!data){toast('Preencha area, descricao e data','err');return;}
+  var ic={id:uid(),tipo:tipo,area:area,descricao:desc,data:data,hora:hora,profissional:currentProfissional,status:'pendente',resolucao:null};
+  var ics=getICs();ics.unshift(ic);saveICs(ics);
+  clearIC();
+  addNotif('Intercorrencia registada: '+tipo+' — '+area+' por '+currentProfissional);
+  toast('Intercorrencia registada');
+  renderIntercorrencias();
+}
+function clearIC(){
+  var el=document.getElementById('ic-area');if(el)el.value='';
+  var el2=document.getElementById('ic-descricao');if(el2)el2.value='';
+  var d=document.getElementById('ic-data');if(d)d.value=todayKey();
+  var h=document.getElementById('ic-hora');if(h)h.value=fmtTime();
+}
+function setICFilter(f){
+  icFilter=f;
+  ['todos','pendentes','resolvidos'].forEach(function(k){
+    var b=document.getElementById('ic-btn-'+k);
+    if(b){b.className=k===f?'btn btn-sm':'btn btn-outline btn-sm';if(k===f)b.style.background='var(--accent)',b.style.color='#fff';else b.style.background='',b.style.color='';}
+  });
+  renderIntercorrencias();
+}
+function abrirResolverIC(id){
+  if(!currentProfissional){toast('Faca login primeiro','err');return;}
+  icResolveId=id;
+  var el=document.getElementById('ic-resolve-obs');if(el)el.value='';
+  var m=document.getElementById('modal-ic-resolve');if(m){m.style.display='flex';setTimeout(function(){if(el)el.focus();},80);}
+}
+function confirmarResolverIC(){
+  var obs=((document.getElementById('ic-resolve-obs')||{}).value||'').trim();
+  var ics=getICs();
+  var idx=ics.findIndex(function(d){return d.id===icResolveId;});
+  if(idx===-1)return;
+  ics[idx].status='resolvido';
+  ics[idx].resolucao={data:todayKey(),hora:fmtTime(),profissional:currentProfissional,obs:obs};
+  saveICs(ics);
+  document.getElementById('modal-ic-resolve').style.display='none';
+  addNotif('Intercorrencia resolvida: '+ics[idx].tipo+' por '+currentProfissional);
+  toast('Intercorrencia marcada como resolvida');
+  renderIntercorrencias();
+}
+function eliminarIC(id){
+  var ics=getICs().filter(function(d){return d.id!==id;});
+  saveICs(ics);renderIntercorrencias();
+}
+function renderIntercorrencias(){
+  var flt=(document.getElementById('ic-filter-data')||{}).value||'';
+  var ics=getICs();
+  if(flt)ics=ics.filter(function(d){return d.data===flt;});
+  if(icFilter==='pendentes')ics=ics.filter(function(d){return d.status!=='resolvido';});
+  else if(icFilter==='resolvidos')ics=ics.filter(function(d){return d.status==='resolvido';});
+  var c=document.getElementById('ic-list');if(!c)return;
+  if(!ics.length){c.innerHTML='<div class="no-data">Nenhuma intercorrencia encontrada.</div>';return;}
+  var icCores={'Incidente com Utente':'#dc2626','Falha de Equipamento':'#d97706','Ausencia de Funcionario':'#7c3aed',
+    'Problema de Comunicacao':'#0891b2','Falta de Material':'#ea580c','Visita Institucional':'#059669',
+    'Situacao de Urgencia':'#dc2626','Outro':'#6b7280'};
+  c.innerHTML=ics.map(function(ic){
+    var cor=icCores[ic.tipo]||'#6b7280';
+    var res=ic.status==='resolvido';
+    var badge=res
+      ?'<span class="badge" style="background:#059669;color:#fff;">Resolvido '+fmtDate(ic.resolucao.data)+'</span>'
+      :'<span class="badge" style="background:#dc2626;color:#fff;">Pendente</span>';
+    var acoes=res
+      ?'<span style="font-size:.68rem;color:#059669;font-weight:600;">Intercorrencia encerrada</span>'
+      :'<button class="btn btn-sm" style="background:#059669;color:#fff;" onclick="abrirResolverIC(\''+ic.id+'\')">Marcar Resolvida</button>';
+    return '<div class="doc-card" style="border-left:4px solid '+cor+';'+(res?'opacity:.82;':'')+';">'
+      +'<div class="doc-card-header">'+badge+'<span class="badge" style="background:'+cor+'22;color:'+cor+';margin-left:4px;">'+ic.tipo+'</span>'
+      +'<span class="doc-data">'+fmtDate(ic.data)+' '+ic.hora+'</span></div>'
+      +'<div class="doc-card-body">'
+      +'<div class="doc-inst"><strong>Area: '+ic.area+'</strong></div>'
+      +'<div class="doc-assunto" style="white-space:pre-line;">'+ic.descricao+'</div>'
+      +(res&&ic.resolucao?'<div class="doc-assunto" style="color:#059669;font-weight:600;">'+(ic.resolucao.obs?'Resolucao: '+ic.resolucao.obs:'Resolvida sem observacoes')+'</div>'
+        +'<div class="doc-assunto" style="color:var(--muted);font-size:.65rem;">Por '+ic.resolucao.profissional+' em '+fmtDate(ic.resolucao.data)+' '+ic.resolucao.hora+'</div>':'')
+      +'<div class="doc-prof">'+ic.profissional+'</div>'
+      +'<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">'+acoes
+      +'<button class="btn btn-outline btn-xs" style="color:var(--red);border-color:var(--red);" onclick="eliminarIC(\''+ic.id+'\')">Eliminar</button></div>'
+      +'</div></div>';
+  }).join('');
+}
+function exportICPDF(){
+  if(typeof jspdf==='undefined'){toast('Biblioteca PDF a carregar, tente novamente','err');return;}
+  var flt=(document.getElementById('ic-filter-data')||{}).value||'';
+  var ics=getICs();
+  if(flt)ics=ics.filter(function(d){return d.data===flt;});
+  if(icFilter==='pendentes')ics=ics.filter(function(d){return d.status!=='resolvido';});
+  else if(icFilter==='resolvidos')ics=ics.filter(function(d){return d.status==='resolvido';});
+  var doc=new jspdf.jsPDF();
+  doc.setFontSize(13);doc.setFont('helvetica','bold');
+  doc.text('Hospital do Prenda — Intercorrencias do Servico',14,14);
+  doc.setFontSize(8.5);doc.setFont('helvetica','normal');doc.setTextColor(80);
+  doc.text('Exportado em '+new Date().toLocaleString('pt-PT')+(currentProfissional?' por '+currentProfissional:''),14,21);
+  doc.setTextColor(0);
+  var rows=ics.map(function(ic){
+    return [fmtDate(ic.data)+' '+ic.hora,ic.tipo,ic.area.substring(0,22),ic.descricao.substring(0,42),
+      ic.status==='resolvido'?'Resolvido':'Pendente',ic.profissional];
+  });
+  doc.autoTable({
+    startY:26,
+    head:[['Data/Hora','Tipo','Area','Descricao','Estado','Profissional']],
+    body:rows,
+    styles:{fontSize:8,cellPadding:2},
+    headStyles:{fillColor:[220,38,38],textColor:255,fontStyle:'bold'},
+    alternateRowStyles:{fillColor:[255,245,245]}
+  });
+  var fname='intercorrencias_'+todayKey()+'.pdf';
+  doc.save(fname);
+  toast('PDF guardado: '+fname,'info');
 }
 
 // ═══ BACKUP AUTOMATICO ═══
 function allDataBackup(){
-  var d={ts:new Date().toISOString(),docs:getDocs(),config:getConfig(),notifs:JSON.parse(localStorage.getItem(NOTIF_KEY)||'[]'),areas:{}};
+  var d={ts:new Date().toISOString(),docs:getDocs(),config:getConfig(),notifs:JSON.parse(localStorage.getItem(NOTIF_KEY)||'[]'),areas:{},intercorrencias:getICs()};
   Object.keys(AREA_INFO).forEach(function(k){d.areas[k]=getAreaDocs(k);});
   return d;
 }
@@ -1723,6 +1925,8 @@ document.addEventListener('DOMContentLoaded',function(){
   var rf=document.getElementById('rh-filter-data');if(rf)rf.value=todayKey();
   initRHMemoNum();
   var range=getDateRange('mes');var sf=document.getElementById('stats-from');if(sf)sf.value=range.start;var st=document.getElementById('stats-to');if(st)st.value=range.end;
+  var icd=document.getElementById('ic-data');if(icd)icd.value=todayKey();
+  var ich=document.getElementById('ic-hora');if(ich)ich.value=fmtTime();
   setupBackupScheduler();
 });
 """
@@ -1755,6 +1959,9 @@ def build_html():
         '<circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/>'
         '<path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Recursos Humanos</div>'
         '<div class="nav-section-lbl">Analise</div>'
+        '<div class="nav-item" data-section="sec-intercorrencias" onclick="showSection(\'sec-intercorrencias\')">'
+        '<svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>'
+        '<line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Intercorrencias</div>'
         '<div class="nav-item" data-section="sec-stats" onclick="showSection(\'sec-stats\')">'
         '<svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/>'
         '<line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Estatisticas</div>'
@@ -1783,9 +1990,11 @@ def build_html():
         '<title>Secretaria Geral - Hospital do Prenda</title>\n'
         '<script>if(localStorage.getItem("theme")==="dark")document.documentElement.classList.add("dark");</script>\n'
         '<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>\n'
+        '<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>\n'
+        '<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>\n'
         '<style>' + CSS + '</style>\n'
         '</head>\n<body>\n'
-        + MODAL_LOGIN + MODAL_EDIT + MODAL_VOLTOU +
+        + MODAL_LOGIN + MODAL_EDIT + MODAL_VOLTOU + MODAL_IC_RESOLVE +
         '<div id="splash"><div class="splash-inner">'
         '<div class="splash-img-ring"><div class="splash-img-circle"><img src="__HOSP_IMG__" alt="HP"></div>'
         '<svg class="splash-progress-svg" viewBox="0 0 100 100">'
@@ -1810,7 +2019,7 @@ def build_html():
         '<span>Hospital do Prenda &middot; Luanda &middot; Angola</span></div>'
         '</header>\n'
         '<div class="layout">' + sidebar + '<main class="main">\n'
-        + SEC_DG + SEC_DESPACHO + SEC_AREA + SEC_RH + SEC_STATS + SEC_PESQUISA + SEC_DEFINICOES +
+        + SEC_DG + SEC_DESPACHO + SEC_AREA + SEC_RH + SEC_INTERCORRENCIAS + SEC_STATS + SEC_PESQUISA + SEC_DEFINICOES +
         '</main></div>\n'
         '<div id="toast"></div>\n'
         '<script>' + JS + '</script>\n'
