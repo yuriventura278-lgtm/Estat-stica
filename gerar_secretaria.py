@@ -538,7 +538,15 @@ SEC_RH = """
       </div>
     </div>
     <div class="card">
-      <div class="filter-bar"><div class="field-group" style="min-width:160px;"><label>Filtrar</label><input type="date" id="rh-jf-filter" onchange="renderJustFaltas()"></div><button class="btn btn-outline btn-sm" onclick="document.getElementById('rh-jf-filter').value='';renderJustFaltas()">Todos</button></div>
+      <div class="filter-bar" style="flex-wrap:wrap;gap:8px;">
+        <div class="field-group" style="min-width:160px;"><label>Filtrar por data</label><input type="date" id="rh-jf-filter" onchange="renderJustFaltas()"></div>
+        <div style="display:flex;gap:6px;align-items:flex-end;">
+          <button class="btn btn-sm" id="rh-jf-btn-todos" onclick="setJFFilter('todos')" style="background:var(--accent);color:#fff;">Todos</button>
+          <button class="btn btn-outline btn-sm" id="rh-jf-btn-pendentes" onclick="setJFFilter('pendentes')">Pendentes</button>
+          <button class="btn btn-outline btn-sm" id="rh-jf-btn-voltaram" onclick="setJFFilter('voltaram')">Voltaram</button>
+          <button class="btn btn-outline btn-sm" onclick="document.getElementById('rh-jf-filter').value='';renderJustFaltas()">Limpar data</button>
+        </div>
+      </div>
       <div id="rh-jf-list" class="doc-list"><div class="no-data">Nenhuma justificacao registada.</div></div>
     </div>
   </div>
@@ -1299,14 +1307,59 @@ function registarJustFalta(){
   clearJustFalta();toast('Justificacao registada');renderJustFaltas();
 }
 function clearJustFalta(){['rh-jf-nome','rh-jf-area','rh-jf-obs'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});}
+var jfFilterMode='todos';
+function setJFFilter(m){
+  jfFilterMode=m;
+  ['todos','pendentes','voltaram'].forEach(function(k){
+    var b=document.getElementById('rh-jf-btn-'+k);
+    if(b){b.className=k===m?'btn btn-sm':'btn btn-outline btn-sm';if(k===m)b.style.background='var(--accent)',b.style.color='#fff';else b.style.background='',b.style.color='';}
+  });
+  renderJustFaltas();
+}
+function marcarVoltou(id){
+  if(!currentProfissional){toast('Faca login primeiro','err');return;}
+  var docs=getAreaDocs('rh');
+  var idx=docs.findIndex(function(d){return d.id===id;});
+  if(idx===-1)return;
+  docs[idx].voltou={data:todayKey(),hora:fmtTime(),profissional:currentProfissional};
+  saveAreaDocs('rh',docs);
+  addNotif('Justificativo de '+docs[idx].nome+' marcado como devolvido por '+currentProfissional);
+  toast('Justificativo marcado como devolvido');
+  renderJustFaltas();
+}
+function desfazerVoltou(id){
+  var docs=getAreaDocs('rh');
+  var idx=docs.findIndex(function(d){return d.id===id;});
+  if(idx===-1)return;
+  delete docs[idx].voltou;
+  saveAreaDocs('rh',docs);
+  toast('Marcacao desfeita');
+  renderJustFaltas();
+}
 function renderJustFaltas(){
   var flt=(document.getElementById('rh-jf-filter')||{}).value||'';
   var docs=getAreaDocs('rh').filter(function(d){return d.tipo==='justfalta';});
   if(flt)docs=docs.filter(function(d){return d.data===flt;});
+  if(jfFilterMode==='pendentes')docs=docs.filter(function(d){return !d.voltou;});
+  else if(jfFilterMode==='voltaram')docs=docs.filter(function(d){return !!d.voltou;});
   var c=document.getElementById('rh-jf-list');if(!c)return;
-  if(!docs.length){c.innerHTML='<div class="no-data">Nenhuma justificacao registada.</div>';return;}
-  c.innerHTML=docs.map(function(d){return '<div class="doc-card"><div class="doc-card-header"><span class="badge badge-rh-jf">Justificacao de Falta</span><span class="doc-data">'+fmtDate(d.data)+' '+(d.hora||'')+'</span></div>'
-    +'<div class="doc-card-body"><div class="doc-inst"><strong>'+d.nome+'</strong></div><div class="doc-oficio">Area: '+d.area+'</div>'+(d.obs?'<div class="doc-assunto">'+d.obs+'</div>':'')+'<div class="doc-prof">'+( d.profissional||'')+'</div></div></div>';}).join('');
+  if(!docs.length){c.innerHTML='<div class="no-data">Nenhuma justificacao encontrada.</div>';return;}
+  c.innerHTML=docs.map(function(d){
+    var voltouBadge=d.voltou?'<span class="badge" style="background:#059669;color:#fff;margin-left:6px;">Devolvido '+fmtDate(d.voltou.data)+'</span>':'<span class="badge" style="background:#f59e0b;color:#fff;margin-left:6px;">Pendente</span>';
+    var acaoBtns=d.voltou
+      ?'<button class="btn btn-outline btn-sm" onclick="desfazerVoltou(\''+d.id+'\')">Desfazer</button>'
+      :'<button class="btn btn-sm" style="background:#059669;color:#fff;" onclick="marcarVoltou(\''+d.id+'\')">Justificativo Voltou</button>';
+    return '<div class="doc-card" style="border-left:4px solid '+(d.voltou?'#059669':'#f59e0b')+';">'
+      +'<div class="doc-card-header">'+voltouBadge+'<span class="doc-data">Falta: '+fmtDate(d.data)+'</span></div>'
+      +'<div class="doc-card-body">'
+      +'<div class="doc-inst"><strong>'+d.nome+'</strong></div>'
+      +'<div class="doc-oficio">Area: '+d.area+'</div>'
+      +(d.obs?'<div class="doc-assunto">'+d.obs+'</div>':'')
+      +(d.voltou?'<div class="doc-assunto" style="color:#059669;">Devolvido em '+fmtDate(d.voltou.data)+' '+d.voltou.hora+' por '+d.voltou.profissional+'</div>':'')
+      +'<div class="doc-prof">'+(d.profissional||'')+'</div>'
+      +'<div style="margin-top:8px;">'+acaoBtns+'</div>'
+      +'</div></div>';
+  }).join('');
 }
 function initRHMemoNum(){var c=getRHMemoCfg();var ano=new Date().getFullYear();var el=document.getElementById('rh-memo-num-val');if(el)el.textContent=fmtRH(c.numAtual,ano);var sub=document.getElementById('rh-memo-num-sub');if(sub)sub.textContent='Ano '+ano;}
 function registarMemorando(){
