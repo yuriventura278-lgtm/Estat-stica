@@ -313,6 +313,25 @@ MODAL_EDIT = """
 </div>
 """
 
+MODAL_VOLTOU = """
+<div id="modal-voltou" class="modal-overlay" style="display:none;">
+  <div class="modal" style="max-width:440px;">
+    <div class="modal-title">Justificativo Devolvido</div>
+    <p style="font-size:.72rem;color:var(--muted);margin-bottom:14px;">Indique o motivo / tipo de documento entregue pelo funcionario.</p>
+    <div class="field-group" style="margin-bottom:14px;">
+      <label>Motivo / Tipo de Justificativo *</label>
+      <input type="text" id="voltou-motivo" placeholder="Ex: Atestado medico, Certidao de obito..."
+             onkeydown="if(event.key==='Enter')confirmarVoltou()">
+    </div>
+    <div id="voltou-err" style="font-size:.7rem;color:var(--red);display:none;margin-bottom:10px;"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="document.getElementById('modal-voltou').style.display='none'">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmarVoltou()">Confirmar Devolucao</button>
+    </div>
+  </div>
+</div>
+"""
+
 SEC_DG = """
 <section id="sec-dg" class="section active">
   <div class="page-header">
@@ -624,10 +643,19 @@ SEC_STATS = """
       <button class="spb" data-sp="semestre" onclick="setStatsPeriod('semestre')">Semestre</button>
       <button class="spb" data-sp="ano" onclick="setStatsPeriod('ano')">Ano</button>
     </div>
-    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px;">
       <div class="field-group" style="min-width:140px;"><label>Data Inicio</label><input type="date" id="stats-from" onchange="renderStats()"></div>
       <div class="field-group" style="min-width:140px;"><label>Data Fim</label><input type="date" id="stats-to" onchange="renderStats()"></div>
-      <button class="btn btn-outline btn-sm no-print" onclick="window.print()" style="margin-top:18px;">Imprimir / PDF</button>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;align-items:center;">
+      <span style="font-size:.65rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em;">Exportar PDF:</span>
+      <button class="btn btn-outline btn-xs" onclick="exportPDF('hoje')">Diario</button>
+      <button class="btn btn-outline btn-xs" onclick="exportPDF('semana')">Semanal</button>
+      <button class="btn btn-outline btn-xs" onclick="exportPDF('mes')">Mensal</button>
+      <button class="btn btn-outline btn-xs" onclick="exportPDF('trimestre')">Trimestral</button>
+      <button class="btn btn-outline btn-xs" onclick="exportPDF('semestre')">Semestral</button>
+      <button class="btn btn-outline btn-xs" onclick="exportPDF('ano')">Anual</button>
+      <button class="btn btn-outline btn-xs" onclick="exportPDF('custom')">Periodo Actual</button>
     </div>
   </div>
   <div class="kpi-row" id="stats-kpis"></div>
@@ -737,8 +765,18 @@ SEC_DEFINICOES = """
       <div style="margin-top:10px;"><button class="btn btn-primary btn-sm" onclick="addProfissional()">Adicionar Profissional</button></div>
     </div>
     <div class="def-card">
-      <div class="def-section-title">Exportar Dados</div>
-      <button class="btn btn-outline btn-sm" onclick="exportarDados()">Exportar JSON</button>
+      <div class="def-section-title">Exportar e Backup</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+        <button class="btn btn-outline btn-sm" onclick="exportarDados()">Exportar JSON</button>
+        <button class="btn btn-primary btn-sm" onclick="downloadBackup(false)">Backup Completo Agora</button>
+      </div>
+      <div id="backup-status" style="margin-bottom:12px;"></div>
+      <div style="background:rgba(26,86,219,.06);border:1px dashed rgba(26,86,219,.3);border-radius:8px;padding:12px 14px;font-size:.7rem;color:var(--muted);">
+        <strong style="color:var(--fg);">Backup automatico diario</strong><br>
+        Todos os dias as 14:00 o sistema faz o download automatico do backup.<br>
+        Guarde o ficheiro numa pasta segura ou envie para a nuvem (Google Drive, etc).<br><br>
+        <button class="btn btn-outline btn-sm" onclick="requestNotifPerm()">Activar Notificacoes do Browser</button>
+      </div>
     </div>
   </div>
 </section>
@@ -1307,7 +1345,7 @@ function registarJustFalta(){
   clearJustFalta();toast('Justificacao registada');renderJustFaltas();
 }
 function clearJustFalta(){['rh-jf-nome','rh-jf-area','rh-jf-obs'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});}
-var jfFilterMode='todos';
+var jfFilterMode='todos', voltouTargetId=null;
 function setJFFilter(m){
   jfFilterMode=m;
   ['todos','pendentes','voltaram'].forEach(function(k){
@@ -1318,12 +1356,23 @@ function setJFFilter(m){
 }
 function marcarVoltou(id){
   if(!currentProfissional){toast('Faca login primeiro','err');return;}
+  voltouTargetId=id;
+  var el=document.getElementById('voltou-motivo');if(el)el.value='';
+  var err=document.getElementById('voltou-err');if(err)err.style.display='none';
+  var m=document.getElementById('modal-voltou');if(m){m.style.display='flex';setTimeout(function(){if(el)el.focus();},80);}
+}
+function confirmarVoltou(){
+  var motivo=((document.getElementById('voltou-motivo')||{}).value||'').trim();
+  var err=document.getElementById('voltou-err');
+  if(!motivo){if(err){err.style.display='block';err.textContent='Preencha o motivo do justificativo.';}return;}
+  if(!currentProfissional){toast('Faca login primeiro','err');return;}
   var docs=getAreaDocs('rh');
-  var idx=docs.findIndex(function(d){return d.id===id;});
+  var idx=docs.findIndex(function(d){return d.id===voltouTargetId;});
   if(idx===-1)return;
-  docs[idx].voltou={data:todayKey(),hora:fmtTime(),profissional:currentProfissional};
+  docs[idx].voltou={data:todayKey(),hora:fmtTime(),profissional:currentProfissional,motivo:motivo};
   saveAreaDocs('rh',docs);
-  addNotif('Justificativo de '+docs[idx].nome+' marcado como devolvido por '+currentProfissional);
+  document.getElementById('modal-voltou').style.display='none';
+  addNotif('Justificativo de '+docs[idx].nome+' devolvido ('+motivo+') — '+currentProfissional);
   toast('Justificativo marcado como devolvido');
   renderJustFaltas();
 }
@@ -1345,17 +1394,21 @@ function renderJustFaltas(){
   var c=document.getElementById('rh-jf-list');if(!c)return;
   if(!docs.length){c.innerHTML='<div class="no-data">Nenhuma justificacao encontrada.</div>';return;}
   c.innerHTML=docs.map(function(d){
-    var voltouBadge=d.voltou?'<span class="badge" style="background:#059669;color:#fff;margin-left:6px;">Devolvido '+fmtDate(d.voltou.data)+'</span>':'<span class="badge" style="background:#f59e0b;color:#fff;margin-left:6px;">Pendente</span>';
+    var voltouBadge=d.voltou
+      ?'<span class="badge" style="background:#059669;color:#fff;">Devolvido '+fmtDate(d.voltou.data)+'</span>'
+      :'<span class="badge" style="background:#f59e0b;color:#fff;">Pendente</span>';
     var acaoBtns=d.voltou
-      ?'<button class="btn btn-outline btn-sm" onclick="desfazerVoltou(\''+d.id+'\')">Desfazer</button>'
+      ?'<span style="font-size:.68rem;color:#059669;font-weight:600;">Justificativo entregue — processo encerrado</span>'
+       +'&nbsp;&nbsp;<button class="btn btn-outline btn-xs" onclick="desfazerVoltou(\''+d.id+'\')" style="font-size:.6rem;">Desfazer</button>'
       :'<button class="btn btn-sm" style="background:#059669;color:#fff;" onclick="marcarVoltou(\''+d.id+'\')">Justificativo Voltou</button>';
-    return '<div class="doc-card" style="border-left:4px solid '+(d.voltou?'#059669':'#f59e0b')+';">'
+    return '<div class="doc-card" style="border-left:4px solid '+(d.voltou?'#059669':'#f59e0b')+';'+(d.voltou?'opacity:.82;':'')+';">'
       +'<div class="doc-card-header">'+voltouBadge+'<span class="doc-data">Falta: '+fmtDate(d.data)+'</span></div>'
       +'<div class="doc-card-body">'
       +'<div class="doc-inst"><strong>'+d.nome+'</strong></div>'
       +'<div class="doc-oficio">Area: '+d.area+'</div>'
       +(d.obs?'<div class="doc-assunto">'+d.obs+'</div>':'')
-      +(d.voltou?'<div class="doc-assunto" style="color:#059669;">Devolvido em '+fmtDate(d.voltou.data)+' '+d.voltou.hora+' por '+d.voltou.profissional+'</div>':'')
+      +(d.voltou?'<div class="doc-assunto" style="color:#059669;font-weight:600;">Motivo: '+d.voltou.motivo+'</div>':'')
+      +(d.voltou?'<div class="doc-assunto" style="color:var(--muted);font-size:.65rem;">Devolvido em '+fmtDate(d.voltou.data)+' '+d.voltou.hora+' por '+d.voltou.profissional+'</div>':'')
       +'<div class="doc-prof">'+(d.profissional||'')+'</div>'
       +'<div style="margin-top:8px;">'+acaoBtns+'</div>'
       +'</div></div>';
@@ -1551,8 +1604,107 @@ function removeProfissional(id){
 }
 function exportarDados(){
   var data={config:getConfig(),documentos:getDocs(),exportadoEm:new Date().toISOString()};
+  Object.keys(AREA_INFO).forEach(function(k){data['area_'+k]=getAreaDocs(k);});
   var blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
-  var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download='secretaria_geral_'+todayKey()+'.json';a.click();URL.revokeObjectURL(url);toast('Dados exportados');
+  var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download='secretaria_geral_'+todayKey()+'.json';document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);toast('Dados exportados');
+}
+
+// ═══ PDF EXPORT ═══
+function exportPDF(period){
+  var docs=getDocs();
+  var f,t;
+  if(period==='custom'){
+    f=(document.getElementById('stats-from')||{}).value||'';
+    t=(document.getElementById('stats-to')||{}).value||todayKey();
+  } else {
+    var range=getDateRange(period);f=range.start;t=range.end;
+  }
+  if(f)docs=docs.filter(function(d){return d.data>=f&&d.data<=t;});
+  var labels={'hoje':'Diario','semana':'Semanal','mes':'Mensal','trimestre':'Trimestral','semestre':'Semestral','ano':'Anual','custom':'Periodo Seleccionado'};
+  var periodoLabel=labels[period]||period;
+  var rows=docs.map(function(d){
+    return '<tr><td>'+fmtNum(d.numProcesso,d.ano)+'</td><td>'+fmtDate(d.data)+'</td>'
+      +'<td>'+(d.instituicao||'')+'</td><td>'+(d.tipoDoc||'')+(d.tipoDocExtra?' — '+d.tipoDocExtra:'')+'</td>'
+      +'<td>'+(d.assunto||'')+(d.assuntoExtra?' — '+d.assuntoExtra:'')+'</td>'
+      +'<td>'+(d.despacho?(d.despacho.area||'Despachado'):'<em>Sem despacho</em>')+'</td>'
+      +'<td>'+(d.profissional||'')+'</td></tr>';
+  }).join('');
+  var total=docs.length;
+  var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Secretaria Geral — '+periodoLabel+'</title>'
+    +'<style>*{margin:0;padding:0;box-sizing:border-box;}body{font-family:Arial,sans-serif;font-size:10.5px;padding:18mm 16mm;color:#1a1a2e;}'
+    +'h1{font-size:15px;font-weight:700;margin-bottom:3px;}h2{font-size:11px;font-weight:400;color:#555;margin-bottom:14px;}'
+    +'table{width:100%;border-collapse:collapse;margin-top:8px;}'
+    +'th{background:#1a56db;color:#fff;padding:6px 8px;text-align:left;font-size:9.5px;white-space:nowrap;}'
+    +'td{padding:5px 8px;border-bottom:1px solid #e0e0e0;font-size:9.5px;vertical-align:top;}'
+    +'tr:nth-child(even){background:#f0f4ff;}'
+    +'.kpi{display:inline-block;background:#f0f4ff;border:1px solid #c8d5f0;border-radius:6px;padding:6px 14px;margin-right:8px;margin-bottom:10px;font-size:10px;}'
+    +'.kpi strong{display:block;font-size:15px;color:#1a56db;}'
+    +'.footer{margin-top:14px;font-size:8.5px;color:#999;text-align:right;border-top:1px solid #e0e0e0;padding-top:6px;}'
+    +'@media print{body{padding:10mm;}}'
+    +'</style></head><body>'
+    +'<h1>Hospital do Prenda — Secretaria Geral</h1>'
+    +'<h2>Relatorio '+periodoLabel+' &nbsp;|&nbsp; '+fmtDate(f)+' ate '+fmtDate(t)+'</h2>'
+    +'<div><span class="kpi"><strong>'+total+'</strong>Total</span>'
+    +'<span class="kpi"><strong>'+docs.filter(function(d){return d.despacho;}).length+'</strong>Despachados</span>'
+    +'<span class="kpi"><strong>'+docs.filter(function(d){return !d.despacho;}).length+'</strong>Pendentes</span>'
+    +'<span class="kpi"><strong>'+docs.filter(function(d){return d.recepcao;}).length+'</strong>Recebidos pela Area</span>'
+    +'</div>'
+    +'<table><thead><tr><th>Processo</th><th>Data</th><th>Instituicao</th><th>Tipo Doc.</th><th>Assunto</th><th>Despacho</th><th>Profissional</th></tr></thead>'
+    +'<tbody>'+(rows||'<tr><td colspan="7" style="text-align:center;padding:16px;color:#999;">Nenhum documento neste periodo</td></tr>')+'</tbody></table>'
+    +'<div class="footer">Exportado em '+new Date().toLocaleString('pt-PT')+' por '+(currentProfissional||'Secretaria')+'</div>'
+    +'</body></html>';
+  var w=window.open('','_blank','width=960,height=720');
+  if(!w){toast('Active popups para exportar PDF','err');return;}
+  w.document.write(html);w.document.close();
+  w.onload=function(){w.focus();w.print();};
+}
+
+// ═══ BACKUP AUTOMATICO ═══
+function allDataBackup(){
+  var d={ts:new Date().toISOString(),docs:getDocs(),config:getConfig(),notifs:JSON.parse(localStorage.getItem(NOTIF_KEY)||'[]'),areas:{}};
+  Object.keys(AREA_INFO).forEach(function(k){d.areas[k]=getAreaDocs(k);});
+  return d;
+}
+function downloadBackup(silent){
+  var blob=new Blob([JSON.stringify(allDataBackup(),null,2)],{type:'application/json'});
+  var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;
+  a.download='backup_secretaria_'+todayKey()+'.json';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+  localStorage.setItem('hp_last_backup',todayKey());
+  renderBackupStatus();
+  if(!silent)toast('Backup realizado — backup_secretaria_'+todayKey()+'.json','info');
+}
+function triggerAutoBackup(){
+  if('Notification' in window&&Notification.permission==='granted'){
+    try{var n=new Notification('Hospital do Prenda — Secretaria',{body:'Backup diario automatico das 14:00 em curso...'});setTimeout(function(){n.close();},6000);}catch(e){}
+  }
+  downloadBackup(true);
+  toast('Backup automatico das 14h efectuado','info');
+}
+function requestNotifPerm(){
+  if(!('Notification' in window)){toast('Notificacoes nao suportadas neste browser','err');return;}
+  Notification.requestPermission().then(function(p){
+    toast(p==='granted'?'Notificacoes activadas! Sera avisado as 14h.':'Permissao recusada',p==='granted'?'ok':'err');
+    renderBackupStatus();
+  });
+}
+function renderBackupStatus(){
+  var el=document.getElementById('backup-status');if(!el)return;
+  var last=localStorage.getItem('hp_last_backup')||null;
+  var perm='indisponivel';
+  if('Notification' in window){var pm=Notification.permission;perm=pm==='granted'?'Activadas':pm==='denied'?'Bloqueadas':'Nao solicitadas';}
+  el.innerHTML='<div style="font-size:.7rem;color:var(--muted);padding:8px 10px;background:rgba(0,0,0,.03);border-radius:6px;">'
+    +'Ultimo backup: <strong>'+(last?fmtDate(last):'Nunca realizado')+'</strong>'
+    +' &nbsp;|&nbsp; Notificacoes browser: <strong>'+perm+'</strong></div>';
+}
+function setupBackupScheduler(){
+  renderBackupStatus();
+  setInterval(function(){
+    var now=new Date();
+    if(now.getHours()===14&&now.getMinutes()===0){
+      if(localStorage.getItem('hp_last_backup')!==todayKey())triggerAutoBackup();
+    }
+  },58000);
 }
 
 // ═══ THEME / SPLASH / INIT ═══
@@ -1571,6 +1723,7 @@ document.addEventListener('DOMContentLoaded',function(){
   var rf=document.getElementById('rh-filter-data');if(rf)rf.value=todayKey();
   initRHMemoNum();
   var range=getDateRange('mes');var sf=document.getElementById('stats-from');if(sf)sf.value=range.start;var st=document.getElementById('stats-to');if(st)st.value=range.end;
+  setupBackupScheduler();
 });
 """
 
@@ -1632,7 +1785,7 @@ def build_html():
         '<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>\n'
         '<style>' + CSS + '</style>\n'
         '</head>\n<body>\n'
-        + MODAL_LOGIN + MODAL_EDIT +
+        + MODAL_LOGIN + MODAL_EDIT + MODAL_VOLTOU +
         '<div id="splash"><div class="splash-inner">'
         '<div class="splash-img-ring"><div class="splash-img-circle"><img src="__HOSP_IMG__" alt="HP"></div>'
         '<svg class="splash-progress-svg" viewBox="0 0 100 100">'
