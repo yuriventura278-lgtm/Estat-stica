@@ -754,10 +754,10 @@ var currentProfissional='', editDocId=null, statsCharts={}, areaStatsChart=null,
 var pesqFilter='todos', statsPeriod='mes', areaStatsPeriod='mes', rhStatsPeriod='mes';
 
 // ═══ DATA HELPERS ═══
-function getConfig(){var r=localStorage.getItem(CFG_KEY);return r?JSON.parse(r):{numAtual:1,ano:new Date().getFullYear(),profissionais:[{id:'admin',nome:'Secretaria',senha:'1234'}],senhaChefe:'1234'};}
+function getConfig(){var def={numAtual:1,ano:new Date().getFullYear(),profissionais:[{id:'admin',nome:'Secretaria',senha:'1234'}],senhaChefe:'1234'};var r=localStorage.getItem(CFG_KEY);if(!r)return def;try{var c=JSON.parse(r);if(!c.profissionais||!c.profissionais.length)c.profissionais=def.profissionais;if(!c.senhaChefe)c.senhaChefe=def.senhaChefe;if(!c.numAtual)c.numAtual=def.numAtual;if(!c.ano)c.ano=def.ano;return c;}catch(e){return def;}}
 function saveConfig(c){localStorage.setItem(CFG_KEY,JSON.stringify(c));}
-// Migrate old default account if stored
-(function(){var raw=localStorage.getItem('hp_secretaria_cfg');if(raw){try{var c=JSON.parse(raw);var profs=c.profissionais||[];if(profs.length===1&&profs[0].nome==='Administrador'){c.profissionais=[{id:'admin',nome:'Secretaria',senha:'1234'}];localStorage.setItem('hp_secretaria_cfg',JSON.stringify(c));}if(!c.senhaChefe){c.senhaChefe='1234';localStorage.setItem('hp_secretaria_cfg',JSON.stringify(c));}}catch(e){}}})();
+// Migrate old config: fix old Administrador account name
+(function(){var raw=localStorage.getItem('hp_secretaria_cfg');if(raw){try{var c=JSON.parse(raw);var changed=false;if(!c.profissionais||!c.profissionais.length){c.profissionais=[{id:'admin',nome:'Secretaria',senha:'1234'}];changed=true;}else if(c.profissionais.length===1&&c.profissionais[0].nome==='Administrador'){c.profissionais=[{id:'admin',nome:'Secretaria',senha:'1234'}];changed=true;}if(!c.senhaChefe){c.senhaChefe='1234';changed=true;}if(changed)localStorage.setItem('hp_secretaria_cfg',JSON.stringify(c));}catch(e){localStorage.removeItem('hp_secretaria_cfg');}}})();
 function getDocs(){var r=localStorage.getItem(DOCS_KEY);return r?JSON.parse(r):[];}
 function saveDocs(d){localStorage.setItem(DOCS_KEY,JSON.stringify(d));}
 function getAreaDocs(k){var r=localStorage.getItem(AREA_INFO[k].sk);return r?JSON.parse(r):[];}
