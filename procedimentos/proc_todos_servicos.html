@@ -1273,7 +1273,9 @@ function aggregate(dates, filterSpecId) {
   let ambD=0, ambN=0, intD=0, intN=0, urgD=0, urgN=0;
   const catD={}, catN={};
   const procD={}, procN={};
+  const specData={};
   CATEGORIES.forEach(c => { catD[c.id]=0; catN[c.id]=0; });
+  filteredSpecs.forEach(sp => { specData[sp.id]={}; });
 
   dates.forEach(date => {
     const raw = localStorage.getItem(storageKey(date));
@@ -1298,6 +1300,9 @@ function aggregate(dates, filterSpecId) {
               const pk = cat.id+'||'+proc;
               procD[pk]=(procD[pk]||0)+dv;
               procN[pk]=(procN[pk]||0)+nv;
+              if(!specData[sp.id][pk]) specData[sp.id][pk]={d:0,n:0};
+              specData[sp.id][pk].d+=dv;
+              specData[sp.id][pk].n+=nv;
             });
           });
         });
@@ -1309,12 +1314,14 @@ function aggregate(dates, filterSpecId) {
     } catch(e){}
   });
   return { grandD, grandN, grand:grandD+grandN, catD, catN, procD, procN,
-           ambD, ambN, amb:ambD+ambN, intD, intN, int:intD+intN, urgD, urgN, urg:urgD+urgN };
+           ambD, ambN, amb:ambD+ambN, intD, intN, int:intD+intN, urgD, urgN, urg:urgD+urgN,
+           specData, filteredSpecs };
 }
 
 function renderReport(containerId, dates, title, colorClass, filterSpec) {
   const { grandD, grandN, grand, catD, catN, procD, procN,
-          amb, ambD, ambN, int, intD, intN, urg, urgD, urgN } = aggregate(dates, filterSpec);
+          amb, ambD, ambN, int, intD, intN, urg, urgD, urgN,
+          specData, filteredSpecs } = aggregate(dates, filterSpec);
   if(grand===0) {
     document.getElementById(containerId).innerHTML = `<div class="no-data"><span>📭</span>Sem dados para este período.</div>`;
     return;
@@ -1371,6 +1378,38 @@ function renderReport(containerId, dates, title, colorClass, filterSpec) {
     });
     html += `</tbody></table></div></div>`;
   }
+
+  // ── Por Serviço e Procedimento (pesquisável)
+  const _uid = containerId;
+  const _svcs = filteredSpecs.filter(sp => {
+    const sd = specData[sp.id]||{};
+    return Object.values(sd).some(v => v.d+v.n>0);
+  });
+  if(_svcs.length>0) {
+    html += `<div class="card"><div class="card-label" style="display:flex;align-items:center;justify-content:space-between;">
+      <span>Por Serviço e Procedimento</span>
+      <input type="text" placeholder="🔍 Pesquisar procedimento ou serviço..." oninput="(function(q,id){document.querySelectorAll('#sp-tbl-'+id+' tbody tr').forEach(function(r){r.style.display=r.textContent.toLowerCase().includes(q.toLowerCase())?'':'none'})})(this.value,'${_uid}')" style="border:1px solid var(--border);border-radius:4px;padding:3px 10px;font-size:.65rem;font-family:var(--font-head);background:var(--bg);color:var(--text);outline:none;min-width:200px;">
+    </div>
+    <div class="rpt-wrap"><table class="rpt-table" id="sp-tbl-${_uid}"><thead><tr>
+      <th>Serviço</th><th>Procedimento</th><th class="num">Dia</th><th class="num">Noite</th><th class="num">Total</th>
+    </tr></thead><tbody>`;
+    _svcs.forEach(function(sp){
+      let spD=0, spN=0;
+      CATEGORIES.forEach(function(c){
+        c.procs.forEach(function(proc){
+          const pk = c.id+'||'+proc;
+          const v = specData[sp.id][pk];
+          if(!v || v.d+v.n===0) return;
+          spD+=v.d; spN+=v.n;
+          html+=`<tr><td style="color:var(--muted);font-size:.63rem;white-space:nowrap;">${sp.label}</td><td>${proc}</td><td class="num d">${v.d}</td><td class="num n">${v.n}</td><td class="num">${v.d+v.n}</td></tr>`;
+        });
+      });
+      if(spD+spN>0) html+=`<tr class="rpt-total-row"><td colspan="2">${sp.label} — SUBTOTAL</td><td class="num">${spD}</td><td class="num">${spN}</td><td class="num">${spD+spN}</td></tr>`;
+    });
+    html+=`<tr class="rpt-total-row"><td colspan="2">TOTAL GERAL</td><td class="num">${grandD}</td><td class="num">${grandN}</td><td class="num">${grand}</td></tr>`;
+    html+=`</tbody></table></div></div>`;
+  }
+
   document.getElementById(containerId).innerHTML = html;
 }
 
@@ -1631,12 +1670,13 @@ function exportPDF() {
 // ════════════════════════════════════════════════════════════
 //  PDF EXPORT — HELPER GENÉRICO
 // ════════════════════════════════════════════════════════════
-function buildReportPDF(dates, titleLine1, titleLine2, specLabel, filename) {
+function buildReportPDF(dates, titleLine1, titleLine2, specLabel, filename, filterSpecId) {
   const { jsPDF } = window.jspdf;
   if(!jsPDF) { showToast('❌ Biblioteca PDF não carregada'); return; }
 
   const { grand, grandD, grandN, catD, catN, procD, procN,
-          amb, ambD, ambN, int: intT, intD, intN, urg, urgD, urgN } = aggregate(dates, 'all');
+          amb, ambD, ambN, int: intT, intD, intN, urg, urgD, urgN,
+          specData, filteredSpecs } = aggregate(dates, filterSpecId||'all');
   if(grand === 0) { showToast('⚠️ Sem dados para este período'); return; }
 
   const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
@@ -1759,6 +1799,40 @@ function buildReportPDF(dates, titleLine1, titleLine2, specLabel, filename) {
       });
     }
   }
+  // ── Por Serviço e Procedimento
+  const svcProcRows=[];
+  filteredSpecs.forEach(function(sp){
+    CATEGORIES.forEach(function(c){
+      c.procs.forEach(function(proc){
+        const pk=c.id+'||'+proc;
+        const v=specData[sp.id]?.[pk];
+        if(!v||v.d+v.n===0) return;
+        svcProcRows.push([sp.label, proc, v.d, v.n, v.d+v.n]);
+      });
+    });
+  });
+  if(svcProcRows.length>0){
+    const _cy2 = doc.lastAutoTable ? doc.lastAutoTable.finalY+8 : cy;
+    const _startY = _cy2>PH-40 ? (doc.addPage(),14) : _cy2;
+    doc.setFillColor(60,30,100); doc.roundedRect(ML,_startY,CW,7,1.5,1.5,'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(255);
+    doc.text('TOTAIS POR SERVIÇO E PROCEDIMENTO',ML+4,_startY+5);
+    doc.setTextColor(0);
+    doc.autoTable({
+      startY:_startY+10,
+      head:[['Serviço','Procedimento','Dia','Noite','Total']],
+      body:svcProcRows,
+      margin:{left:ML,right:MR},
+      styles:{fontSize:7.5,cellPadding:2},
+      headStyles:{fillColor:[60,30,100],textColor:255,fontStyle:'bold'},
+      columnStyles:{0:{halign:'left',cellWidth:CW*.22},1:{halign:'left',cellWidth:CW*.42},2:{halign:'center'},3:{halign:'center'},4:{halign:'center',fontStyle:'bold'}},
+      alternateRowStyles:{fillColor:[248,245,255]},
+      didParseCell:function(d){
+        if(d.section==='body'&&d.column.index===0&&d.row.index>0&&svcProcRows[d.row.index-1][0]===d.cell.raw){d.cell.text=[''];}
+      }
+    });
+  }
+
   // ── Footer
   const total = doc.internal.getNumberOfPages();
   for(let i=1;i<=total;i++){
@@ -1898,7 +1972,7 @@ function exportSemanalPDF() {
   const specLabel = specId==='all'?'Todos os Serviços':(SPECIALTIES.find(sp=>sp.id===specId)?.label||specId);
   const [sy,sm,sd]=s.split('-'); const [ey,em,ed]=e.split('-');
   const title2 = `${sd}/${sm}/${sy} – ${ed}/${em}/${ey}`;
-  buildReportPDF(datesInRange(s,e), `Período: ${title2}`, 'RELATÓRIO SEMANAL', specLabel, `Semanal_${s}_${e}${specId!=='all'?'_'+specId:''}.pdf`);
+  buildReportPDF(datesInRange(s,e), `Período: ${title2}`, 'RELATÓRIO SEMANAL', specLabel, `Semanal_${s}_${e}${specId!=='all'?'_'+specId:''}.pdf`, specId);
 }
 
 // ── Mensal
@@ -1911,7 +1985,7 @@ function exportMensalPDF() {
   const specLabel=specId==='all'?'Todos os Serviços':(SPECIALTIES.find(sp=>sp.id===specId)?.label||specId);
   const months=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
   const title2=`${months[+mo-1]} ${y}`;
-  buildReportPDF(datesInRange(`${m}-01`,`${m}-${String(last).padStart(2,'0')}`), `Mês: ${title2}`, 'RELATÓRIO MENSAL', specLabel, `Mensal_${m}${specId!=='all'?'_'+specId:''}.pdf`);
+  buildReportPDF(datesInRange(`${m}-01`,`${m}-${String(last).padStart(2,'0')}`), `Mês: ${title2}`, 'RELATÓRIO MENSAL', specLabel, `Mensal_${m}${specId!=='all'?'_'+specId:''}.pdf`, specId);
 }
 
 // ── Trimestral
@@ -1923,7 +1997,7 @@ function exportTrimestralPDF() {
   const [sm,sd]=starts[q-1]; const [em,ed]=ends[q-1];
   const fmt=n=>String(n).padStart(2,'0');
   const specLabel=specId==='all'?'Todos os Serviços':(SPECIALTIES.find(sp=>sp.id===specId)?.label||specId);
-  buildReportPDF(datesInRange(`${y}-${fmt(sm)}-${fmt(sd)}`,`${y}-${fmt(em)}-${fmt(ed)}`), `Trimestre: T${q}/${y}`, 'RELATÓRIO TRIMESTRAL', specLabel, `Trimestral_T${q}_${y}${specId!=='all'?'_'+specId:''}.pdf`);
+  buildReportPDF(datesInRange(`${y}-${fmt(sm)}-${fmt(sd)}`,`${y}-${fmt(em)}-${fmt(ed)}`), `Trimestre: T${q}/${y}`, 'RELATÓRIO TRIMESTRAL', specLabel, `Trimestral_T${q}_${y}${specId!=='all'?'_'+specId:''}.pdf`, specId);
 }
 
 // ── Semestral
@@ -1934,7 +2008,7 @@ function exportSemestralPDF() {
   const s=h===1?`${y}-01-01`:`${y}-07-01`;
   const e=h===1?`${y}-06-30`:`${y}-12-31`;
   const specLabel=specId==='all'?'Todos os Serviços':(SPECIALTIES.find(sp=>sp.id===specId)?.label||specId);
-  buildReportPDF(datesInRange(s,e), `Semestre: S${h}/${y}`, 'RELATÓRIO SEMESTRAL', specLabel, `Semestral_S${h}_${y}${specId!=='all'?'_'+specId:''}.pdf`);
+  buildReportPDF(datesInRange(s,e), `Semestre: S${h}/${y}`, 'RELATÓRIO SEMESTRAL', specLabel, `Semestral_S${h}_${y}${specId!=='all'?'_'+specId:''}.pdf`, specId);
 }
 
 // ── Anual
@@ -1942,7 +2016,7 @@ function exportAnualPDF() {
   const y=document.getElementById('anu-year').value;
   const specId=document.getElementById('anu-spec').value;
   const specLabel=specId==='all'?'Todos os Serviços':(SPECIALTIES.find(sp=>sp.id===specId)?.label||specId);
-  buildReportPDF(datesInRange(`${y}-01-01`,`${y}-12-31`), `Ano: ${y}`, 'RELATÓRIO ANUAL', specLabel, `Anual_${y}${specId!=='all'?'_'+specId:''}.pdf`);
+  buildReportPDF(datesInRange(`${y}-01-01`,`${y}-12-31`), `Ano: ${y}`, 'RELATÓRIO ANUAL', specLabel, `Anual_${y}${specId!=='all'?'_'+specId:''}.pdf`, specId);
 }
 
 // ════════════════════════════════════════════════════════════
