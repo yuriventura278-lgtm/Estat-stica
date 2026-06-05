@@ -530,6 +530,7 @@ html.dark #theme-toggle{color:var(--accent);border-color:var(--accent-ring)!impo
       <div class="nav-item rpt" data-view="semestral"><span class="ni-icon"><svg class="svc-icon" aria-hidden="true"><use href="#i-chart"/></svg></span><span class="ni-label">Semestral</span></div>
       <div class="nav-item rpt" data-view="anual"><span class="ni-icon"><svg class="svc-icon" aria-hidden="true"><use href="#i-calendar"/></svg></span><span class="ni-label">Anual</span></div>
       <div class="nav-item rpt" data-view="comparacao"><span class="ni-icon"><svg class="svc-icon" aria-hidden="true"><use href="#i-shuffle"/></svg></span><span class="ni-label">Comparação</span></div>
+      <div class="nav-item rpt" data-view="placar"><span class="ni-icon">📋</span><span class="ni-label">Placar Mensal</span></div>
     </div>
   </aside>
 
@@ -668,6 +669,16 @@ html.dark #theme-toggle{color:var(--accent);border-color:var(--accent-ring)!impo
   <div class="chart-canvas-wrap"><canvas id="cmp-chart"></canvas></div>
   <div class="interp-box" id="cmp-interp"></div>
 </div>
+    </div>
+
+    <div class="section" id="sec-placar">
+      <div class="rpt-hdr"><span class="rpt-badge" style="background:#7c3aed;color:#fff;padding:3px 10px;border-radius:4px;font-size:.55rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;">📋 Placar</span><h2 class="rpt-title">Placar Mensal</h2></div>
+      <div class="period-row">
+        <label>Mês</label><input type="month" id="placar-month">
+        <button class="btn-load" onclick="loadPlacar()">Carregar</button>
+        <button class="btn-load" onclick="exportPlacarPDF()"><svg class="svc-icon" aria-hidden="true"><use href="#i-pdf"/></svg> Exportar PDF</button>
+      </div>
+      <div id="placar-content"><div class="no-data">Seleccione o mês e clique em Carregar.</div></div>
     </div>
   </main>
 </div>
@@ -2019,6 +2030,108 @@ function exportAnualPDF() {
   buildReportPDF(datesInRange(`${y}-01-01`,`${y}-12-31`), `Ano: ${y}`, 'RELATÓRIO ANUAL', specLabel, `Anual_${y}${specId!=='all'?'_'+specId:''}.pdf`, specId);
 }
 
+// ── Placar Mensal
+var _BD_MONTHS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+function loadPlacar() {
+  const m = document.getElementById('placar-month').value;
+  if(!m) { showToast('⚠️ Seleccione o mês'); return; }
+  const [y,mo] = m.split('-');
+  const last = new Date(+y,+mo,0).getDate();
+  const dates = datesInRange(`${m}-01`,`${m}-${String(last).padStart(2,'0')}`);
+  const { grand, grandD, grandN, amb, ambD, ambN, int:intT, intD, intN, urg, urgD, urgN } = aggregate(dates,'all');
+  const title = `${_BD_MONTHS[+mo-1]} ${y}`;
+  const el = document.getElementById('placar-content');
+  if(grand===0){ el.innerHTML=`<div class="no-data"><span>📭</span>Sem dados para ${title}.</div>`; return; }
+  el.innerHTML = `
+    <div style="text-align:center;margin-bottom:20px;font-family:var(--font-head);font-size:.75rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:2px;">${title}</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:18px;margin-bottom:16px;">
+      <div style="background:#f0fdf4;border:2px solid #86efac;border-radius:10px;padding:28px 20px;text-align:center;">
+        <div style="font-size:.52rem;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:#166534;font-family:var(--font-head);margin-bottom:10px;">🏥 Consulta Externa</div>
+        <div style="font-size:3.8rem;font-weight:200;color:#15803d;font-family:var(--font-body);line-height:1;">${amb}</div>
+        <div style="font-size:.58rem;color:#16a34a;margin-top:10px;font-family:var(--font-head);">Dia: <b>${ambD}</b> &nbsp;·&nbsp; Noite: <b>${ambN}</b></div>
+      </div>
+      <div style="background:#fef2f2;border:2px solid #fca5a5;border-radius:10px;padding:28px 20px;text-align:center;">
+        <div style="font-size:.52rem;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:#991b1b;font-family:var(--font-head);margin-bottom:10px;">🚨 Banco de Urgência</div>
+        <div style="font-size:3.8rem;font-weight:200;color:#dc2626;font-family:var(--font-body);line-height:1;">${urg}</div>
+        <div style="font-size:.58rem;color:#dc2626;margin-top:10px;font-family:var(--font-head);">Dia: <b>${urgD}</b> &nbsp;·&nbsp; Noite: <b>${urgN}</b></div>
+      </div>
+      <div style="background:#eff6ff;border:2px solid #93c5fd;border-radius:10px;padding:28px 20px;text-align:center;">
+        <div style="font-size:.52rem;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:#1e3a8a;font-family:var(--font-head);margin-bottom:10px;">🛏 Internamento</div>
+        <div style="font-size:3.8rem;font-weight:200;color:var(--accent);font-family:var(--font-body);line-height:1;">${intT}</div>
+        <div style="font-size:.58rem;color:var(--accent);margin-top:10px;font-family:var(--font-head);">Dia: <b>${intD}</b> &nbsp;·&nbsp; Noite: <b>${intN}</b></div>
+      </div>
+      <div style="background:oklch(96% 0.02 230);border:2px solid oklch(89% 0.04 230);border-radius:10px;padding:28px 20px;text-align:center;">
+        <div style="font-size:.52rem;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--muted);font-family:var(--font-head);margin-bottom:10px;">∑ Total Geral</div>
+        <div style="font-size:3.8rem;font-weight:200;color:var(--text);font-family:var(--font-body);line-height:1;">${grand}</div>
+        <div style="font-size:.58rem;color:var(--muted);margin-top:10px;font-family:var(--font-head);">Dia: <b>${grandD}</b> &nbsp;·&nbsp; Noite: <b>${grandN}</b></div>
+      </div>
+    </div>`;
+}
+
+function exportPlacarPDF() {
+  const m = document.getElementById('placar-month').value;
+  if(!m) { showToast('⚠️ Seleccione o mês'); return; }
+  const { jsPDF } = window.jspdf;
+  if(!jsPDF) { showToast('❌ Biblioteca PDF não carregada'); return; }
+  const [y,mo] = m.split('-');
+  const last = new Date(+y,+mo,0).getDate();
+  const dates = datesInRange(`${m}-01`,`${m}-${String(last).padStart(2,'0')}`);
+  const { grand, grandD, grandN, amb, ambD, ambN, int:intT, intD, intN, urg, urgD, urgN } = aggregate(dates,'all');
+  if(grand===0){ showToast('⚠️ Sem dados para exportar'); return; }
+  const title = `${_BD_MONTHS[+mo-1]} ${y}`;
+  const now = new Date();
+  const geradoEm = `${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+
+  const doc = new jsPDF({ orientation:'landscape', unit:'mm', format:'a4' });
+  const PW = doc.internal.pageSize.getWidth();
+  const PH = doc.internal.pageSize.getHeight();
+  const ML=15, MR=15;
+
+  // Header
+  doc.setFillColor(10,25,60); doc.rect(0,0,PW,28,'F');
+  try{ doc.addImage(LOGO_B64,'JPEG',ML,5,18,18); }catch(e){}
+  doc.setFont('helvetica','bold'); doc.setFontSize(15); doc.setTextColor(255);
+  doc.text('HOSPITAL PRENDA',ML+22,12);
+  doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+  doc.text('Placar Mensal de Procedimentos de Enfermagem',ML+22,20);
+  doc.setFont('helvetica','bold'); doc.setFontSize(13); doc.setTextColor(147,197,253);
+  doc.text(title,PW-MR,13,{align:'right'});
+  doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(147,197,253);
+  doc.text(`Gerado: ${geradoEm}`,PW-MR,21,{align:'right'});
+  doc.setTextColor(0);
+
+  // Four cards in landscape
+  const cards=[
+    {lbl:'CONSULTA EXTERNA', val:amb,  d:ambD,  n:ambN,  bg:[240,253,244], tc:[22,101,52]},
+    {lbl:'BANCO DE URGÊNCIA',val:urg,  d:urgD,  n:urgN,  bg:[254,242,242], tc:[153,27,27]},
+    {lbl:'INTERNAMENTO',     val:intT, d:intD,  n:intN,  bg:[239,246,255], tc:[30,58,138]},
+    {lbl:'TOTAL GERAL',      val:grand,d:grandD,n:grandN,bg:[10,25,60],    tc:[200,240,255]}
+  ];
+  const cw=(PW-ML-MR-12)/4;
+  const cy=32, ch=PH-cy-18;
+  cards.forEach(function(c,i){
+    const bx=ML+i*(cw+4);
+    doc.setFillColor(c.bg[0],c.bg[1],c.bg[2]);
+    doc.roundedRect(bx,cy,cw,ch,4,4,'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(c.tc[0],c.tc[1],c.tc[2]);
+    doc.text(c.lbl,bx+cw/2,cy+12,{align:'center'});
+    doc.setFont('helvetica','normal'); doc.setFontSize(50); doc.setTextColor(c.tc[0],c.tc[1],c.tc[2]);
+    doc.text(String(c.val),bx+cw/2,cy+ch/2+14,{align:'center'});
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(c.tc[0],c.tc[1],c.tc[2]);
+    doc.text(`Dia: ${c.d}`,bx+cw/2,cy+ch-16,{align:'center'});
+    doc.text(`Noite: ${c.n}`,bx+cw/2,cy+ch-8,{align:'center'});
+  });
+
+  // Footer
+  doc.setDrawColor(180); doc.setLineWidth(.3); doc.line(ML,PH-9,PW-MR,PH-9);
+  doc.setFontSize(7); doc.setTextColor(120); doc.setFont('helvetica','normal');
+  doc.text(`Hospital Prenda  |  Placar Mensal  |  ${title}  |  Gerado: ${geradoEm}`,ML,PH-4);
+
+  doc.save(`Placar_Mensal_${m}.pdf`);
+  showToast('PDF exportado com sucesso!');
+}
+
 // ════════════════════════════════════════════════════════════
 //  INIT REPORTS DEFAULTS
 // ════════════════════════════════════════════════════════════
@@ -2031,6 +2144,7 @@ function exportAnualPDF() {
 
   document.getElementById('rpt-day-date').value = todayStr;
   document.getElementById('men-month').value = monthStr;
+  document.getElementById('placar-month').value = monthStr;
   document.getElementById('tri-year').value = y;
   document.getElementById('tri-q').value = Math.ceil(mo/3);
   document.getElementById('seme-year').value = y;
