@@ -719,10 +719,20 @@ const SPECIALTIES = [
 ];
 
 // ── Grupos para placar dos totais ──
+// Usa sempre os IDs consolidados (leitura): medicina e bloco_op
+// Os componentes (med_homem/mulher, bloco_urgente/electiva) são ignorados nos totais
 var GRUPO_AMB = ['consulta_ext','hosp_dia'];
 var GRUPO_INT = ['ortopedia','cuid_intermedio','uci','cirurgia','maxilo','nefrologia',
-                 'neurocirurgia','otorrino','med_homem','med_mulher','bloco_urgente','bloco_electiva'];
+                 'neurocirurgia','otorrino','medicina','bloco_op'];
 var GRUPO_URG = ['banco_urg'];
+
+// Mapa de fontes para IDs auto-calculados (não guardados em localStorage)
+var SRC_MAP = {
+  'medicina': ['med_homem','med_mulher'],
+  'bloco_op': ['bloco_urgente','bloco_electiva']
+};
+// IDs a excluir dos totais (contados via consolidados acima)
+var SKIP_IDS = new Set(['med_homem','med_mulher','bloco_urgente','bloco_electiva']);
 
 const CATEGORIES = [
   { id:'medicacao',    label:'Medicação e Terapêutica',         color:'green',
@@ -1248,8 +1258,15 @@ function switchTurno(specId, turno) {
 //  AGGREGATE (para relatórios)
 // ════════════════════════════════════════════════════════════
 function aggregate(dates, filterSpecId) {
-  const specs = filterSpecId&&filterSpecId!=='all'
-    ? SPECIALTIES.filter(s=>s.id===filterSpecId) : SPECIALTIES;
+  // Quando filtramos por serviço consolidado, lemos as fontes corretas
+  let filteredSpecs;
+  if(filterSpecId && filterSpecId!=='all') {
+    filteredSpecs = SPECIALTIES.filter(s=>s.id===filterSpecId);
+  } else {
+    // Usar todos, mas ignorar os componentes individuais — contar só os consolidados
+    filteredSpecs = SPECIALTIES.filter(s => !SKIP_IDS.has(s.id));
+  }
+
   let grandD=0, grandN=0;
   let ambD=0, ambN=0, intD=0, intN=0, urgD=0, urgN=0;
   const catD={}, catN={};
@@ -1261,25 +1278,28 @@ function aggregate(dates, filterSpecId) {
     if(!raw) return;
     try {
       const data = JSON.parse(raw);
-      specs.forEach(sp => {
-        if(sp.id==='medicina' || sp.id==='bloco_op') return;
-        const spData = data.specs?.[sp.id];
-        if(!spData) return;
+      filteredSpecs.forEach(sp => {
+        // Para medicina e bloco_op: lê dos componentes armazenados
+        const srcIds = SRC_MAP[sp.id] || [sp.id];
         let spD=0, spN=0;
-        CATEGORIES.forEach(cat => {
-          cat.procs.forEach(proc => {
-            const k = pKey(cat.id,proc);
-            const dv = spData.dia?.[k]||0;
-            const nv = spData.noite?.[k]||0;
-            catD[cat.id]+=dv; catN[cat.id]+=nv;
-            grandD+=dv; grandN+=nv;
-            spD+=dv; spN+=nv;
-            const pk = cat.id+'||'+proc;
-            procD[pk]=(procD[pk]||0)+dv;
-            procN[pk]=(procN[pk]||0)+nv;
+        srcIds.forEach(srcId => {
+          const spData = data.specs?.[srcId];
+          if(!spData) return;
+          CATEGORIES.forEach(cat => {
+            cat.procs.forEach(proc => {
+              const k = pKey(cat.id,proc);
+              const dv = spData.dia?.[k]||0;
+              const nv = spData.noite?.[k]||0;
+              catD[cat.id]+=dv; catN[cat.id]+=nv;
+              grandD+=dv; grandN+=nv;
+              spD+=dv; spN+=nv;
+              const pk = cat.id+'||'+proc;
+              procD[pk]=(procD[pk]||0)+dv;
+              procN[pk]=(procN[pk]||0)+nv;
+            });
           });
         });
-        // Acumuladores por grupo
+        // Acumuladores por grupo (usa IDs consolidados)
         if(GRUPO_AMB.includes(sp.id))      { ambD+=spD; ambN+=spN; }
         else if(GRUPO_URG.includes(sp.id)) { urgD+=spD; urgN+=spN; }
         else if(GRUPO_INT.includes(sp.id)) { intD+=spD; intN+=spN; }
@@ -2449,11 +2469,11 @@ function exportBdExcel() {
   var sortedDates = Object.keys(dateMap).sort();
   if(!sortedDates.length){ showToast('⚠️ Sem dados guardados para exportar'); return; }
 
-  // Serviços a exportar (excluir os calculados automaticamente)
-  var EXPORT_SPECS = SPECIALTIES.filter(function(s){ return s.id!=='medicina' && s.id!=='bloco_op'; });
+  // Serviços a exportar: usa IDs consolidados (medicina, bloco_op) e exclui os componentes individuais
+  var EXPORT_SPECS = SPECIALTIES.filter(function(s){ return !SKIP_IDS.has(s.id); });
 
   // 2 ── Ler localStorage e calcular total por serviço/data
-  // rawData[spId] = { d:[...], n:[...] }  — um valor por data, na ordem de sortedDates
+  // Para medicina → lê med_homem + med_mulher; para bloco_op → lê bloco_urgente + bloco_electiva
   var rawData = {};
   EXPORT_SPECS.forEach(function(sp){ rawData[sp.id] = {d:[], n:[]}; });
 
@@ -2462,14 +2482,17 @@ function exportBdExcel() {
     try{ parsed = JSON.parse(localStorage.getItem(dateMap[ds])); }catch(e){}
     EXPORT_SPECS.forEach(function(sp){
       var spD=0, spN=0;
-      var spData = parsed && parsed.specs && parsed.specs[sp.id];
-      if(spData){
-        CATEGORIES.forEach(function(cat){ cat.procs.forEach(function(proc){
-          var k2 = pKey(cat.id,proc);
-          spD += (spData.dia   && spData.dia[k2]  ) ? parseInt(spData.dia[k2])||0   : 0;
-          spN += (spData.noite && spData.noite[k2]) ? parseInt(spData.noite[k2])||0 : 0;
-        }); });
-      }
+      var srcIds = SRC_MAP[sp.id] || [sp.id];
+      srcIds.forEach(function(sid){
+        var spData = parsed && parsed.specs && parsed.specs[sid];
+        if(spData){
+          CATEGORIES.forEach(function(cat){ cat.procs.forEach(function(proc){
+            var k2 = pKey(cat.id,proc);
+            spD += (spData.dia   && spData.dia[k2]  ) ? parseInt(spData.dia[k2])||0   : 0;
+            spN += (spData.noite && spData.noite[k2]) ? parseInt(spData.noite[k2])||0 : 0;
+          }); });
+        }
+      });
       rawData[sp.id].d.push(spD);
       rawData[sp.id].n.push(spN);
     });
@@ -2545,6 +2568,8 @@ function exportBdExcel() {
   // Subtotais por grupo
   ws1Data.push([]);
   ws1Data.push([{ v:'SUBTOTAIS POR GRUPO', t:'s', s:sH('left') }]);
+  // Subtotais por grupo — usa IDs consolidados (medicina=med_h+med_m; bloco_op=bloco_u+bloco_e)
+  // rawData já tem os valores correctos pois foi calculado via SRC_MAP
   var gruposCfg = [
     { label:'🏥 Ambulatório (Consulta Externa)',  ids:GRUPO_AMB, bg:C.green,  bd:C.greenBd,  col:C.greenDark },
     { label:'🛏 Internamentos',                   ids:GRUPO_INT, bg:C.blue1,  bd:C.borderB,  col:C.textBd   },
@@ -2647,7 +2672,7 @@ function exportBdExcel() {
     EXPORT_SPECS.forEach(function(sp){
       var d=rawData[sp.id].d[di], n=rawData[sp.id].n[di];
       var grp=GRUPO_AMB.includes(sp.id)?'Ambulatório':GRUPO_URG.includes(sp.id)?'Urgência':
-              GRUPO_INT.includes(sp.id)?'Internamento':'Bloco Op.';
+              GRUPO_INT.includes(sp.id)?'Internamento':'Outro';
       ws3Data.push([
         {v:dtFmt,t:'s',s:sN(bg,false)},{v:dNum,t:'n',s:sN(bg,false)},
         {v:BD_MESES[mNum],t:'s',s:sT(bg,false)},{v:yNum,t:'n',s:sN(bg,false)},
