@@ -7,6 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx-js-style.min.js"></script>
 <style>
 /* ════ CLINICAL MINIMAL v1 ════ */
 :root{
@@ -506,6 +507,7 @@ html.dark #theme-toggle{color:var(--accent);border-color:var(--accent-ring)!impo
     <button class="btn-h btn-save" onclick="saveAll()"><svg class="svc-icon" aria-hidden="true"><use href="#i-save"/></svg> Guardar</button>
     <button class="btn-h btn-out pdf" onclick="exportPDF()"><svg class="svc-icon" aria-hidden="true"><use href="#i-pdf"/></svg> PDF</button>
     <button class="btn-h btn-out bk" onclick="openBackup()"><svg class="svc-icon" aria-hidden="true"><use href="#i-download"/></svg> Backup</button>
+    <button class="btn-h btn-out" onclick="exportBdExcel()" title="Exportar Base de Dados Excel completa" style="color:#047857;border-color:#bbf7d0;background:#f0fdf4;font-weight:700;">📊 BD Excel</button>
     <button class="btn-h btn-out rs" onclick="document.getElementById('restoreInput').click()"><svg class="svc-icon" aria-hidden="true"><use href="#i-upload"/></svg> Restaurar</button>
     <input type="file" id="restoreInput" accept=".json" style="display:none" onchange="restoreFromFile(this)">
   </div>
@@ -715,6 +717,12 @@ const SPECIALTIES = [
   { id:'med_mulher', label:'Medicina Mulher', icon:'<svg class="svc-icon" aria-hidden="true"><use href="#i-notes"/></svg>' },
   { id:'medicina', label:'Medicina (Auto)', icon:'<svg class="svc-icon" aria-hidden="true"><use href="#i-pill"/></svg>' },
 ];
+
+// ── Grupos para placar dos totais ──
+var GRUPO_AMB = ['consulta_ext','hosp_dia'];
+var GRUPO_INT = ['ortopedia','cuid_intermedio','uci','cirurgia','maxilo','nefrologia',
+                 'neurocirurgia','otorrino','med_homem','med_mulher','bloco_urgente','bloco_electiva'];
+var GRUPO_URG = ['banco_urg'];
 
 const CATEGORIES = [
   { id:'medicacao',    label:'Medicação e Terapêutica',         color:'green',
@@ -1243,6 +1251,7 @@ function aggregate(dates, filterSpecId) {
   const specs = filterSpecId&&filterSpecId!=='all'
     ? SPECIALTIES.filter(s=>s.id===filterSpecId) : SPECIALTIES;
   let grandD=0, grandN=0;
+  let ambD=0, ambN=0, intD=0, intN=0, urgD=0, urgN=0;
   const catD={}, catN={};
   const procD={}, procN={};
   CATEGORIES.forEach(c => { catD[c.id]=0; catN[c.id]=0; });
@@ -1256,6 +1265,7 @@ function aggregate(dates, filterSpecId) {
         if(sp.id==='medicina' || sp.id==='bloco_op') return;
         const spData = data.specs?.[sp.id];
         if(!spData) return;
+        let spD=0, spN=0;
         CATEGORIES.forEach(cat => {
           cat.procs.forEach(proc => {
             const k = pKey(cat.id,proc);
@@ -1263,27 +1273,49 @@ function aggregate(dates, filterSpecId) {
             const nv = spData.noite?.[k]||0;
             catD[cat.id]+=dv; catN[cat.id]+=nv;
             grandD+=dv; grandN+=nv;
+            spD+=dv; spN+=nv;
             const pk = cat.id+'||'+proc;
             procD[pk]=(procD[pk]||0)+dv;
             procN[pk]=(procN[pk]||0)+nv;
           });
         });
+        // Acumuladores por grupo
+        if(GRUPO_AMB.includes(sp.id))      { ambD+=spD; ambN+=spN; }
+        else if(GRUPO_URG.includes(sp.id)) { urgD+=spD; urgN+=spN; }
+        else if(GRUPO_INT.includes(sp.id)) { intD+=spD; intN+=spN; }
       });
     } catch(e){}
   });
-  return { grandD, grandN, grand:grandD+grandN, catD, catN, procD, procN };
+  return { grandD, grandN, grand:grandD+grandN, catD, catN, procD, procN,
+           ambD, ambN, amb:ambD+ambN, intD, intN, int:intD+intN, urgD, urgN, urg:urgD+urgN };
 }
 
 function renderReport(containerId, dates, title, colorClass, filterSpec) {
-  const { grandD, grandN, grand, catD, catN, procD, procN } = aggregate(dates, filterSpec);
+  const { grandD, grandN, grand, catD, catN, procD, procN,
+          amb, ambD, ambN, int, intD, intN, urg, urgD, urgN } = aggregate(dates, filterSpec);
   if(grand===0) {
     document.getElementById(containerId).innerHTML = `<div class="no-data"><span>📭</span>Sem dados para este período.</div>`;
     return;
   }
   let html = `<div class="sum-grid">
-    <div class="sum-card c1"><span class="sum-label">Total Geral</span><span class="sum-val">${grand}</span><div class="sum-sub">${title}</div></div>
+    <div class="sum-card c3"><span class="sum-label">∑ Total Geral</span><span class="sum-val">${grand}</span><div class="sum-sub">${title}</div></div>
     <div class="sum-card c1"><span class="sum-label"><svg class="svc-icon" aria-hidden="true"><use href="#i-sun"/></svg> Total Dia</span><span class="sum-val">${grandD}</span></div>
-    <div class="sum-card c2"><span class="sum-label"><svg class="svc-icon" aria-hidden="true"><use href="#i-moon"/></svg> Total Noite</span><span class="sum-val" >${grandN}</span></div>
+    <div class="sum-card c2"><span class="sum-label"><svg class="svc-icon" aria-hidden="true"><use href="#i-moon"/></svg> Total Noite</span><span class="sum-val">${grandN}</span></div>
+    <div class="sum-card" style="background:#f0fdf4;border:1px solid #86efac;border-radius:5px;padding:13px;text-align:center;">
+      <span class="sum-label" style="color:#166534;">🏥 Ambulatório</span>
+      <span class="sum-val" style="color:#15803d;">${amb}</span>
+      <div class="sum-sub">Consulta Externa + Hosp. Dia</div>
+    </div>
+    <div class="sum-card" style="background:#eff6ff;border:1px solid #93c5fd;border-radius:5px;padding:13px;text-align:center;">
+      <span class="sum-label" style="color:#1e3a8a;">🛏 Internamentos</span>
+      <span class="sum-val" style="color:var(--accent);">${int}</span>
+      <div class="sum-sub">Serviços de Internamento</div>
+    </div>
+    <div class="sum-card" style="background:#fef2f2;border:1px solid #fca5a5;border-radius:5px;padding:13px;text-align:center;">
+      <span class="sum-label" style="color:#991b1b;">🚨 Banco de Urgência</span>
+      <span class="sum-val" style="color:#dc2626;">${urg}</span>
+      <div class="sum-sub">Urgências atendidas</div>
+    </div>
   </div>`;
 
   // Por categoria
@@ -2393,7 +2425,271 @@ setTimeout(loadStaffInfo, 80);
   requestAnimationFrame(step);
 })();
 
-// CSS dos componentes avançados
+// ════════════════════════════════════════════════════════════
+//  BASE DE DADOS EXCEL — export automático e estilizado
+// ════════════════════════════════════════════════════════════
+
+var BD_MESES  = ['','Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+var BD_DIASEM = ['Domingo','Segunda-Feira','Terça-Feira','Quarta-Feira','Quinta-Feira','Sexta-Feira','Sábado'];
+
+function exportBdExcel() {
+  if(typeof XLSX === 'undefined'){ showToast('❌ Biblioteca Excel não carregada'); return; }
+
+  // 1 ── Recolher datas únicas (sem duplicação: enf5_ tem prioridade sobre enf4_)
+  var dateMap = {}; // YYYYMMDD → chave localStorage
+  for(var i=0; i<localStorage.length; i++){
+    var k = localStorage.key(i);
+    if(!k) continue;
+    var ds = null;
+    if(k.startsWith('enf5_'))      ds = k.slice(5);
+    else if(k.startsWith('enf4_')) ds = k.slice(5);
+    if(!ds || !/^\d{8}$/.test(ds)) continue;
+    if(!dateMap[ds] || k.startsWith('enf5_')) dateMap[ds] = k;
+  }
+  var sortedDates = Object.keys(dateMap).sort();
+  if(!sortedDates.length){ showToast('⚠️ Sem dados guardados para exportar'); return; }
+
+  // Serviços a exportar (excluir os calculados automaticamente)
+  var EXPORT_SPECS = SPECIALTIES.filter(function(s){ return s.id!=='medicina' && s.id!=='bloco_op'; });
+
+  // 2 ── Ler localStorage e calcular total por serviço/data
+  // rawData[spId] = { d:[...], n:[...] }  — um valor por data, na ordem de sortedDates
+  var rawData = {};
+  EXPORT_SPECS.forEach(function(sp){ rawData[sp.id] = {d:[], n:[]}; });
+
+  sortedDates.forEach(function(ds){
+    var parsed = null;
+    try{ parsed = JSON.parse(localStorage.getItem(dateMap[ds])); }catch(e){}
+    EXPORT_SPECS.forEach(function(sp){
+      var spD=0, spN=0;
+      var spData = parsed && parsed.specs && parsed.specs[sp.id];
+      if(spData){
+        CATEGORIES.forEach(function(cat){ cat.procs.forEach(function(proc){
+          var k2 = pKey(cat.id,proc);
+          spD += (spData.dia   && spData.dia[k2]  ) ? parseInt(spData.dia[k2])||0   : 0;
+          spN += (spData.noite && spData.noite[k2]) ? parseInt(spData.noite[k2])||0 : 0;
+        }); });
+      }
+      rawData[sp.id].d.push(spD);
+      rawData[sp.id].n.push(spN);
+    });
+  });
+
+  // 3 ── Paleta de estilos
+  var C = { navy:'1B3A6B', navyDark:'0F2347', blue1:'DBEAFE', blue2:'EEF4FB',
+    white:'FFFFFF', text:'111827', textBd:'1B3A6B', muted:'6B7280',
+    border:'D1D5DB', borderB:'BFDBFE', green:'D1FAE5', greenBd:'86EFAC',
+    greenDark:'166534', red:'FEE2E2', redBd:'FCA5A5', redDark:'991B1B',
+    amber:'FEF3C7', amberBd:'FDE68A', amberDark:'92400E' };
+  var bdr = function(c){ return { top:{style:'thin',color:{rgb:c}}, bottom:{style:'thin',color:{rgb:c}},
+    left:{style:'thin',color:{rgb:c}}, right:{style:'thin',color:{rgb:c}} }; };
+  var sH  = function(al,bg){ bg=bg||C.navy; return { font:{bold:true,color:{rgb:C.white},sz:9,name:'Calibri'},
+    fill:{patternType:'solid',fgColor:{rgb:bg}}, alignment:{horizontal:al||'center',vertical:'center'}, border:bdr(C.navyDark) }; };
+  var sDH = function(){ return { font:{bold:true,color:{rgb:C.textBd},sz:8,name:'Calibri'},
+    fill:{patternType:'solid',fgColor:{rgb:C.blue1}}, alignment:{horizontal:'center',vertical:'center'}, border:bdr(C.borderB) }; };
+  var sNH = function(){ return { font:{bold:true,color:{rgb:C.muted},sz:8,name:'Calibri'},
+    fill:{patternType:'solid',fgColor:{rgb:'E2E8F0'}}, alignment:{horizontal:'center',vertical:'center'}, border:bdr('CBD5E1') }; };
+  var sTH = function(){ return { font:{bold:true,color:{rgb:C.textBd},sz:8,name:'Calibri'},
+    fill:{patternType:'solid',fgColor:{rgb:'C7D7F5'}}, alignment:{horizontal:'center',vertical:'center'}, border:bdr(C.borderB) }; };
+  var sT  = function(bg,bold){ return { font:{sz:9,name:'Calibri',bold:!!bold,color:{rgb:bold?C.textBd:C.text}},
+    fill:{patternType:'solid',fgColor:{rgb:bg}}, alignment:{horizontal:'left',vertical:'center'}, border:bdr(bg===C.white?C.border:C.borderB) }; };
+  var sN  = function(bg,bold,col){ return { font:{sz:9,name:'Calibri',bold:!!bold,color:{rgb:col||(bold?C.textBd:C.text)}},
+    fill:{patternType:'solid',fgColor:{rgb:bg}}, alignment:{horizontal:'center',vertical:'center'}, border:bdr(bg===C.white?C.border:C.borderB) }; };
+  var sG  = function(){ return { font:{bold:true,sz:10,name:'Calibri',color:{rgb:C.white}},
+    fill:{patternType:'solid',fgColor:{rgb:C.navy}}, alignment:{horizontal:'center',vertical:'center'}, border:bdr(C.navyDark) }; };
+  var sGrp= function(bg,bd,col){ return { font:{bold:true,sz:9,name:'Calibri',color:{rgb:col}},
+    fill:{patternType:'solid',fgColor:{rgb:bg}}, alignment:{horizontal:'center',vertical:'center'}, border:bdr(bd) }; };
+
+  // ════════════════════════════════════════════════════════
+  // FOLHA 1 — Resumo por Serviço (pivot: serviços × datas)
+  //   Colunas: Serviço | Dia1_Total | Dia2_Total | … | TOTAL GERAL
+  // ════════════════════════════════════════════════════════
+  var ws1Data = [];
+
+  // Cabeçalho — linha de datas
+  var hdr1 = [{ v:'Serviço', t:'s', s:sH('left') }];
+  sortedDates.forEach(function(ds){
+    var fmt = ds.slice(6,8)+'/'+ds.slice(4,6)+'/'+ds.slice(0,4);
+    hdr1.push({ v:fmt, t:'s', s:sDH() });
+  });
+  hdr1.push({ v:'TOTAL', t:'s', s:sH('center') });
+  ws1Data.push(hdr1);
+
+  // Linhas por serviço
+  var toggle=0;
+  EXPORT_SPECS.forEach(function(sp){
+    var bg = toggle===0 ? C.white : C.blue2; toggle=1-toggle;
+    var row = [{ v:sp.label, t:'s', s:sT(bg,false) }];
+    var spTot = 0;
+    sortedDates.forEach(function(ds,i){
+      var tot = rawData[sp.id].d[i] + rawData[sp.id].n[i];
+      spTot += tot;
+      row.push({ v:tot, t:'n', s:sN(bg,false) });
+    });
+    row.push({ v:spTot, t:'n', s:sN(C.blue1,true,'1B3A6B') });
+    ws1Data.push(row);
+  });
+
+  // Linha TOTAL POR DIA
+  var totRow1 = [{ v:'TOTAL / DIA', t:'s', s:sH('left') }];
+  var grandGrand1 = 0;
+  sortedDates.forEach(function(ds,i){
+    var dayTot = 0;
+    EXPORT_SPECS.forEach(function(sp){ dayTot += rawData[sp.id].d[i] + rawData[sp.id].n[i]; });
+    grandGrand1 += dayTot;
+    totRow1.push({ v:dayTot, t:'n', s:sN(C.blue1,true,'1B3A6B') });
+  });
+  totRow1.push({ v:grandGrand1, t:'n', s:sG() });
+  ws1Data.push(totRow1);
+
+  // Subtotais por grupo
+  ws1Data.push([]);
+  ws1Data.push([{ v:'SUBTOTAIS POR GRUPO', t:'s', s:sH('left') }]);
+  var gruposCfg = [
+    { label:'🏥 Ambulatório (Consulta Externa)',  ids:GRUPO_AMB, bg:C.green,  bd:C.greenBd,  col:C.greenDark },
+    { label:'🛏 Internamentos',                   ids:GRUPO_INT, bg:C.blue1,  bd:C.borderB,  col:C.textBd   },
+    { label:'🚨 Banco de Urgência',               ids:GRUPO_URG, bg:C.red,    bd:C.redBd,    col:C.redDark  }
+  ];
+  gruposCfg.forEach(function(g){
+    var row = [{ v:g.label, t:'s', s:sGrp(g.bg,g.bd,g.col) }];
+    var gTot = 0;
+    sortedDates.forEach(function(ds,i){
+      var dayTot = 0;
+      g.ids.forEach(function(id){ if(rawData[id]){ dayTot+=rawData[id].d[i]+rawData[id].n[i]; } });
+      gTot += dayTot;
+      row.push({ v:dayTot, t:'n', s:sGrp(g.bg,g.bd,g.col) });
+    });
+    row.push({ v:gTot, t:'n', s:sGrp(g.bg,g.bd,g.col) });
+    ws1Data.push(row);
+  });
+
+  var ws1 = XLSX.utils.aoa_to_sheet(ws1Data);
+  var cols1 = [{wch:30}];
+  sortedDates.forEach(function(){ cols1.push({wch:11}); });
+  cols1.push({wch:14});
+  ws1['!cols'] = cols1;
+  ws1['!rows'] = [{hpt:22}];
+  ws1['!freeze'] = { xSplit:1, ySplit:1 };
+
+  // ════════════════════════════════════════════════════════
+  // FOLHA 2 — Detalhe Dia / Noite por data
+  //   Colunas: Serviço | Data_Dia | Data_Noite | Data_Total | … | TOTAL
+  // ════════════════════════════════════════════════════════
+  var ws2Data = [];
+
+  // Cabeçalho (3 colunas por data)
+  var hdr2 = [{ v:'Serviço', t:'s', s:sH('left') }];
+  sortedDates.forEach(function(ds){
+    var fmt = ds.slice(6,8)+'/'+ds.slice(4,6)+'/'+ds.slice(0,4);
+    hdr2.push({ v:fmt+' Dia',   t:'s', s:sDH() });
+    hdr2.push({ v:fmt+' Noite', t:'s', s:sNH() });
+    hdr2.push({ v:fmt+' Total', t:'s', s:sTH() });
+  });
+  hdr2.push({ v:'TOTAL GERAL', t:'s', s:sH('center') });
+  ws2Data.push(hdr2);
+
+  // Linhas por serviço
+  toggle=0;
+  EXPORT_SPECS.forEach(function(sp){
+    var bg = toggle===0 ? C.white : C.blue2; toggle=1-toggle;
+    var row = [{ v:sp.label, t:'s', s:sT(bg,false) }];
+    var spTot = 0;
+    sortedDates.forEach(function(ds,i){
+      var d = rawData[sp.id].d[i], n = rawData[sp.id].n[i];
+      row.push({ v:d, t:'n', s:sN(bg,false,'1A56DB') });
+      row.push({ v:n, t:'n', s:sN(bg,false,'475569') });
+      row.push({ v:d+n, t:'n', s:sN(bg,true) });
+      spTot += d+n;
+    });
+    row.push({ v:spTot, t:'n', s:sG() });
+    ws2Data.push(row);
+  });
+
+  // Linha TOTAL
+  var totRow2 = [{ v:'TOTAL / DIA', t:'s', s:sH('left') }];
+  var grandGrand2 = 0;
+  sortedDates.forEach(function(ds,i){
+    var dd=0, dn=0;
+    EXPORT_SPECS.forEach(function(sp){ dd+=rawData[sp.id].d[i]; dn+=rawData[sp.id].n[i]; });
+    totRow2.push({ v:dd, t:'n', s:sN(C.blue1,true,'1A56DB') });
+    totRow2.push({ v:dn, t:'n', s:sN('E2E8F0',true,'475569') });
+    totRow2.push({ v:dd+dn, t:'n', s:sN(C.blue1,true,'1B3A6B') });
+    grandGrand2 += dd+dn;
+  });
+  totRow2.push({ v:grandGrand2, t:'n', s:sG() });
+  ws2Data.push(totRow2);
+
+  var ws2 = XLSX.utils.aoa_to_sheet(ws2Data);
+  var cols2 = [{wch:30}];
+  sortedDates.forEach(function(){ cols2.push({wch:9}); cols2.push({wch:9}); cols2.push({wch:9}); });
+  cols2.push({wch:14});
+  ws2['!cols'] = cols2;
+  ws2['!rows'] = [{hpt:22}];
+  ws2['!freeze'] = { xSplit:1, ySplit:1 };
+
+  // ════════════════════════════════════════════════════════
+  // FOLHA 3 — Base de Dados (uma linha por serviço por dia)
+  // ════════════════════════════════════════════════════════
+  var ws3Data = [];
+  ws3Data.push([
+    {v:'Data',t:'s',s:sH('center')},{v:'Dia',t:'s',s:sH('center')},
+    {v:'Mês',t:'s',s:sH('left')},{v:'Ano',t:'s',s:sH('center')},
+    {v:'Dia Semana',t:'s',s:sH('left')},{v:'Serviço',t:'s',s:sH('left')},
+    {v:'Grupo',t:'s',s:sH('center')},{v:'Total Dia',t:'s',s:sH('center')},
+    {v:'Total Noite',t:'s',s:sH('center')},{v:'Total',t:'s',s:sH('center')}
+  ]);
+  toggle=0;
+  sortedDates.forEach(function(ds,di){
+    var dtFmt=ds.slice(6,8)+'/'+ds.slice(4,6)+'/'+ds.slice(0,4);
+    var dNum=parseInt(ds.slice(6,8)), mNum=parseInt(ds.slice(4,6)), yNum=parseInt(ds.slice(0,4));
+    var dtObj=new Date(yNum,mNum-1,dNum);
+    var bg=toggle===0?C.white:C.blue2; toggle=1-toggle;
+    EXPORT_SPECS.forEach(function(sp){
+      var d=rawData[sp.id].d[di], n=rawData[sp.id].n[di];
+      var grp=GRUPO_AMB.includes(sp.id)?'Ambulatório':GRUPO_URG.includes(sp.id)?'Urgência':
+              GRUPO_INT.includes(sp.id)?'Internamento':'Bloco Op.';
+      ws3Data.push([
+        {v:dtFmt,t:'s',s:sN(bg,false)},{v:dNum,t:'n',s:sN(bg,false)},
+        {v:BD_MESES[mNum],t:'s',s:sT(bg,false)},{v:yNum,t:'n',s:sN(bg,false)},
+        {v:BD_DIASEM[dtObj.getDay()],t:'s',s:sT(bg,false)},{v:sp.label,t:'s',s:sT(bg,false)},
+        {v:grp,t:'s',s:sN(bg,false)},{v:d,t:'n',s:sN(bg,false,'1A56DB')},
+        {v:n,t:'n',s:sN(bg,false,'475569')},{v:d+n,t:'n',s:sN(bg,true)}
+      ]);
+    });
+  });
+  var ws3=XLSX.utils.aoa_to_sheet(ws3Data);
+  ws3['!cols']=[{wch:11},{wch:5},{wch:12},{wch:6},{wch:15},{wch:26},{wch:14},{wch:10},{wch:10},{wch:10}];
+  ws3['!rows']=[{hpt:20}];
+  ws3['!freeze']={xSplit:0,ySplit:1};
+  ws3['!autofilter']={ref:'A1:J1'};
+
+  // 6 ── Workbook e download
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws1, 'Resumo por Serviço');
+  XLSX.utils.book_append_sheet(wb, ws2, 'Detalhe Dia-Noite');
+  XLSX.utils.book_append_sheet(wb, ws3, 'Base de Dados');
+
+  var td=new Date();
+  var fname='BD_Procedimentos_HPrend_'+td.getFullYear()+String(td.getMonth()+1).padStart(2,'0')+String(td.getDate()).padStart(2,'0')+'.xlsx';
+  XLSX.writeFile(wb, fname);
+
+  showToast('✅ Excel exportado — '+sortedDates.length+' dias · '+EXPORT_SPECS.length+' serviços · 3 folhas');
+}
+
+// Auto-exportar Excel ao clicar "Guardar" — com protecção anti-duplicação
+(function(){
+  var _orig = saveAll;
+  var _excelTimer = null;
+  saveAll = function(){
+    _orig();
+    // Cancela export pendente e agenda um novo (debounce 800ms → apenas 1 export por clique)
+    clearTimeout(_excelTimer);
+    _excelTimer = setTimeout(function(){ exportBdExcel(); _excelTimer = null; }, 800);
+  };
+})();
+
+// ════ FIM BASE DE DADOS EXCEL ════
+
 (function(){
   var s = document.createElement('style');
   s.textContent = [
