@@ -1320,24 +1320,22 @@ function renderReport(containerId, dates, title, colorClass, filterSpec) {
     return;
   }
   let html = `<div class="sum-grid">
-    <div class="sum-card c3"><span class="sum-label">∑ Total Geral</span><span class="sum-val">${grand}</span><div class="sum-sub">${title}</div></div>
-    <div class="sum-card c1"><span class="sum-label"><svg class="svc-icon" aria-hidden="true"><use href="#i-sun"/></svg> Total Dia</span><span class="sum-val">${grandD}</span></div>
-    <div class="sum-card c2"><span class="sum-label"><svg class="svc-icon" aria-hidden="true"><use href="#i-moon"/></svg> Total Noite</span><span class="sum-val">${grandN}</span></div>
     <div class="sum-card" style="background:#f0fdf4;border:1px solid #86efac;border-radius:5px;padding:13px;text-align:center;">
-      <span class="sum-label" style="color:#166534;">🏥 Ambulatório</span>
+      <span class="sum-label" style="color:#166534;">🏥 Consulta Externa</span>
       <span class="sum-val" style="color:#15803d;">${amb}</span>
-      <div class="sum-sub">Consulta Externa + Hosp. Dia</div>
-    </div>
-    <div class="sum-card" style="background:#eff6ff;border:1px solid #93c5fd;border-radius:5px;padding:13px;text-align:center;">
-      <span class="sum-label" style="color:#1e3a8a;">🛏 Internamentos</span>
-      <span class="sum-val" style="color:var(--accent);">${int}</span>
-      <div class="sum-sub">Serviços de Internamento</div>
+      <div class="sum-sub">Dia: ${ambD} · Noite: ${ambN}</div>
     </div>
     <div class="sum-card" style="background:#fef2f2;border:1px solid #fca5a5;border-radius:5px;padding:13px;text-align:center;">
       <span class="sum-label" style="color:#991b1b;">🚨 Banco de Urgência</span>
       <span class="sum-val" style="color:#dc2626;">${urg}</span>
-      <div class="sum-sub">Urgências atendidas</div>
+      <div class="sum-sub">Dia: ${urgD} · Noite: ${urgN}</div>
     </div>
+    <div class="sum-card" style="background:#eff6ff;border:1px solid #93c5fd;border-radius:5px;padding:13px;text-align:center;">
+      <span class="sum-label" style="color:#1e3a8a;">🛏 Internamento</span>
+      <span class="sum-val" style="color:var(--accent);">${int}</span>
+      <div class="sum-sub">Dia: ${intD} · Noite: ${intN}</div>
+    </div>
+    <div class="sum-card c3"><span class="sum-label">∑ Total Geral</span><span class="sum-val">${grand}</span><div class="sum-sub">Dia: ${grandD} · Noite: ${grandN}</div></div>
   </div>`;
 
   // Por categoria
@@ -1637,7 +1635,8 @@ function buildReportPDF(dates, titleLine1, titleLine2, specLabel, filename) {
   const { jsPDF } = window.jspdf;
   if(!jsPDF) { showToast('❌ Biblioteca PDF não carregada'); return; }
 
-  const { grand, grandD, grandN, catD, catN, procD, procN } = aggregate(dates, 'all');
+  const { grand, grandD, grandN, catD, catN, procD, procN,
+          amb, ambD, ambN, int: intT, intD, intN, urg, urgD, urgN } = aggregate(dates, 'all');
   if(grand === 0) { showToast('⚠️ Sem dados para este período'); return; }
 
   const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
@@ -1665,20 +1664,28 @@ function buildReportPDF(dates, titleLine1, titleLine2, specLabel, filename) {
   doc.setTextColor(0);
   let cy = 38;
 
-  // ── Summary boxes
+  // ── Summary boxes: Consulta Externa | Banco de Urgência | Internamento | Total Geral
   doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(60);
   doc.text('RESUMO DO PERÍODO', ML, cy); cy += 5;
-  [[`Total Geral`,grand,0,120,90],[`Turno Dia`,grandD,20,100,160],[`Turno Noite`,grandN,80,40,130]].forEach((b,i)=>{
-    const bx = ML + i*((CW-8)/3+4);
-    const bw = (CW-8)/3;
-    doc.setFillColor(b[2],b[3],b[4]);
-    doc.roundedRect(bx,cy,bw,14,2,2,'F');
-    doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(200,255,230);
-    doc.text(b[0], bx+bw/2, cy+5, {align:'center'});
-    doc.setFont('helvetica','bold'); doc.setFontSize(14); doc.setTextColor(255);
-    doc.text(String(b[1]), bx+bw/2, cy+12, {align:'center'});
+  const _boxes = [
+    {label:'Consulta Externa', val:amb,  sub:`D:${ambD} N:${ambN}`, bg:[240,253,244], tc:[22,101,52]},
+    {label:'Banco de Urgência',val:urg,  sub:`D:${urgD} N:${urgN}`, bg:[254,242,242], tc:[153,27,27]},
+    {label:'Internamento',     val:intT, sub:`D:${intD} N:${intN}`, bg:[239,246,255], tc:[30,58,138]},
+    {label:'Total Geral',      val:grand,sub:`D:${grandD} N:${grandN}`,bg:[10,25,60],tc:[200,240,255]}
+  ];
+  const _bw = (CW-12)/4;
+  _boxes.forEach(function(b,i){
+    const bx = ML + i*(_bw+4);
+    doc.setFillColor(b.bg[0],b.bg[1],b.bg[2]);
+    doc.roundedRect(bx,cy,_bw,20,2,2,'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(6.5); doc.setTextColor(b.tc[0],b.tc[1],b.tc[2]);
+    doc.text(b.label, bx+_bw/2, cy+6, {align:'center'});
+    doc.setFontSize(13);
+    doc.text(String(b.val), bx+_bw/2, cy+14, {align:'center'});
+    doc.setFont('helvetica','normal'); doc.setFontSize(5.5);
+    doc.text(b.sub, bx+_bw/2, cy+19, {align:'center'});
   });
-  doc.setTextColor(0); cy += 20;
+  doc.setTextColor(0); cy += 26;
 
   // ── Category table
   doc.setFillColor(0,80,60); doc.roundedRect(ML,cy,CW,7,1.5,1.5,'F');
