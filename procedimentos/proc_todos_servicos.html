@@ -1604,7 +1604,6 @@ function exportPDF() {
   if(cy > PH-40){ doc.addPage(); cy=14; }
   const pRows=[];
   CATEGORIES.forEach(c=>c.procs.forEach(p=>{const k=c.id+'||'+p;const dv=procD[k]||0,nv=procN[k]||0;if(dv+nv>0)pRows.push([p,dv,nv,dv+nv]);}));
-  pRows.sort((a,b)=>b[3]-a[3]);
   if(pRows.length>0){
     doc.setFillColor(0,60,100); doc.roundedRect(ML,cy,CW,7,1.5,1.5,'F');
     doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(255);
@@ -1704,7 +1703,6 @@ function buildReportPDF(dates, titleLine1, titleLine2, specLabel, filename) {
   if(cy > PH-40){ doc.addPage(); cy=14; }
   const pRows = [];
   CATEGORIES.forEach(c=>c.procs.forEach(p=>{const k=c.id+'||'+p;const dv=procD[k]||0,nv=procN[k]||0;if(dv+nv>0)pRows.push([p,dv,nv,dv+nv]);}));
-  pRows.sort((a,b)=>b[3]-a[3]);
   if(pRows.length > 0) {
     if(cy > PH-40){ doc.addPage(); cy=14; }
     doc.setFillColor(0,60,100); doc.roundedRect(ML,cy,CW,7,1.5,1.5,'F');
@@ -1827,7 +1825,6 @@ function exportDiarioPDF() {
   if(cy>PH-40){doc.addPage();cy=14;}
   const pRows=[];
   CATEGORIES.forEach(c=>c.procs.forEach(p=>{const k=c.id+'||'+p;const dv=procD[k]||0,nv=procN[k]||0;if(dv+nv>0)pRows.push([p,dv,nv,dv+nv]);}));
-  pRows.sort((a,b)=>b[3]-a[3]);
   if(pRows.length>0){
     doc.setFillColor(0,60,100); doc.roundedRect(ML,cy,CW,7,1.5,1.5,'F');
     doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(255);
