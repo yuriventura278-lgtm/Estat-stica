@@ -676,7 +676,9 @@ html.dark #theme-toggle{color:var(--accent);border-color:var(--accent-ring)!impo
       <div class="period-row">
         <label>Mês</label><input type="month" id="placar-month">
         <button class="btn-load" onclick="loadPlacar()">Carregar</button>
-        <button class="btn-load" onclick="exportPlacarPDF()"><svg class="svc-icon" aria-hidden="true"><use href="#i-pdf"/></svg> Exportar PDF</button>
+        <button class="btn-load" onclick="exportPlacarPDF()"><svg class="svc-icon" aria-hidden="true"><use href="#i-pdf"/></svg> PDF Geral</button>
+        <button class="btn-load" onclick="exportPlacarPDFIndividual()" style="color:#7c3aed;border-color:#c4b5fd;"><svg class="svc-icon" aria-hidden="true"><use href="#i-pdf"/></svg> PDF por Grupo</button>
+        <button class="btn-load" onclick="exportMensalExcel()" style="color:#047857;border-color:#6ee7b7;background:#f0fdf4;font-weight:700;">📊 Excel do Mês</button>
       </div>
       <div id="placar-content"><div class="no-data">Seleccione o mês e clique em Carregar.</div></div>
     </div>
@@ -2122,7 +2124,156 @@ function exportPlacarPDF() {
   doc.text(`Hospital Prenda  |  Placar Mensal  |  ${title}  |  Gerado: ${geradoEm}`,ML,PH-4);
 
   doc.save(`Placar_Mensal_${m}.pdf`);
-  showToast('PDF exportado com sucesso!');
+  showToast('PDF Geral exportado!');
+}
+
+function exportPlacarPDFIndividual() {
+  const m = document.getElementById('placar-month').value;
+  if(!m){ showToast('⚠️ Seleccione o mês'); return; }
+  const {jsPDF} = window.jspdf;
+  if(!jsPDF){ showToast('❌ Biblioteca PDF não carregada'); return; }
+  const [y,mo] = m.split('-');
+  const last = new Date(+y,+mo,0).getDate();
+  const dates = datesInRange(`${m}-01`,`${m}-${String(last).padStart(2,'0')}`);
+  const agg = aggregate(dates,'all');
+  if(agg.grand===0){ showToast('⚠️ Sem dados para exportar'); return; }
+  const title = `${_BD_MONTHS[+mo-1]} ${y}`;
+  const now = new Date();
+  const geradoEm = `${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+
+  [{lbl:'CONSULTA EXTERNA', val:agg.amb,  bg:[240,253,244], tc:[22,101,52],  fn:'Consulta_Externa'},
+   {lbl:'BANCO DE URGÊNCIA',val:agg.urg,  bg:[254,242,242], tc:[153,27,27],  fn:'Banco_Urgencia'},
+   {lbl:'INTERNAMENTO',     val:agg['int'],bg:[239,246,255], tc:[30,58,138], fn:'Internamento'}
+  ].forEach(function(g){
+    const doc = new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+    const PW=doc.internal.pageSize.getWidth(), PH=doc.internal.pageSize.getHeight(), ML=15,MR=15;
+    doc.setFillColor(10,25,60); doc.rect(0,0,PW,28,'F');
+    try{doc.addImage(LOGO_B64,'JPEG',ML,5,18,18);}catch(e){}
+    doc.setFont('helvetica','bold'); doc.setFontSize(15); doc.setTextColor(255);
+    doc.text('HOSPITAL PRENDA',ML+22,12);
+    doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+    doc.text('Placar Mensal — '+g.lbl,ML+22,20);
+    doc.setFont('helvetica','bold'); doc.setFontSize(13); doc.setTextColor(147,197,253);
+    doc.text(title,PW-MR,13,{align:'right'});
+    doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(147,197,253);
+    doc.text('Gerado: '+geradoEm,PW-MR,21,{align:'right'});
+    doc.setTextColor(0);
+    const cy=32, ch=PH-cy-18, cw=PW-ML-MR;
+    doc.setFillColor(g.bg[0],g.bg[1],g.bg[2]);
+    doc.roundedRect(ML,cy,cw,ch,6,6,'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(14); doc.setTextColor(g.tc[0],g.tc[1],g.tc[2]);
+    doc.text(g.lbl,PW/2,cy+18,{align:'center'});
+    doc.setFont('helvetica','normal'); doc.setFontSize(80);
+    doc.text(String(g.val),PW/2,cy+ch/2+20,{align:'center'});
+    doc.setFont('helvetica','bold'); doc.setFontSize(11);
+    doc.text(title,PW/2,cy+ch-10,{align:'center'});
+    doc.setDrawColor(180); doc.setLineWidth(.3); doc.line(ML,PH-9,PW-MR,PH-9);
+    doc.setFontSize(7); doc.setTextColor(120); doc.setFont('helvetica','normal');
+    doc.text('Hospital Prenda  |  '+g.lbl+'  |  '+title,ML,PH-4);
+    doc.save('Placar_'+g.fn+'_'+m+'.pdf');
+  });
+  showToast('3 PDFs individuais exportados!');
+}
+
+function exportMensalExcel() {
+  if(typeof XLSX==='undefined'){
+    showToast('⏳ A carregar biblioteca Excel...');
+    (function tryFb(i){var fbs=['https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx-js-style.min.js','https://unpkg.com/xlsx-js-style@1.2.0/dist/xlsx-js-style.min.js','https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js','https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js'];if(i>=fbs.length){showToast('❌ Sem internet');return;}var s=document.createElement('script');s.src=fbs[i];s.onload=function(){setTimeout(exportMensalExcel,300);};s.onerror=function(){tryFb(i+1);};document.head.appendChild(s);})(0);
+    return;
+  }
+  const m = document.getElementById('placar-month').value;
+  if(!m){ showToast('⚠️ Seleccione o mês'); return; }
+  const [y,mo] = m.split('-');
+  const last = new Date(+y,+mo,0).getDate();
+  const mTitle = _BD_MONTHS[+mo-1]+' '+y;
+
+  // ── Style helper
+  function mk(bold,bg,fc,ha,sz){
+    return {font:{name:'Calibri',sz:sz||10,bold:!!bold,color:{rgb:fc||'111827'}},
+            fill:bg?{patternType:'solid',fgColor:{rgb:bg}}:{patternType:'none'},
+            alignment:{horizontal:ha||'left',vertical:'center'},
+            border:{top:{style:'thin',color:{rgb:'D1D5DB'}},bottom:{style:'thin',color:{rgb:'D1D5DB'}},
+                    left:{style:'thin',color:{rgb:'D1D5DB'}},right:{style:'thin',color:{rgb:'D1D5DB'}}}};
+  }
+  function cs(v,bold,bg,fc,ha,t,sz){return {v:v,t:t||'s',s:mk(bold,bg,fc,ha,sz)};}
+  function cn(v,bold,bg,fc){return {v:v,t:'n',s:mk(bold,bg,fc,'center')};}
+
+  const wb = XLSX.utils.book_new();
+  const HDR='0A193C', HDR2='1E3A5F', WHT='FFFFFF', AMB='D1FAE5', AMBT='065F46',
+        URG='FEE2E2', URGT='991B1B', INT='DBEAFE', INTT='1E3A8A',
+        TOT='1E3A5F', SUB='F1F5F9', SUBT='334155', ODD='FFFFFF', EVN='F8FAFC',
+        BLUE='1A56DB', GREY='6B7280';
+
+  // ── Sheet "Resumo Mensal": Data | Consulta Externa | Banco de Urgência | Internamento | Total
+  var rsRows = [];
+  rsRows.push([cs('RESUMO MENSAL — '+mTitle,true,HDR,WHT,'center','s',12),cs('',false,HDR,WHT),cs('',false,HDR,WHT),cs('',false,HDR,WHT),cs('',false,HDR,WHT)]);
+  rsRows.push([cs('Data',true,HDR2,WHT,'center'),cs('🏥 Consulta Externa',true,HDR2,WHT,'center'),cs('🚨 Banco de Urgência',true,HDR2,WHT,'center'),cs('🛏 Internamento',true,HDR2,WHT,'center'),cs('∑ Total Geral',true,HDR2,WHT,'center')]);
+  var rTA=0,rTU=0,rTI=0,rTG=0,tog=0;
+  for(var d=1;d<=last;d++){
+    var ds=y+mo+String(d).padStart(2,'0');
+    var raw=localStorage.getItem('enf5_'+ds)||localStorage.getItem('enf4_'+ds);
+    if(!raw) continue;
+    var ag=aggregate([y+'-'+mo+'-'+String(d).padStart(2,'0')],'all');
+    if(ag.grand===0) continue;
+    var bg=tog===0?ODD:EVN; tog=1-tog;
+    var dFmt=String(d).padStart(2,'0')+'/'+mo+'/'+y;
+    rTA+=ag.amb;rTU+=ag.urg;rTI+=ag['int'];rTG+=ag.grand;
+    rsRows.push([cs(dFmt,false,bg,'374151','center'),cn(ag.amb,false,AMB,AMBT),cn(ag.urg,false,URG,URGT),cn(ag['int'],false,INT,INTT),cn(ag.grand,true,'EFF6FF',INTT)]);
+  }
+  rsRows.push([cs('TOTAL DO MÊS',true,TOT,WHT,'center'),cn(rTA,true,AMB,AMBT),cn(rTU,true,URG,URGT),cn(rTI,true,INT,INTT),cn(rTG,true,TOT,WHT)]);
+  var wsR=XLSX.utils.aoa_to_sheet(rsRows);
+  wsR['!cols']=[{wch:14},{wch:22},{wch:22},{wch:18},{wch:16}];
+  wsR['!rows']=[{hpt:28},{hpt:22}];
+  wsR['!merges']=[{s:{r:0,c:0},e:{r:0,c:4}}];
+  XLSX.utils.book_append_sheet(wb,wsR,'Resumo Mensal');
+
+  // ── One sheet per day
+  var sheetCount=0;
+  for(var d=1;d<=last;d++){
+    var dateStr=y+'-'+mo+'-'+String(d).padStart(2,'0');
+    var ds=y+mo+String(d).padStart(2,'0');
+    var raw=localStorage.getItem('enf5_'+ds)||localStorage.getItem('enf4_'+ds);
+    if(!raw) continue;
+    var ag=aggregate([dateStr],'all');
+    if(ag.grand===0) continue;
+    var dFmt=String(d).padStart(2,'0')+'/'+mo+'/'+y;
+    var dKey=String(d).padStart(2,'0');
+    var sd=[];
+    sd.push([cs('Hospital Prenda — Procedimentos de Enfermagem — '+dFmt,true,HDR,WHT,'center','s',11),cs('',false,HDR,WHT),cs('',false,HDR,WHT),cs('',false,HDR,WHT),cs('',false,HDR,WHT)]);
+    sd.push([cs('Serviço',true,HDR2,WHT),cs('Procedimento',true,HDR2,WHT),cs('Turno Dia',true,HDR2,WHT,'center'),cs('Turno Noite',true,HDR2,WHT,'center'),cs('Total',true,HDR2,WHT,'center')]);
+    var rt=0,gD=0,gN=0;
+    ag.filteredSpecs.forEach(function(sp){
+      var grpBg=GRUPO_AMB.includes(sp.id)?AMB:GRUPO_URG.includes(sp.id)?URG:GRUPO_INT.includes(sp.id)?INT:SUB;
+      var grpFc=GRUPO_AMB.includes(sp.id)?AMBT:GRUPO_URG.includes(sp.id)?URGT:GRUPO_INT.includes(sp.id)?INTT:SUBT;
+      var spD=0,spN=0,hasR=false;
+      CATEGORIES.forEach(function(cat){
+        cat.procs.forEach(function(proc){
+          var pk=cat.id+'||'+proc;
+          var v=ag.specData[sp.id]?.[pk];
+          if(!v||v.d+v.n===0)return;
+          hasR=true; spD+=v.d; spN+=v.n;
+          var rbg=rt===0?ODD:EVN; rt=1-rt;
+          sd.push([cs(sp.label,false,grpBg,grpFc),cs(proc,false,rbg),cn(v.d,false,rbg,BLUE),cn(v.n,false,rbg,GREY),cn(v.d+v.n,true,rbg)]);
+        });
+      });
+      if(hasR){
+        gD+=spD;gN+=spN;
+        sd.push([cs('SUBTOTAL — '+sp.label,true,SUB,SUBT),cs('',false,SUB),cn(spD,true,SUB,SUBT),cn(spN,true,SUB,SUBT),cn(spD+spN,true,SUB,SUBT)]);
+      }
+    });
+    sd.push([cs('',false,HDR)]);
+    sd.push([cs('TOTAL GERAL',true,TOT,WHT),cs('',false,TOT),cn(gD,true,TOT,WHT),cn(gN,true,TOT,WHT),cn(gD+gN,true,TOT,WHT)]);
+    var ws=XLSX.utils.aoa_to_sheet(sd);
+    ws['!cols']=[{wch:26},{wch:38},{wch:12},{wch:12},{wch:12}];
+    ws['!rows']=[{hpt:26},{hpt:22}];
+    ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:4}}];
+    XLSX.utils.book_append_sheet(wb,ws,dKey);
+    sheetCount++;
+  }
+
+  if(sheetCount===0){showToast('⚠️ Sem dados para '+mTitle);return;}
+  XLSX.writeFile(wb,'BD_'+mTitle.replace(/ /g,'_')+'_'+m+'.xlsx');
+  showToast('✅ Excel — '+mTitle+' — '+sheetCount+' dias exportados');
 }
 
 // ════════════════════════════════════════════════════════════
