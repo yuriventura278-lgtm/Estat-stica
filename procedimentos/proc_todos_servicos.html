@@ -7,7 +7,27 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx-js-style.min.js"></script>
+<!-- Excel: tenta 4 CDNs em cascata para garantir carregamento -->
+<script>
+(function(){
+  var tried=0;
+  var cdns=[
+    'https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx-js-style.min.js',
+    'https://unpkg.com/xlsx-js-style@1.2.0/dist/xlsx-js-style.min.js',
+    'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js',
+    'https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js'
+  ];
+  function tryLoad(i){
+    if(i>=cdns.length)return;
+    var s=document.createElement('script');
+    s.src=cdns[i];
+    s.onload=function(){ window._xlsxLoaded=true; };
+    s.onerror=function(){ tryLoad(i+1); };
+    document.head.appendChild(s);
+  }
+  tryLoad(0);
+})();
+</script>
 <style>
 /* ════ CLINICAL MINIMAL v1 ════ */
 :root{
@@ -23,7 +43,7 @@
   --green:#047857;--purple:#5b21b6;--orange:#c2410c;
   --font-head:'Inter',sans-serif;
   --font-body:'IBM Plex Mono',monospace;
-  --nav-w:220px;--hdr-h:56px;--staff-h:38px;--top-h:calc(var(--hdr-h) + var(--staff-h));
+  --nav-w:220px;--hdr-h:56px;--top-h:var(--hdr-h);
 }
 
 /* SVG ICON HELPERS */
@@ -310,22 +330,6 @@ header{position:fixed;top:0;left:0;right:0;z-index:200;height:var(--hdr-h);paddi
   .spec-totals{display:none;}
 }
 
-/* STAFF BAR */
-.staff-bar{position:fixed;top:var(--hdr-h);left:0;right:0;z-index:190;
-  height:var(--staff-h);background:oklch(97% 0.01 230);
-  border-bottom:1px solid var(--accent-ring);
-  display:flex;align-items:center;gap:12px;padding:0 20px;
-  font-family:var(--font-head);}
-.staff-lbl{font-size:.48rem;color:var(--muted);font-weight:600;
-  text-transform:uppercase;letter-spacing:1.5px;white-space:nowrap;}
-.staff-sep{color:var(--border);font-size:.8rem;margin:0 2px;}
-.staff-inp{background:transparent;border:none;border-bottom:1px solid var(--border);
-  color:var(--text);font-family:var(--font-head);font-size:.68rem;
-  padding:2px 6px;outline:none;min-width:150px;max-width:210px;
-  transition:border-color .13s;}
-.staff-inp:focus{border-bottom-color:var(--accent);}
-.staff-inp::placeholder{color:var(--muted);opacity:.55;}
-
 /* DARK MODE */
 html.dark{
   --bg:#0c0f14;--surface:#141820;--surface2:#0f1520;
@@ -335,7 +339,6 @@ html.dark{
   --accent-ring:rgba(59,130,246,.25);
 }
 html.dark header,html.dark .sidebar,html.dark .save-bar{background:var(--surface);}
-html.dark .staff-bar{background:rgba(59,130,246,.06);border-bottom-color:var(--border);}
 html.dark .sb-hdr{background:var(--surface);}
 html.dark .card{background:var(--surface);}
 html.dark .modal-box{background:var(--surface);}
@@ -513,7 +516,6 @@ html.dark #theme-toggle{color:var(--accent);border-color:var(--accent-ring)!impo
   </div>
 </header>
 
-<div class="staff-bar"><span class="staff-lbl">Profissional</span><input type="text" id="inp-profissional" class="staff-inp" placeholder="Nome do profissional" autocomplete="name" oninput="saveStaffInfo()"><span class="staff-sep">·</span><span class="staff-lbl">Chefe de Turno</span><input type="text" id="inp-chefe" class="staff-inp" placeholder="Nome do chefe de turno" autocomplete="name" oninput="saveStaffInfo()"></div>
 <div class="app-shell">
   <aside class="sidebar" id="sidebar">
     <div class="sb-hdr"><span>Serviços</span></div>
@@ -1662,7 +1664,6 @@ function buildReportPDF(dates, titleLine1, titleLine2, specLabel, filename) {
   doc.text(`Serviço: ${specLabel}`, PW - MR, 19, {align:'right'});
   doc.text(`Gerado: ${geradoEm}`, PW - MR, 25, {align:'right'});
   doc.setTextColor(0);
-  (function(){try{var _raw=localStorage.getItem('_staff');if(!_raw)return;var _st=JSON.parse(_raw);var _parts=[];if(_st.profissional)_parts.push('Enf.: '+_st.profissional);if(_st.chefe)_parts.push('Chefe: '+_st.chefe);if(!_parts.length)return;doc.setFont('helvetica','italic');doc.setFontSize(6.5);doc.setTextColor(180,210,255);doc.text(_parts.join('  ·  '),PW-MR,29,{align:'right'});doc.setTextColor(0);}catch(e){}})();
   let cy = 38;
 
   // ── Summary boxes
@@ -1796,7 +1797,6 @@ function exportDiarioPDF() {
   doc.setFont('helvetica','normal'); doc.setFontSize(7);
   doc.text(`Serviço: ${specLabel}`, PW - MR, 19, {align:'right'});
   doc.setTextColor(0);
-  (function(){try{var _raw=localStorage.getItem('_staff');if(!_raw)return;var _st=JSON.parse(_raw);var _parts=[];if(_st.profissional)_parts.push('Enf.: '+_st.profissional);if(_st.chefe)_parts.push('Chefe: '+_st.chefe);if(!_parts.length)return;doc.setFont('helvetica','italic');doc.setFontSize(6.5);doc.setTextColor(180,210,255);doc.text(_parts.join('  ·  '),PW-MR,29,{align:'right'});doc.setTextColor(0);}catch(e){}})();
   let cy = 38;
   doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(60);
   doc.text('RESUMO DO DIA', ML, cy); cy += 5;
@@ -2321,12 +2321,8 @@ function emailReport(contentId, subject) {
   if (!data || !data.grand) { showToast('Carregue um relatório primeiro.'); return; }
   var spec  = (document.getElementById('active-label')||{}).textContent || 'Serviço';
   var date  = (document.getElementById('date-disp')||{}).textContent    || '';
-  var staffRaw = localStorage.getItem('_staff');
-  var staff = staffRaw ? JSON.parse(staffRaw) : {};
   var top10 = data.procData.slice(0,10).sort(function(a,b){return b.t-a.t;});
   var body  = 'Relatório: ' + subject + '\nServiço: ' + spec + '  ' + date + '\n';
-  body += 'Profissional       : ' + (staff.profissional || 'N/D') + '\n';
-  body += 'Chefe de turno     : ' + (staff.chefe || 'N/D') + '\n';
   body += '────────────────────────────────────────\n';
   body += 'Total procedimentos : ' + data.grand + '\n';
   body += 'Turno diurno        : ' + data.totalD + '\n';
@@ -2401,24 +2397,6 @@ function toggleTheme() {
   Object.keys(_ci).forEach(function(id){ if(_ci[id]) _ci[id].update(); });
 }
 
-// ────── STAFF INFO ──────
-function loadStaffInfo() {
-  var raw = localStorage.getItem('_staff');
-  var d = raw ? JSON.parse(raw) : {};
-  var pi = document.getElementById('inp-profissional');
-  var ci = document.getElementById('inp-chefe');
-  if (pi) pi.value = d.profissional || '';
-  if (ci) ci.value = d.chefe || '';
-}
-function saveStaffInfo() {
-  var pi = document.getElementById('inp-profissional');
-  var ci = document.getElementById('inp-chefe');
-  localStorage.setItem('_staff', JSON.stringify({
-    profissional: pi ? pi.value.trim() : '',
-    chefe: ci ? ci.value.trim() : ''
-  }));
-}
-setTimeout(loadStaffInfo, 80);
 
 // ────── SPLASH RING ANIMATION ──────
 (function(){
@@ -2453,7 +2431,24 @@ var BD_MESES  = ['','Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho
 var BD_DIASEM = ['Domingo','Segunda-Feira','Terça-Feira','Quarta-Feira','Quinta-Feira','Sexta-Feira','Sábado'];
 
 function exportBdExcel() {
-  if(typeof XLSX === 'undefined'){ showToast('❌ Biblioteca Excel não carregada'); return; }
+  if(typeof XLSX === 'undefined'){
+    showToast('⏳ A carregar biblioteca Excel...');
+    var fallbacks=[
+      'https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx-js-style.min.js',
+      'https://unpkg.com/xlsx-js-style@1.2.0/dist/xlsx-js-style.min.js',
+      'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js',
+      'https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js'
+    ];
+    function tryFallback(i){
+      if(i>=fallbacks.length){ showToast('❌ Sem internet – não foi possível carregar Excel'); return; }
+      var s=document.createElement('script'); s.src=fallbacks[i];
+      s.onload=function(){ setTimeout(exportBdExcel,300); };
+      s.onerror=function(){ tryFallback(i+1); };
+      document.head.appendChild(s);
+    }
+    tryFallback(0);
+    return;
+  }
 
   // 1 ── Recolher datas únicas (sem duplicação: enf5_ tem prioridade sobre enf4_)
   var dateMap = {}; // YYYYMMDD → chave localStorage
