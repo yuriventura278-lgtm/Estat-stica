@@ -697,14 +697,20 @@ html.dark #theme-toggle{color:var(--accent);border-color:var(--accent-ring)!impo
 
 <div class="toast" id="toast"></div>
 
-<!-- RESTORE CONFIRM MODAL -->
+<!-- RESTORE / MERGE MODAL -->
 <div class="modal-overlay" id="restoreModal">
-  <div class="modal-box">
-    <h3>Restaurar Backup</h3>
-    <p>Isto irá sobrescrever todos os dados actuais pelos dados do ficheiro de backup. Esta acção não pode ser desfeita.</p>
+  <div class="modal-box" style="width:520px;">
+    <h3>Importar Ficheiro de Backup</h3>
+    <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:6px;padding:10px 14px;margin-bottom:10px;font-size:.65rem;font-family:var(--font-head);color:#166534;line-height:1.6;">
+      <b>↑ Mesclar (recomendado)</b> — compara dia a dia e mantém o registo mais recente de cada. Ideal para sincronizar o PC1 com o PC2 sem perder dados de nenhum dos dois.
+    </div>
+    <div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:6px;padding:10px 14px;margin-bottom:18px;font-size:.65rem;font-family:var(--font-head);color:#991b1b;line-height:1.6;">
+      <b>Substituir Tudo</b> — apaga todos os dados locais e usa apenas os do ficheiro importado.
+    </div>
     <div class="modal-btns">
       <button class="mbtn cancel" onclick="closeRestoreModal()">Cancelar</button>
-      <button class="mbtn confirm" id="confirmRestoreBtn">Restaurar</button>
+      <button class="mbtn" id="mergeRestoreBtn" style="background:#047857;color:#fff;border:none;">↑ Mesclar</button>
+      <button class="mbtn confirm" id="confirmRestoreBtn">Substituir Tudo</button>
     </div>
   </div>
 </div>
@@ -1530,19 +1536,30 @@ function loadComparacao() {
 // ════════════════════════════════════════════════════════════
 function openBackup() {
   const all = {};
+  var count = 0;
   Object.keys(localStorage).forEach(k => {
     if(k.startsWith('enf5_') || k.startsWith('enf4_')) {
-      try { all[k] = JSON.parse(localStorage.getItem(k)); } catch(e){}
+      try { all[k] = JSON.parse(localStorage.getItem(k)); count++; } catch(e){}
     }
   });
-  const blob = new Blob([JSON.stringify({version:'5',exported:new Date().toISOString(),data:all},null,2)],{type:'application/json'});
+  const now = new Date();
+  const ts = now.getFullYear()+String(now.getMonth()+1).padStart(2,'0')+String(now.getDate()).padStart(2,'0')
+           +'_'+String(now.getHours()).padStart(2,'0')+String(now.getMinutes()).padStart(2,'0');
+  const payload = {
+    version: '5',
+    exported: now.toISOString(),
+    exportedBy: navigator.userAgent.split(' ').pop(),
+    days: count,
+    data: all
+  };
+  const blob = new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `backup_procedimentos_${new Date().toISOString().split('T')[0]}.json`;
+  a.download = 'backup_HP_'+ts+'.json';
   a.click();
   URL.revokeObjectURL(url);
-  showToast('⬇️ Backup exportado com sucesso!');
+  showToast('⬇️ Backup exportado — '+count+' dias');
 }
 
 let _pendingRestore = null;
@@ -1563,6 +1580,47 @@ function restoreFromFile(input) {
   input.value = '';
 }
 
+// ── Mesclar: mantém o registo mais recente de cada dia
+document.getElementById('mergeRestoreBtn').addEventListener('click', () => {
+  if(!_pendingRestore) return;
+  var imported=0, updated=0, kept=0;
+  Object.entries(_pendingRestore).forEach(([k,v]) => {
+    if(!k.startsWith('enf5_') && !k.startsWith('enf4_')) return;
+    var importObj = (typeof v === 'string') ? JSON.parse(v) : v;
+    var localRaw = localStorage.getItem(k);
+    if(!localRaw) {
+      // Dia não existe localmente → importar
+      localStorage.setItem(k, JSON.stringify(importObj));
+      imported++;
+    } else {
+      try {
+        var localObj = JSON.parse(localRaw);
+        var localTs  = localObj._ts  || 0;
+        var importTs = importObj._ts || 0;
+        if(importTs > localTs) {
+          // Ficheiro importado é mais recente → usar importado
+          localStorage.setItem(k, JSON.stringify(importObj));
+          updated++;
+        } else {
+          // Local é mais recente → manter
+          kept++;
+        }
+      } catch(e) {
+        localStorage.setItem(k, JSON.stringify(importObj));
+        imported++;
+      }
+    }
+  });
+  closeRestoreModal();
+  loadFromStorage();
+  var msg = '✅ Mesclado: ' + imported + ' dias novos';
+  if(updated) msg += ', ' + updated + ' actualizados';
+  if(kept)    msg += ', ' + kept + ' mantidos locais';
+  showToast(msg);
+  _pendingRestore = null;
+});
+
+// ── Substituir tudo (comportamento original)
 document.getElementById('confirmRestoreBtn').addEventListener('click', () => {
   if(!_pendingRestore) return;
   Object.entries(_pendingRestore).forEach(([k,v]) => {
@@ -1572,7 +1630,7 @@ document.getElementById('confirmRestoreBtn').addEventListener('click', () => {
   });
   closeRestoreModal();
   loadFromStorage();
-  showToast('✅ Backup restaurado com sucesso!');
+  showToast('✅ Backup restaurado (substituição total)');
   _pendingRestore = null;
 });
 
