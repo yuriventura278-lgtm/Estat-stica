@@ -1,0 +1,1289 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Banco de Urgência — Cirurgia · Hospital do Prenda</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--bg:#fef9f0;--s1:#fff;--s2:#fff8ee;--bd:#fde68a;--txt:#1c1917;--mut:#78716c;--acc:#b45309;--acc2:#d97706;--grn:#059669;--red:#dc2626;--pur:#7c3aed;--blu:#1e40af;--sw:230px;--hh:56px;--r:10px;--r2:6px;--sh:0 2px 8px rgba(0,0,0,.08);--fh:'IBM Plex Sans',sans-serif}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:var(--fh);background:var(--bg);color:var(--txt)}
+
+header{position:fixed;top:0;left:0;right:0;height:var(--hh);background:linear-gradient(135deg,#92400e,#b45309);display:flex;align-items:center;padding:0 20px;gap:12px;z-index:1000;box-shadow:0 2px 12px rgba(0,0,0,.25)}
+.h-ico{font-size:1.4rem}
+.h-ti{color:#fff;font-weight:700;font-size:1rem;line-height:1.2}
+.h-su{color:rgba(255,255,255,.6);font-size:.72rem}
+.h-sp{flex:1}
+.h-btn{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;padding:7px 14px;border-radius:7px;cursor:pointer;font-size:.8rem;font-family:var(--fh);font-weight:500;transition:.2s}
+.h-btn:hover{background:rgba(255,255,255,.25)}
+.h-link{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.25);color:rgba(255,255,255,.85);padding:6px 12px;border-radius:6px;cursor:pointer;font-size:.75rem;text-decoration:none;font-family:var(--fh)}
+
+.sidebar{position:fixed;top:var(--hh);left:0;bottom:0;width:var(--sw);background:var(--s1);border-right:1px solid var(--bd);display:flex;flex-direction:column;z-index:100;overflow-y:auto}
+.nav-item{display:flex;align-items:center;gap:10px;padding:12px 18px;cursor:pointer;font-size:.875rem;color:var(--mut);transition:.2s;border-left:3px solid transparent}
+.nav-item:hover{background:#fef3c7;color:var(--txt)}
+.nav-item.active{background:#fef3c7;color:var(--acc);border-left-color:var(--acc2);font-weight:600}
+.nav-ico{font-size:1.1rem;min-width:22px;text-align:center}
+.nav-sep{height:1px;background:var(--bd);margin:6px 16px}
+.nav-badge{margin-left:auto;background:var(--acc);color:#fff;border-radius:10px;padding:1px 7px;font-size:.7rem;font-weight:600}
+.sb-stat{padding:14px 16px;font-size:.78rem;color:var(--mut);border-top:1px solid var(--bd);margin-top:auto}
+.sb-stat strong{color:var(--txt)}
+
+.main{margin-left:var(--sw);margin-top:var(--hh);padding:24px;min-height:calc(100vh - var(--hh))}
+.tab-sec{display:none}.tab-sec.active{display:block}
+.pg-title{font-size:1.4rem;font-weight:700;margin-bottom:4px}
+.pg-sub{color:var(--mut);font-size:.85rem;margin-bottom:22px}
+
+.card{background:var(--s1);border-radius:var(--r);border:1px solid var(--bd);padding:20px;box-shadow:var(--sh)}
+.card-title{font-size:.85rem;font-weight:600;color:var(--txt);margin-bottom:14px}
+
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:14px;margin-bottom:22px}
+.kpi{background:var(--s1);border-radius:var(--r);border:1px solid var(--bd);padding:14px;text-align:center;box-shadow:var(--sh)}
+.kpi-val{font-size:2rem;font-weight:700;line-height:1}
+.kpi-lbl{font-size:.7rem;color:var(--mut);text-transform:uppercase;letter-spacing:.05em;margin-top:5px}
+
+/* Form */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-full{grid-column:1/-1}
+.form-g{display:flex;flex-direction:column;gap:5px}
+.form-lbl{font-size:.8rem;font-weight:600;color:var(--txt);display:flex;align-items:center;gap:3px}
+.req{color:var(--red)}
+input[type=text],input[type=number],input[type=date],select,textarea{border:1.5px solid var(--bd);border-radius:var(--r2);padding:9px 12px;font-family:var(--fh);font-size:.875rem;color:var(--txt);background:var(--s2);transition:.2s;width:100%}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--acc2);background:#fff;box-shadow:0 0 0 3px rgba(217,119,6,.15)}
+input.err,select.err{border-color:var(--red)!important}
+.ferr{font-size:.72rem;color:var(--red);display:none}
+.ferr.show{display:block}
+textarea{min-height:70px;resize:vertical}
+
+.tog-group{display:flex;gap:8px;flex-wrap:wrap}
+.tog-btn{padding:8px 16px;border-radius:20px;border:2px solid var(--bd);cursor:pointer;font-size:.82rem;font-weight:500;color:var(--mut);background:var(--s2);transition:.2s;font-family:var(--fh)}
+.tog-btn:hover{border-color:var(--acc2);color:var(--acc)}
+.tog-btn.active{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:600}
+.tog-btn.M.active{background:#1e40af;border-color:#1e40af}
+.tog-btn.F.active{background:#7c3aed;border-color:#7c3aed}
+
+/* Tables */
+.tbl-wrap{overflow-x:auto;border-radius:var(--r2);border:1px solid var(--bd)}
+table{width:100%;border-collapse:collapse;font-size:.84rem}
+thead th{background:#fef3c7;padding:10px 12px;text-align:left;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--acc);border-bottom:1px solid var(--bd);white-space:nowrap}
+tbody td{padding:9px 12px;border-bottom:1px solid var(--bd)}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:#fef9f0;cursor:pointer}
+.tc{text-align:center}.tr{text-align:right}
+
+.bm{border-radius:4px;padding:2px 8px;font-size:.73rem;font-weight:600}
+.bm-m{background:#dbeafe;color:#1e40af}
+.bm-f{background:#f3e8ff;color:#7c3aed}
+.bm-alta{background:#d1fae5;color:#065f46}
+.bm-int{background:#fef3c7;color:#92400e}
+.bm-obt{background:#fee2e2;color:#991b1b}
+.bm-trf{background:#e0f2fe;color:#0c4a6e}
+
+.fbar{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.fbar input,.fbar select{min-width:130px;width:auto;padding:8px 10px;font-size:.82rem}
+.fbar .sp{flex:1}
+
+.atabs{display:flex;gap:2px;margin-bottom:18px;border-bottom:2px solid var(--bd)}
+.atab{padding:9px 16px;cursor:pointer;font-size:.85rem;font-weight:500;color:var(--mut);border-bottom:3px solid transparent;margin-bottom:-2px;transition:.2s}
+.atab:hover{color:var(--txt)}
+.atab.active{color:var(--acc);border-bottom-color:var(--acc2);font-weight:600}
+.apanel{display:none}.apanel.active{display:block}
+
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+.chart-card{background:var(--s1);border-radius:var(--r);border:1px solid var(--bd);padding:16px;box-shadow:var(--sh)}
+.chart-t{font-size:.82rem;font-weight:600;margin-bottom:12px}
+canvas{max-height:240px}
+
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);background:#1e293b;color:#fff;padding:11px 22px;border-radius:8px;font-size:.875rem;transition:.3s;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.3);pointer-events:none}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.toast.ok{background:var(--grn)}.toast.err{background:var(--red)}
+
+.sbar{position:fixed;bottom:0;left:var(--sw);right:0;background:#1c1917;color:rgba(255,255,255,.55);font-size:.72rem;padding:4px 16px;display:flex;gap:16px;z-index:100}
+.sbar strong{color:rgba(255,255,255,.9)}
+
+.modal-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;align-items:center;justify-content:center}
+.modal-ov.open{display:flex}
+.modal-box{background:var(--s1);border-radius:var(--r);max-width:500px;width:92%;box-shadow:0 20px 60px rgba(0,0,0,.3);padding:26px}
+.modal-box h3{font-size:1rem;margin-bottom:14px}
+.mbns{display:flex;gap:10px;justify-content:flex-end;margin-top:18px}
+.mbn{padding:9px 20px;border-radius:8px;border:none;cursor:pointer;font-family:var(--fh);font-weight:600;font-size:.875rem}
+
+.btn{padding:9px 20px;border-radius:8px;border:none;cursor:pointer;font-family:var(--fh);font-size:.875rem;font-weight:600;transition:.2s}
+.btn-pri{background:var(--acc);color:#fff}.btn-pri:hover{background:#92400e}
+.btn-sec{background:var(--s2);border:1.5px solid var(--bd);color:var(--txt)}.btn-sec:hover{background:var(--bd)}
+.btn-grn{background:var(--grn);color:#fff}.btn-grn:hover{background:#047857}
+.btn-red{background:var(--red);color:#fff}.btn-red:hover{background:#b91c1c}
+.btn-sm{padding:7px 14px;font-size:.8rem}.btn-xs{padding:5px 10px;font-size:.75rem}
+
+.pag{display:flex;gap:6px;align-items:center;justify-content:center;margin-top:14px}
+.pg{padding:5px 10px;border:1px solid var(--bd);border-radius:6px;cursor:pointer;background:var(--s1);font-size:.8rem;font-family:var(--fh)}
+.pg:hover,.pg.active{background:var(--acc);color:#fff;border-color:var(--acc)}
+.pg-info{font-size:.78rem;color:var(--mut)}
+
+.empty{text-align:center;padding:50px 20px;color:var(--mut)}
+.empty-ico{font-size:2.5rem;margin-bottom:10px}
+.empty h3{font-size:.95rem;margin-bottom:5px;color:var(--txt)}
+
+.info-box{background:#fef3c7;border-left:4px solid var(--acc2);border-radius:var(--r2);padding:11px 15px;font-size:.83rem;color:#92400e;margin-bottom:14px}
+
+/* Step wizard */
+.wiz-wrap{background:var(--s1);border-radius:var(--r);border:1px solid var(--bd);box-shadow:var(--sh);overflow:hidden}
+.wiz-hdr{background:linear-gradient(135deg,#92400e,#b45309);padding:20px 26px;color:#fff}
+.wiz-step-title{font-size:1rem;font-weight:700;margin-bottom:3px}
+.wiz-step-sub{font-size:.8rem;opacity:.7;margin-bottom:12px}
+.step-dots{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.sd{display:flex;align-items:center;gap:5px;font-size:.72rem;color:rgba(255,255,255,.45);padding:3px 0}
+.sd.done{color:rgba(255,255,255,.85)}.sd.active{color:#fff;font-weight:700}
+.sd-n{width:22px;height:22px;border-radius:50%;border:2px solid rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:700;flex-shrink:0}
+.sd.done .sd-n{background:#10b981;border-color:#10b981}
+.sd.active .sd-n{background:#fff;border-color:#fff;color:#92400e}
+.sd-line{width:18px;height:2px;background:rgba(255,255,255,.2);flex-shrink:0}
+.wiz-prog{height:4px;background:rgba(0,0,0,.15)}
+.wiz-prog-fill{height:100%;background:#10b981;transition:width .4s}
+.wiz-body{padding:26px}
+.wiz-step{display:none}.wiz-step.active{display:block}
+.wiz-nav{display:flex;justify-content:space-between;align-items:center;padding:14px 26px;border-top:1px solid var(--bd);background:var(--s2)}
+
+.review-sec{margin-bottom:16px}
+.review-title{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--mut);margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--bd)}
+.review-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
+.rv-lbl{font-size:.7rem;color:var(--mut);margin-bottom:2px}
+.rv-val{font-size:.88rem;font-weight:500;color:var(--txt)}
+
+/* Matrix */
+.mtr th,.mtr td{padding:7px 8px;font-size:.75rem;border:1px solid var(--bd);text-align:center;white-space:nowrap}
+.mtr th{background:#fef3c7;font-weight:600;font-size:.7rem}
+.mtr .mtr-diag{text-align:left;max-width:180px;white-space:normal;font-weight:500}
+.c0{color:#d1d5db}.c1{background:#fde68a;color:#92400e}.c2{background:#f59e0b;color:#fff;font-weight:600}.c3{background:#92400e;color:#fff;font-weight:700}
+.ctot{background:#b45309;color:#fff;font-weight:700}
+
+@media(max-width:700px){:root{--sw:0px}.sidebar{width:220px;transform:translateX(-220px);transition:.3s}.sidebar.open{transform:translateX(0)}.main{margin-left:0}.form-grid,.chart-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<header>
+  <span class="h-ico">🚨</span>
+  <div><div class="h-ti">Banco de Urgência — Cirurgia</div><div class="h-su">Hospital do Prenda · Luanda · Angola</div></div>
+  <div class="h-sp"></div>
+  <a class="h-link" href="internamento.html">🏥 Internamento</a>
+  <button class="h-btn" onclick="openNewReg()" style="margin-left:8px">+ Novo Registo</button>
+  <button class="h-btn" onclick="openBackup()">💾 Backup</button>
+</header>
+
+<nav class="sidebar" id="sidebar">
+  <div class="nav-item active" onclick="showTab('home')" id="nb-home"><span class="nav-ico">🏠</span>Início<span class="nav-badge" id="nb-cnt">0</span></div>
+  <div class="nav-item" onclick="showTab('new')" id="nb-new"><span class="nav-ico">➕</span>Novo Registo</div>
+  <div class="nav-sep"></div>
+  <div class="nav-item" onclick="showTab('analysis')" id="nb-analysis"><span class="nav-ico">📊</span>Análise Clínica</div>
+  <div class="nav-item" onclick="showTab('db')" id="nb-db"><span class="nav-ico">🗃️</span>Base de Dados</div>
+  <div class="nav-sep"></div>
+  <div class="nav-item" onclick="showTab('mov')" id="nb-mov"><span class="nav-ico">📅</span>Movimento Diário</div>
+  <div class="nav-item" onclick="openCfgModal()" id="nb-cfg"><span class="nav-ico">⚙️</span>Configurações</div>
+  <div class="sb-stat" id="sb-stat">A carregar…</div>
+</nav>
+
+<main class="main">
+
+<!-- ══ HOME ══ -->
+<div class="tab-sec active" id="tab-home">
+  <div class="pg-title">Banco de Urgência — Painel</div>
+  <div class="pg-sub" id="home-date"></div>
+  <div class="kpi-grid" id="kpi-grid"></div>
+  <div class="card">
+    <div class="card-title">🚨 Doentes Recentes</div>
+    <div id="home-table"></div>
+  </div>
+</div>
+
+<!-- ══ NOVO REGISTO (WIZARD 4 PASSOS) ══ -->
+<div class="tab-sec" id="tab-new">
+  <div class="pg-title" id="wiz-pg-title">Novo Registo</div>
+  <div class="pg-sub">Preencha cada passo antes de avançar</div>
+  <div class="wiz-wrap">
+    <div class="wiz-hdr">
+      <div class="wiz-step-title" id="ws-title">Passo 1 — Identificação</div>
+      <div class="wiz-step-sub" id="ws-sub">Dados do doente</div>
+      <div class="step-dots" id="step-dots"></div>
+    </div>
+    <div class="wiz-prog"><div class="wiz-prog-fill" id="wiz-prog" style="width:25%"></div></div>
+    <div class="wiz-body">
+
+      <!-- STEP 1: Identificação -->
+      <div class="wiz-step active" id="wstep-1">
+        <div class="form-grid">
+          <div class="form-g form-full">
+            <label class="form-lbl">Nome / Identificação <span class="req">*</span></label>
+            <input type="text" id="f-nome" placeholder="Nome completo ou 'Anónimo'">
+            <div class="ferr" id="e-nome">Campo obrigatório</div>
+          </div>
+          <div class="form-g">
+            <label class="form-lbl">Nº de Processo</label>
+            <input type="text" id="f-processo" placeholder="Opcional">
+          </div>
+          <div class="form-g">
+            <label class="form-lbl">Data de Atendimento <span class="req">*</span></label>
+            <input type="date" id="f-data">
+            <div class="ferr" id="e-data">Campo obrigatório</div>
+          </div>
+          <div class="form-g">
+            <label class="form-lbl">Hora (opcional)</label>
+            <input type="time" id="f-hora">
+          </div>
+          <div class="form-g">
+            <label class="form-lbl">Idade (anos) <span class="req">*</span></label>
+            <input type="number" id="f-idade" min="0" max="120" placeholder="0–120">
+            <div class="ferr" id="e-idade">Idade obrigatória</div>
+          </div>
+          <div class="form-g form-full">
+            <label class="form-lbl">Género <span class="req">*</span></label>
+            <div class="tog-group" id="gen-tog">
+              <button class="tog-btn M" onclick="setGen('M')">♂ Masculino</button>
+              <button class="tog-btn F" onclick="setGen('F')">♀ Feminino</button>
+            </div>
+            <div class="ferr" id="e-genero">Seleccione o género</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 2: Diagnóstico / CID -->
+      <div class="wiz-step" id="wstep-2">
+        <div class="form-grid">
+          <div class="form-g form-full">
+            <label class="form-lbl">Pesquisar Diagnóstico / CID <span class="req">*</span></label>
+            <input type="text" id="f-diag-search" placeholder="🔍 Nome ou código CID…" oninput="buildDiagSelect()" autocomplete="off">
+            <select id="f-diag" size="7" style="margin-top:6px" onchange="onDiagChange()">
+              <option value="">— Seleccione —</option>
+            </select>
+            <div class="ferr" id="e-diag">Diagnóstico obrigatório</div>
+          </div>
+          <div class="form-g form-full" id="diag-outro-wrap" style="display:none">
+            <label class="form-lbl">Especifique o Diagnóstico <span class="req">*</span></label>
+            <input type="text" id="f-diag-outro" placeholder="Descreva o diagnóstico">
+            <div class="ferr" id="e-diag-outro">Campo obrigatório</div>
+          </div>
+          <div class="form-g form-full">
+            <label class="form-lbl">Notas Clínicas</label>
+            <textarea id="f-notas" placeholder="Queixa principal, achados, etc."></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 3: Resultado -->
+      <div class="wiz-step" id="wstep-3">
+        <div class="form-grid">
+          <div class="form-g form-full">
+            <label class="form-lbl">Desfecho / Resultado <span class="req">*</span></label>
+            <div class="tog-group" id="res-tog">
+              <button class="tog-btn" onclick="setRes('alta')">✅ Alta (domicílio)</button>
+              <button class="tog-btn" onclick="setRes('internamento')">🛏️ Internamento</button>
+              <button class="tog-btn" onclick="setRes('transferencia')">🏛️ Transferência</button>
+              <button class="tog-btn" onclick="setRes('obito')">✝️ Óbito</button>
+              <button class="tog-btn" onclick="setRes('fuga')">🚶 Fuga / AMA</button>
+            </div>
+            <div class="ferr" id="e-resultado">Resultado obrigatório</div>
+          </div>
+          <div class="form-g form-full" id="int-destino-wrap" style="display:none">
+            <label class="form-lbl">Serviço de Destino</label>
+            <select id="f-int-destino">
+              <option value="">— Seleccione —</option>
+              <option>Cirurgia Geral</option><option>Ortopedia</option>
+              <option>Medicina Interna</option><option>UCI</option>
+              <option>Neurocirurgia</option><option>Outro Serviço</option>
+            </select>
+          </div>
+          <div class="form-g form-full" id="trf-destino-wrap" style="display:none">
+            <label class="form-lbl">Hospital de Destino</label>
+            <select id="f-trf-destino">
+              <option value="">— Seleccione —</option>
+              <option>Hospital Geral de Luanda</option><option>Hospital Josina Machel</option>
+              <option>Complexo Hospitalar de Pedalé</option><option>Outro Hospital</option>
+            </select>
+          </div>
+          <div class="form-g form-full" id="obito-causa-wrap" style="display:none">
+            <label class="form-lbl">Causa de Morte</label>
+            <input type="text" id="f-causa-morte" placeholder="Causa principal">
+          </div>
+          <div class="form-g form-full">
+            <label class="form-lbl">Observações</label>
+            <textarea id="f-obs" placeholder="Notas adicionais…"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 4: Confirmação -->
+      <div class="wiz-step" id="wstep-4">
+        <div class="info-box">Verifique os dados antes de gravar.</div>
+        <div id="review-content"></div>
+      </div>
+
+    </div>
+    <div class="wiz-nav">
+      <button class="btn btn-sec" id="btn-back" onclick="wizBack()">← Anterior</button>
+      <span id="wiz-step-info" style="font-size:.8rem;color:var(--mut)">Passo 1 de 4</span>
+      <button class="btn btn-pri" id="btn-next" onclick="wizNext()">Próximo →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ANÁLISE ══ -->
+<div class="tab-sec" id="tab-analysis">
+  <div class="pg-title">Análise Clínica</div>
+  <div class="pg-sub">CID, género, faixa etária e resultados</div>
+  <div class="fbar">
+    <div class="form-g"><label class="form-lbl" style="font-size:.75rem">Período</label>
+      <select id="an-period" onchange="onAnPeriodChange()">
+        <option value="all">Todos</option><option value="month">Mês actual</option>
+        <option value="year">Ano actual</option><option value="custom">Personalizado</option>
+      </select>
+    </div>
+    <div class="form-g" id="an-from-wrap" style="display:none"><label class="form-lbl" style="font-size:.75rem">De</label><input type="date" id="an-from" onchange="renderAnalysis()"></div>
+    <div class="form-g" id="an-to-wrap" style="display:none"><label class="form-lbl" style="font-size:.75rem">Até</label><input type="date" id="an-to" onchange="renderAnalysis()"></div>
+    <button class="btn btn-pri btn-sm" onclick="exportAnalysisPDF()">📄 PDF</button>
+  </div>
+  <div class="atabs">
+    <div class="atab active" onclick="showATab('resumo')">Resumo</div>
+    <div class="atab" onclick="showATab('cid')">CID × Género × Idade</div>
+    <div class="atab" onclick="showATab('obitos')">Óbitos por CID</div>
+    <div class="atab" onclick="showATab('admitidos')">Admitidos</div>
+  </div>
+  <div class="apanel active" id="ap-resumo"><div id="an-resumo-content"></div></div>
+  <div class="apanel" id="ap-cid"><div id="an-cid-content"></div></div>
+  <div class="apanel" id="ap-obitos"><div id="an-obitos-content"></div></div>
+  <div class="apanel" id="ap-admitidos"><div id="an-admitidos-content"></div></div>
+</div>
+
+<!-- ══ BASE DE DADOS ══ -->
+<div class="tab-sec" id="tab-db">
+  <div class="pg-title">Base de Dados</div>
+  <div class="pg-sub">Todos os atendimentos registados</div>
+  <div class="fbar">
+    <input type="text" id="db-search" placeholder="🔍 Nome / CID / diagnóstico…" oninput="renderDB()" style="min-width:200px">
+    <select id="db-gen" onchange="renderDB()"><option value="">Género</option><option value="M">Masculino</option><option value="F">Feminino</option></select>
+    <select id="db-res" onchange="renderDB()">
+      <option value="">Resultado</option>
+      <option value="alta">Alta</option><option value="internamento">Internamento</option>
+      <option value="transferencia">Transferência</option><option value="obito">Óbito</option><option value="fuga">Fuga</option>
+    </select>
+    <input type="date" id="db-from" onchange="renderDB()">
+    <input type="date" id="db-to" onchange="renderDB()">
+    <div class="sp"></div>
+    <button class="btn btn-sec btn-sm" onclick="resetFilters()">Limpar</button>
+    <button class="btn btn-grn btn-sm" onclick="exportCSV()">📥 CSV</button>
+  </div>
+  <div class="card" style="padding:0">
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th>Data</th><th>Nome</th><th class="tc">Idade</th>
+          <th class="tc">F.Etária</th><th class="tc">Gén.</th>
+          <th class="tc">CID-10</th><th>Diagnóstico</th>
+          <th class="tc">Resultado</th><th class="tc">Acções</th>
+        </tr></thead>
+        <tbody id="db-tbody"></tbody>
+      </table>
+    </div>
+    <div class="pag" id="db-pag"></div>
+  </div>
+</div>
+
+<!-- ══ MOVIMENTO DIÁRIO ══ -->
+<div class="tab-sec" id="tab-mov">
+  <div class="pg-title">Movimento Diário</div>
+  <div class="pg-sub">Registo de atendimentos e estatísticas diárias</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+    <div class="card">
+      <div class="card-title">📝 Registo do Dia</div>
+      <div class="form-g" style="margin-bottom:12px">
+        <label class="form-lbl">Data <span class="req">*</span></label>
+        <input type="date" id="mov-data">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div class="form-g">
+          <label class="form-lbl">Total Atendimentos <span class="req">*</span></label>
+          <input type="number" id="mov-total" min="0" placeholder="0">
+        </div>
+        <div class="form-g">
+          <label class="form-lbl">Altas (domicílio)</label>
+          <input type="number" id="mov-altas" min="0" value="0">
+        </div>
+        <div class="form-g">
+          <label class="form-lbl">Internamentos</label>
+          <input type="number" id="mov-internamentos" min="0" value="0">
+        </div>
+        <div class="form-g">
+          <label class="form-lbl">Transferências</label>
+          <input type="number" id="mov-transf" min="0" value="0">
+        </div>
+        <div class="form-g">
+          <label class="form-lbl">Óbitos <span class="req">*</span></label>
+          <input type="number" id="mov-obitos" min="0" value="0">
+        </div>
+        <div class="form-g">
+          <label class="form-lbl">Fugas / AMA</label>
+          <input type="number" id="mov-fugas" min="0" value="0">
+        </div>
+        <div class="form-g">
+          <label class="form-lbl">♂ Masculinos</label>
+          <input type="number" id="mov-masc" min="0" value="0">
+        </div>
+        <div class="form-g">
+          <label class="form-lbl">♀ Femininos</label>
+          <input type="number" id="mov-fem" min="0" value="0">
+        </div>
+      </div>
+      <button class="btn btn-pri" onclick="saveMov()" style="width:100%">💾 Gravar Movimento</button>
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title">📊 Indicadores do Dia</div>
+        <div id="mov-indicadores" style="font-size:.85rem;color:var(--mut)">Preencha e grave para ver os indicadores.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">📅 Histórico</div>
+        <div id="mov-hist"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</main>
+
+<!-- Modal: Config -->
+<div class="modal-ov" id="cfg-modal">
+  <div class="modal-box">
+    <h3>⚙️ Configurações do Serviço</h3>
+    <div class="form-g" style="margin-bottom:14px">
+      <label class="form-lbl">Capacidade máxima de atendimento diário</label>
+      <input type="number" id="cfg-cap" min="1" max="500" placeholder="Ex: 50">
+    </div>
+    <div class="form-g" style="margin-bottom:14px">
+      <label class="form-lbl">Nome do serviço</label>
+      <input type="text" id="cfg-nome" placeholder="Ex: Banco de Urgência — Cirurgia">
+    </div>
+    <div class="mbns">
+      <button class="mbn" style="background:#e5e7eb" onclick="closeCfgModal()">Cancelar</button>
+      <button class="mbn" style="background:var(--acc);color:#fff" onclick="saveCfg()">Gravar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Delete -->
+<div class="modal-ov" id="del-modal">
+  <div class="modal-box">
+    <h3>⚠️ Eliminar Registo</h3>
+    <p style="font-size:.875rem;color:var(--mut)">Tem a certeza? Esta acção não pode ser desfeita.</p>
+    <div class="mbns">
+      <button class="mbn" style="background:#e5e7eb" onclick="document.getElementById('del-modal').classList.remove('open')">Cancelar</button>
+      <button class="mbn" style="background:var(--red);color:#fff" id="del-confirm-btn">Eliminar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Backup/Merge -->
+<div class="modal-ov" id="backup-modal">
+  <div class="modal-box">
+    <h3>💾 Importar Backup</h3>
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px;margin-bottom:10px;font-size:.83rem;color:#166534">
+      <strong>↑ Mesclar</strong> — Mantém o registo mais recente de cada doente.
+    </div>
+    <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px;font-size:.83rem;color:#991b1b">
+      <strong>⚠️ Substituir</strong> — Apaga todos os dados locais.
+    </div>
+    <div class="mbns">
+      <button class="mbn" style="background:#e5e7eb" onclick="document.getElementById('backup-modal').classList.remove('open')">Cancelar</button>
+      <button class="mbn" style="background:var(--grn);color:#fff" id="merge-btn">↑ Mesclar</button>
+      <button class="mbn" style="background:var(--red);color:#fff" id="replace-btn">Substituir</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<div class="sbar">
+  <span><strong id="sb-total">0</strong> atendimentos</span>
+  <span><strong id="sb-altas">0</strong> altas</span>
+  <span><strong id="sb-int">0</strong> internamentos</span>
+  <span><strong id="sb-obt">0</strong> óbitos</span>
+</div>
+
+<script>
+// ══ CONSTANTS ══
+const DIAGNOSES_BU = [
+  // Cirurgia urgência
+  {cat:'Cirurgia Urgente', name:'Apendicite Aguda',              cid:'K35.9'},
+  {cat:'Cirurgia Urgente', name:'Peritonite',                    cid:'K65.0'},
+  {cat:'Cirurgia Urgente', name:'Oclusão Intestinal',            cid:'K56.7'},
+  {cat:'Cirurgia Urgente', name:'Hérnia Encarcerada/Estrangulada',cid:'K40.3'},
+  {cat:'Cirurgia Urgente', name:'Perfuração de Víscera Oca',     cid:'K63.1'},
+  {cat:'Cirurgia Urgente', name:'Vólvulo do Sigmoide',           cid:'K56.2'},
+  {cat:'Cirurgia Urgente', name:'Abcesso Abdominal',             cid:'K65.0'},
+  {cat:'Cirurgia Urgente', name:'Isquemia Mesentérica',          cid:'K55.0'},
+  // Trauma
+  {cat:'Trauma',           name:'Traumatismo Abdominal Fechado', cid:'S36.9'},
+  {cat:'Trauma',           name:'Traumatismo Abdominal Aberto',  cid:'S31.0'},
+  {cat:'Trauma',           name:'Hemoperitoneu Traumático',      cid:'S36.8'},
+  {cat:'Trauma',           name:'Traumatismo Torácico',          cid:'S29.9'},
+  {cat:'Trauma',           name:'Ferida por Arma de Fogo',       cid:'W34.9'},
+  {cat:'Trauma',           name:'Ferida por Arma Branca',        cid:'W26.0'},
+  // GI/Hemorragia
+  {cat:'Gastro-Intestinal', name:'Hemorragia Digestiva Alta',    cid:'K92.1'},
+  {cat:'Gastro-Intestinal', name:'Hemorragia Digestiva Baixa',   cid:'K92.2'},
+  {cat:'Gastro-Intestinal', name:'Dor Abdominal Aguda',          cid:'R10.0'},
+  {cat:'Gastro-Intestinal', name:'Pancreatite Aguda',            cid:'K85.9'},
+  {cat:'Gastro-Intestinal', name:'Colecistite Aguda',            cid:'K81.0'},
+  {cat:'Gastro-Intestinal', name:'Náuseas e Vómitos',            cid:'R11.2'},
+  {cat:'Gastro-Intestinal', name:'Diarreia (causa cirúrgica)',   cid:'K92.1'},
+  // Parede abdominal
+  {cat:'Parede Abdominal',  name:'Hérnia Inguinal (urgência)',   cid:'K40.9'},
+  {cat:'Parede Abdominal',  name:'Hérnia Umbilical (urgência)',  cid:'K42.9'},
+  {cat:'Parede Abdominal',  name:'Hérnia Epigástrica',           cid:'K43.9'},
+  {cat:'Parede Abdominal',  name:'Abcesso da Parede Abdominal',  cid:'L02.2'},
+  // Outros
+  {cat:'Outros',            name:'Retenção Urinária Aguda',      cid:'R33.9'},
+  {cat:'Outros',            name:'Cólica Renal / Ureteral',      cid:'N23'},
+  {cat:'Outros',            name:'Abcesso Perianal',             cid:'K61.0'},
+  {cat:'Outros',            name:'Doença Hemorroidal Aguda',     cid:'K64.8'},
+  {cat:'Outros',            name:'Patologia Escrotal Aguda',     cid:'N50.8'},
+  {cat:'Outros',            name:'Mastite / Abcesso Mamário',    cid:'N61.1'},
+  {cat:'Outros',            name:'Outro',                        cid:'Z99.9'},
+];
+
+const AGE_GROUPS = ['< 15 anos', '≥ 15 anos'];
+const AGE_GROUPS_DET = ['< 1 ano','1–4 anos','5–14 anos','15–29 anos','30–44 anos','45–59 anos','60–74 anos','≥ 75 anos'];
+
+const RES_LABELS = {
+  alta:'Alta (domicílio)', internamento:'Internamento',
+  transferencia:'Transferência', obito:'Óbito', fuga:'Fuga / AMA'
+};
+
+const STEPS = [
+  {title:'Identificação',  sub:'Dados do doente e data',          ico:'👤'},
+  {title:'Diagnóstico',    sub:'CID-10 e notas clínicas',         ico:'🔬'},
+  {title:'Resultado',      sub:'Desfecho do atendimento',         ico:'📋'},
+  {title:'Confirmação',    sub:'Revisão e gravação do registo',   ico:'✅'},
+];
+
+// ══ STATE ══
+let PATS = [];
+let _wiz = null;
+let _wizStep = 1;
+let _wizEditId = null;
+let _delId = null;
+let _pendingImport = null;
+let _dbPage = 1;
+const DB_PER_PAGE = 25;
+let _charts = {};
+let _curATab = 'resumo';
+
+const STORE_KEY = 'cirg_bu_pats';
+const MOV_KEY   = 'cirg_bu_mov';
+const CFG_KEY   = 'cirg_bu_cfg';
+let MOVS = [];
+let CFG  = {capacidade:50, nomeServico:'Banco de Urgência — Cirurgia'};
+
+function loadData() { try{PATS=JSON.parse(localStorage.getItem(STORE_KEY)||'[]');}catch(e){PATS=[];} }
+function saveData() { localStorage.setItem(STORE_KEY,JSON.stringify(PATS)); updateSidebar(); }
+function loadMovs() { try{MOVS=JSON.parse(localStorage.getItem(MOV_KEY)||'[]');}catch(e){MOVS=[];} }
+function saveMovs() { localStorage.setItem(MOV_KEY,JSON.stringify(MOVS)); }
+function loadCfg()  { try{const r=localStorage.getItem(CFG_KEY);if(r)CFG={...CFG,...JSON.parse(r)};}catch(e){} }
+function saveCfg()  {
+  CFG.capacidade=Number(document.getElementById('cfg-cap').value)||50;
+  CFG.nomeServico=document.getElementById('cfg-nome').value||'Banco de Urgência';
+  localStorage.setItem(CFG_KEY,JSON.stringify(CFG));
+  closeCfgModal(); showToast('✅ Configurações gravadas','ok');
+}
+
+function today() { return new Date().toISOString().slice(0,10); }
+function fmt(d)  { if(!d)return'—';const p=d.split('-');return p[2]+'/'+p[1]+'/'+p[0]; }
+function genId() { return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+
+function getAgeGroup(age) {
+  return Number(age) < 15 ? '< 15 anos' : '≥ 15 anos';
+}
+function getAgeGroupDet(age) {
+  const a=Number(age)||0;
+  if(a<1)return'< 1 ano';if(a<=4)return'1–4 anos';if(a<=14)return'5–14 anos';
+  if(a<=29)return'15–29 anos';if(a<=44)return'30–44 anos';if(a<=59)return'45–59 anos';
+  if(a<=74)return'60–74 anos';return'≥ 75 anos';
+}
+
+function showToast(msg,type=''){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.className='toast '+(type||'');t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+// ══ NAVIGATION ══
+function showTab(id){
+  document.querySelectorAll('.tab-sec').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  const nb=document.getElementById('nb-'+id); if(nb) nb.classList.add('active');
+  if(id==='home') renderHome();
+  if(id==='analysis') renderAnalysis();
+  if(id==='db') {_dbPage=1;renderDB();}
+  if(id==='mov') initMovTab();
+}
+
+function updateSidebar(){
+  const total=PATS.length;
+  const altas=PATS.filter(p=>p.resultado==='alta').length;
+  const ints=PATS.filter(p=>p.resultado==='internamento').length;
+  const obits=PATS.filter(p=>p.resultado==='obito').length;
+  document.getElementById('nb-cnt').textContent=total;
+  document.getElementById('sb-stat').innerHTML=`<strong>${total}</strong> atendimentos<br>${obits} óbitos · ${ints} internamentos`;
+  document.getElementById('sb-total').textContent=total;
+  document.getElementById('sb-altas').textContent=altas;
+  document.getElementById('sb-int').textContent=ints;
+  document.getElementById('sb-obt').textContent=obits;
+}
+
+// ══ HOME ══
+function renderHome(){
+  const now=new Date();
+  document.getElementById('home-date').textContent=now.toLocaleDateString('pt-PT',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  const total=PATS.length;
+  const altas=PATS.filter(p=>p.resultado==='alta').length;
+  const ints=PATS.filter(p=>p.resultado==='internamento').length;
+  const obits=PATS.filter(p=>p.resultado==='obito').length;
+  const trfs=PATS.filter(p=>p.resultado==='transferencia').length;
+  const mortRate=total?(obits/total*100).toFixed(1):'0.0';
+  const intRate=total?(ints/total*100).toFixed(1):'0.0';
+  document.getElementById('kpi-grid').innerHTML=`
+    <div class="kpi"><div class="kpi-val" style="color:#b45309">${total}</div><div class="kpi-lbl">Total Atendimentos</div></div>
+    <div class="kpi"><div class="kpi-val" style="color:#059669">${altas}</div><div class="kpi-lbl">Altas</div></div>
+    <div class="kpi"><div class="kpi-val" style="color:#d97706">${ints}</div><div class="kpi-lbl">Internamentos</div></div>
+    <div class="kpi"><div class="kpi-val" style="color:#0369a1">${trfs}</div><div class="kpi-lbl">Transferências</div></div>
+    <div class="kpi"><div class="kpi-val" style="color:#dc2626">${obits}</div><div class="kpi-lbl">Óbitos</div></div>
+    <div class="kpi"><div class="kpi-val" style="color:#dc2626">${mortRate}%</div><div class="kpi-lbl">Tx. Mortalidade</div></div>
+    <div class="kpi"><div class="kpi-val" style="color:#d97706">${intRate}%</div><div class="kpi-lbl">Tx. Internamento</div></div>
+  `;
+  const recent=[...PATS].sort((a,b)=>b._ts-a._ts).slice(0,10);
+  if(!recent.length){
+    document.getElementById('home-table').innerHTML='<div class="empty"><div class="empty-ico">🚨</div><h3>Sem registos ainda</h3><p>Clique em <strong>"+ Novo Registo"</strong> para começar.</p></div>';
+    return;
+  }
+  document.getElementById('home-table').innerHTML=`<div class="tbl-wrap"><table>
+    <thead><tr><th>Data</th><th>Nome</th><th class="tc">Idade</th><th class="tc">Gén.</th><th class="tc">CID</th><th>Diagnóstico</th><th class="tc">Resultado</th></tr></thead>
+    <tbody>${recent.map(p=>`<tr onclick="editPat('${p.id}')">
+      <td>${fmt(p.data)}</td><td style="font-weight:500">${p.nome}</td>
+      <td class="tc">${p.idade}</td>
+      <td class="tc"><span class="bm bm-${(p.genero||'m').toLowerCase()}">${p.genero}</span></td>
+      <td class="tc" style="font-family:monospace;font-size:.75rem">${getDiagCID(p)}</td>
+      <td>${getDiagLabel(p)}</td>
+      <td class="tc"><span class="bm ${resClass(p.resultado)}">${resShort(p.resultado)}</span></td>
+    </tr>`).join('')}</tbody>
+  </table></div>`;
+}
+
+function getDiagLabel(p){const d=p.diagnostico||'—';return d==='Outro'?(p.diagOutro||'Outro'):d;}
+function getDiagCID(p){const d=DIAGNOSES_BU.find(x=>x.name===(p.diagnostico||''));return d?d.cid:'—';}
+function resClass(r){
+  if(!r)return''; if(r==='alta')return'bm-alta'; if(r==='internamento')return'bm-int';
+  if(r==='obito')return'bm-obt'; if(r==='transferencia')return'bm-trf'; return'';
+}
+function resShort(r){
+  if(r==='alta')return'Alta';if(r==='internamento')return'Int.';
+  if(r==='transferencia')return'Trf.';if(r==='obito')return'Óbito';if(r==='fuga')return'AMA';return r||'—';
+}
+
+// ══ WIZARD ══
+function openNewReg(){_wizEditId=null;resetWiz();showTab('new');document.getElementById('wiz-pg-title').textContent='Novo Registo';}
+function editPat(id){
+  _wizEditId=id; const p=PATS.find(x=>x.id===id); if(!p)return;
+  _wiz={...p}; _wizStep=1; showTab('new');
+  document.getElementById('wiz-pg-title').textContent='Editar Registo'; renderWizStep();
+}
+
+function resetWiz(){
+  _wiz={id:genId(),nome:'',processo:'',data:today(),hora:'',idade:'',genero:'',
+    diagSearch:'',diagnostico:'',diagOutro:'',notas:'',
+    resultado:'',intDestino:'',trfDestino:'',causaMorte:'',observacoes:'',_created:Date.now()};
+  _wizStep=1; renderWizStep();
+}
+
+const WIZ_TITLES=['Passo 1 — Identificação do Doente','Passo 2 — Diagnóstico / CID-10','Passo 3 — Desfecho / Resultado','Passo 4 — Confirmação e Gravação'];
+
+function renderWizStep(){
+  document.querySelectorAll('.wiz-step').forEach(s=>s.classList.remove('active'));
+  document.getElementById('wstep-'+_wizStep).classList.add('active');
+  document.getElementById('ws-title').textContent=WIZ_TITLES[_wizStep-1];
+  document.getElementById('ws-sub').textContent=STEPS[_wizStep-1].sub;
+  document.getElementById('wiz-step-info').textContent='Passo '+_wizStep+' de 4';
+  document.getElementById('wiz-prog').style.width=((_wizStep/4)*100)+'%';
+  document.getElementById('btn-back').disabled=_wizStep===1;
+  const isLast=_wizStep===4;
+  document.getElementById('btn-next').textContent=isLast?'💾 Gravar':'Próximo →';
+  document.getElementById('btn-next').className='btn '+(isLast?'btn-grn':'btn-pri');
+
+  let dots='';
+  STEPS.forEach((s,i)=>{
+    const n=i+1,cls=n<_wizStep?'done':n===_wizStep?'active':'';
+    dots+=`<div class="sd ${cls}"><div class="sd-n">${n<_wizStep?'✓':n}</div>${s.ico} ${s.title}</div>`;
+    if(i<STEPS.length-1) dots+=`<div class="sd-line"></div>`;
+  });
+  document.getElementById('step-dots').innerHTML=dots;
+
+  if(_wizStep===1){
+    setVal('f-nome',_wiz.nome);setVal('f-processo',_wiz.processo);
+    setVal('f-data',_wiz.data);setVal('f-hora',_wiz.hora);setVal('f-idade',_wiz.idade);
+    document.querySelectorAll('#gen-tog .tog-btn').forEach(b=>b.classList.toggle('active',b.classList.contains(_wiz.genero)));
+  }
+  if(_wizStep===2){ buildDiagSelect(); setVal('f-diag-outro',_wiz.diagOutro); setVal('f-notas',_wiz.notas); document.getElementById('diag-outro-wrap').style.display=(_wiz.diagnostico==='Outro')?'block':'none'; }
+  if(_wizStep===3){
+    document.querySelectorAll('#res-tog .tog-btn').forEach(b=>b.classList.remove('active'));
+    if(_wiz.resultado){const vals=['alta','internamento','transferencia','obito','fuga'];const btns=document.querySelectorAll('#res-tog .tog-btn');const idx=vals.indexOf(_wiz.resultado);if(idx>=0&&btns[idx])btns[idx].classList.add('active');}
+    setVal('f-int-destino',_wiz.intDestino||'');setVal('f-trf-destino',_wiz.trfDestino||'');
+    setVal('f-causa-morte',_wiz.causaMorte||'');setVal('f-obs',_wiz.observacoes||'');
+    updateResFields();
+  }
+  if(_wizStep===4) renderReview();
+}
+
+function setVal(id,v){const el=document.getElementById(id);if(el)el.value=v||'';}
+
+function buildDiagSelect(){
+  const sel=document.getElementById('f-diag');
+  const q=(document.getElementById('f-diag-search').value||'').toLowerCase();
+  sel.innerHTML='<option value="">— Seleccione —</option>';
+  const cats={};
+  DIAGNOSES_BU.forEach(d=>{
+    if(!q||d.name.toLowerCase().includes(q)||d.cid.toLowerCase().includes(q)){
+      if(!cats[d.cat])cats[d.cat]=[];cats[d.cat].push(d);
+    }
+  });
+  Object.entries(cats).forEach(([cat,diags])=>{
+    const og=document.createElement('optgroup');og.label='── '+cat+' ──';
+    diags.forEach(d=>{const o=document.createElement('option');o.value=d.name;o.textContent=d.cid+' — '+d.name;if(d.name===_wiz.diagnostico)o.selected=true;og.appendChild(o);});
+    sel.appendChild(og);
+  });
+}
+
+function onDiagChange(){
+  _wiz.diagnostico=document.getElementById('f-diag').value;
+  document.getElementById('diag-outro-wrap').style.display=(_wiz.diagnostico==='Outro')?'block':'none';
+}
+
+function setGen(g){_wiz.genero=g;document.querySelectorAll('#gen-tog .tog-btn').forEach(b=>b.classList.toggle('active',b.classList.contains(g)));clearErr('e-genero');}
+function setRes(r){
+  _wiz.resultado=r;
+  document.querySelectorAll('#res-tog .tog-btn').forEach(b=>b.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  updateResFields();clearErr('e-resultado');
+}
+function updateResFields(){
+  const r=_wiz.resultado;
+  document.getElementById('int-destino-wrap').style.display=r==='internamento'?'block':'none';
+  document.getElementById('trf-destino-wrap').style.display=r==='transferencia'?'block':'none';
+  document.getElementById('obito-causa-wrap').style.display=r==='obito'?'block':'none';
+}
+
+function clearErr(id){const e=document.getElementById(id);if(e)e.classList.remove('show');}
+function clearAllErrors(){document.querySelectorAll('.err').forEach(e=>e.classList.remove('err'));document.querySelectorAll('.ferr').forEach(e=>e.classList.remove('show'));}
+function showErr(id){const e=document.getElementById(id);if(e)e.classList.add('show');}
+function markErr(id){const el=document.getElementById(id);if(el)el.classList.add('err');}
+
+function validateStep(){
+  clearAllErrors();let ok=true;
+  if(_wizStep===1){
+    _wiz.nome=(document.getElementById('f-nome').value||'').trim();
+    _wiz.processo=(document.getElementById('f-processo').value||'').trim();
+    _wiz.data=document.getElementById('f-data').value;
+    _wiz.hora=document.getElementById('f-hora').value;
+    _wiz.idade=document.getElementById('f-idade').value;
+    if(!_wiz.nome){markErr('f-nome');showErr('e-nome');ok=false;}
+    if(!_wiz.data){markErr('f-data');showErr('e-data');ok=false;}
+    if(_wiz.idade===''||Number(_wiz.idade)<0||Number(_wiz.idade)>120){markErr('f-idade');showErr('e-idade');ok=false;}
+    if(!_wiz.genero){showErr('e-genero');ok=false;}
+    if(ok)_wiz.faixaEtaria=getAgeGroup(Number(_wiz.idade));
+  }
+  if(_wizStep===2){
+    _wiz.diagnostico=document.getElementById('f-diag').value;
+    _wiz.diagOutro=(document.getElementById('f-diag-outro').value||'').trim();
+    _wiz.notas=(document.getElementById('f-notas').value||'').trim();
+    if(!_wiz.diagnostico){markErr('f-diag');showErr('e-diag');ok=false;}
+    if(_wiz.diagnostico==='Outro'&&!_wiz.diagOutro){markErr('f-diag-outro');showErr('e-diag-outro');ok=false;}
+  }
+  if(_wizStep===3){
+    _wiz.observacoes=(document.getElementById('f-obs').value||'').trim();
+    _wiz.causaMorte=(document.getElementById('f-causa-morte').value||'').trim();
+    _wiz.intDestino=(document.getElementById('f-int-destino').value||'').trim();
+    _wiz.trfDestino=(document.getElementById('f-trf-destino').value||'').trim();
+    if(!_wiz.resultado){showErr('e-resultado');ok=false;}
+  }
+  return ok;
+}
+
+function wizNext(){if(!validateStep())return;if(_wizStep<4){_wizStep++;renderWizStep();}else savePat();}
+function wizBack(){if(_wizStep>1){_wizStep--;renderWizStep();}}
+
+function savePat(){
+  _wiz._ts=Date.now();if(!_wiz._created)_wiz._created=Date.now();
+  const cidObj=DIAGNOSES_BU.find(x=>x.name===_wiz.diagnostico);
+  _wiz.cidCode=cidObj?cidObj.cid:'—';
+  if(_wizEditId){const idx=PATS.findIndex(p=>p.id===_wizEditId);if(idx>=0)PATS[idx]={..._wiz};else PATS.push({..._wiz});}
+  else PATS.push({..._wiz});
+  saveData();showToast('✅ Registo gravado!','ok');showTab('home');renderHome();
+}
+
+function renderReview(){
+  const p=_wiz;
+  const diagLabel=getDiagLabel(p);
+  const cidCode=getDiagCID(p);
+  document.getElementById('review-content').innerHTML=`
+    <div class="review-sec"><div class="review-title">👤 Identificação</div>
+      <div class="review-grid">
+        <div><div class="rv-lbl">Nome</div><div class="rv-val">${p.nome||'—'}</div></div>
+        <div><div class="rv-lbl">Processo</div><div class="rv-val">${p.processo||'—'}</div></div>
+        <div><div class="rv-lbl">Data</div><div class="rv-val">${fmt(p.data)}${p.hora?' '+p.hora:''}</div></div>
+        <div><div class="rv-lbl">Idade / Faixa</div><div class="rv-val">${p.idade} anos (${p.faixaEtaria})</div></div>
+        <div><div class="rv-lbl">Género</div><div class="rv-val">${p.genero==='M'?'♂ Masculino':'♀ Feminino'}</div></div>
+      </div>
+    </div>
+    <div class="review-sec"><div class="review-title">🔬 Diagnóstico</div>
+      <div class="review-grid">
+        <div><div class="rv-lbl">CID-10</div><div class="rv-val" style="font-family:monospace;font-weight:700">${cidCode}</div></div>
+        <div><div class="rv-lbl">Diagnóstico</div><div class="rv-val">${diagLabel}</div></div>
+        ${p.notas?`<div style="grid-column:1/-1"><div class="rv-lbl">Notas</div><div class="rv-val">${p.notas}</div></div>`:''}
+      </div>
+    </div>
+    <div class="review-sec"><div class="review-title">📋 Resultado</div>
+      <div class="review-grid">
+        <div><div class="rv-lbl">Desfecho</div><div class="rv-val">${RES_LABELS[p.resultado]||'—'}</div></div>
+        ${p.intDestino?`<div><div class="rv-lbl">Destino</div><div class="rv-val">${p.intDestino}</div></div>`:''}
+        ${p.trfDestino?`<div><div class="rv-lbl">Hospital</div><div class="rv-val">${p.trfDestino}</div></div>`:''}
+        ${p.causaMorte?`<div><div class="rv-lbl">Causa de Morte</div><div class="rv-val">${p.causaMorte}</div></div>`:''}
+        ${p.observacoes?`<div><div class="rv-lbl">Obs.</div><div class="rv-val">${p.observacoes}</div></div>`:''}
+      </div>
+    </div>`;
+}
+
+// ══ ANALYSIS ══
+function showATab(id){
+  _curATab=id;
+  const tabs=['resumo','cid','obitos','admitidos'];
+  document.querySelectorAll('.atab').forEach((t,i)=>t.classList.toggle('active',tabs[i]===id));
+  document.querySelectorAll('.apanel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('ap-'+id).classList.add('active');
+  renderAnalysis();
+}
+
+function onAnPeriodChange(){
+  const isC=document.getElementById('an-period').value==='custom';
+  document.getElementById('an-from-wrap').style.display=isC?'block':'none';
+  document.getElementById('an-to-wrap').style.display=isC?'block':'none';
+  renderAnalysis();
+}
+
+function getFilteredPats(){
+  const period=document.getElementById('an-period').value;
+  const now=new Date(); let pats=[...PATS];
+  if(period==='month'){const ym=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');pats=pats.filter(p=>p.data&&p.data.startsWith(ym));}
+  else if(period==='year'){pats=pats.filter(p=>p.data&&p.data.startsWith(now.getFullYear()+''));}
+  else if(period==='custom'){const from=document.getElementById('an-from').value;const to=document.getElementById('an-to').value;if(from)pats=pats.filter(p=>p.data>=from);if(to)pats=pats.filter(p=>p.data<=to);}
+  return pats;
+}
+
+function getByDiag(pats){
+  const byDiag={};
+  pats.forEach(p=>{
+    let d=p.diagnostico||'Não Especificado';if(d==='Outro')d=p.diagOutro||'Outro';
+    const cidObj=DIAGNOSES_BU.find(x=>x.name===(p.diagnostico||''));
+    const cid=cidObj?cidObj.cid:'—';
+    if(!byDiag[d]) byDiag[d]={M:0,F:0,total:0,obitos:0,internamentos:0,transferencias:0,altas:0,byAge:{},cid};
+    byDiag[d][(p.genero||'M')]++;byDiag[d].total++;
+    if(p.resultado==='obito')byDiag[d].obitos++;
+    if(p.resultado==='internamento')byDiag[d].internamentos++;
+    if(p.resultado==='transferencia')byDiag[d].transferencias++;
+    if(p.resultado==='alta')byDiag[d].altas++;
+    const ag=p.faixaEtaria||getAgeGroup(Number(p.idade));
+    if(!byDiag[d].byAge[ag])byDiag[d].byAge[ag]={M:0,F:0};
+    byDiag[d].byAge[ag][(p.genero||'M')]++;
+  });
+  return byDiag;
+}
+
+function destroyChart(id){if(_charts[id]){_charts[id].destroy();delete _charts[id];}}
+
+function renderAnalysis(){
+  const pats=getFilteredPats();
+  if(_curATab==='resumo') renderAnResumo(pats);
+  else if(_curATab==='cid') renderAnCID(pats);
+  else if(_curATab==='obitos') renderAnObitos(pats);
+  else if(_curATab==='admitidos') renderAnAdmitidos(pats);
+}
+
+function renderAnResumo(pats){
+  const total=pats.length;
+  const totalM=pats.filter(p=>p.genero==='M').length;
+  const totalF=pats.filter(p=>p.genero==='F').length;
+  const obits=pats.filter(p=>p.resultado==='obito').length;
+  const ints=pats.filter(p=>p.resultado==='internamento').length;
+  const altas=pats.filter(p=>p.resultado==='alta').length;
+  const trfs=pats.filter(p=>p.resultado==='transferencia').length;
+  const mortRate=total?(obits/total*100).toFixed(1):'0.0';
+  const intRate=total?(ints/total*100).toFixed(1):'0.0';
+  const avgAge=total?Math.round(pats.reduce((s,p)=>s+Number(p.idade||0),0)/total):0;
+
+  destroyChart('ch-gen');destroyChart('ch-res');destroyChart('ch-diag');destroyChart('ch-age');
+
+  document.getElementById('an-resumo-content').innerHTML=`
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px;margin-bottom:18px">
+      <div class="kpi"><div class="kpi-val" style="color:#b45309">${total}</div><div class="kpi-lbl">Total</div></div>
+      <div class="kpi"><div class="kpi-val" style="color:#1e40af">${totalM}</div><div class="kpi-lbl">Masculinos</div></div>
+      <div class="kpi"><div class="kpi-val" style="color:#7c3aed">${totalF}</div><div class="kpi-lbl">Femininos</div></div>
+      <div class="kpi"><div class="kpi-val" style="color:#059669">${altas}</div><div class="kpi-lbl">Altas</div></div>
+      <div class="kpi"><div class="kpi-val" style="color:#d97706">${ints}</div><div class="kpi-lbl">Internamentos</div></div>
+      <div class="kpi"><div class="kpi-val" style="color:#dc2626">${obits}</div><div class="kpi-lbl">Óbitos</div></div>
+      <div class="kpi"><div class="kpi-val" style="color:#0891b2">${avgAge}</div><div class="kpi-lbl">Idade Média</div></div>
+      <div class="kpi"><div class="kpi-val" style="color:#dc2626">${mortRate}%</div><div class="kpi-lbl">Tx. Mort.</div></div>
+      <div class="kpi"><div class="kpi-val" style="color:#d97706">${intRate}%</div><div class="kpi-lbl">Tx. Intern.</div></div>
+    </div>
+    <div class="chart-grid">
+      <div class="chart-card"><div class="chart-t">Distribuição por Género</div><canvas id="ch-gen"></canvas></div>
+      <div class="chart-card"><div class="chart-t">Distribuição por Resultado</div><canvas id="ch-res"></canvas></div>
+      <div class="chart-card"><div class="chart-t">Top 8 Diagnósticos (por CID)</div><canvas id="ch-diag" style="max-height:290px"></canvas></div>
+      <div class="chart-card"><div class="chart-t">Distribuição por Faixa Etária</div><canvas id="ch-age" style="max-height:290px"></canvas></div>
+    </div>`;
+
+  if(!total) return;
+  _charts['ch-gen']=new Chart(document.getElementById('ch-gen'),{type:'doughnut',data:{labels:['Masculino','Feminino'],datasets:[{data:[totalM,totalF],backgroundColor:['#3b82f6','#a855f7'],borderWidth:2}]},options:{plugins:{legend:{position:'bottom'}},cutout:'60%'}});
+  _charts['ch-res']=new Chart(document.getElementById('ch-res'),{type:'doughnut',data:{labels:['Altas','Internamentos','Transferências','Óbitos'],datasets:[{data:[altas,ints,trfs,obits],backgroundColor:['#10b981','#f59e0b','#3b82f6','#ef4444'],borderWidth:2}]},options:{plugins:{legend:{position:'bottom'}},cutout:'60%'}});
+  const byDiag=getByDiag(pats);
+  const top8=Object.entries(byDiag).sort((a,b)=>b[1].total-a[1].total).slice(0,8);
+  _charts['ch-diag']=new Chart(document.getElementById('ch-diag'),{type:'bar',data:{labels:top8.map(([d,v])=>v.cid+' '+d.slice(0,20)),datasets:[{label:'M',data:top8.map(([,v])=>v.M),backgroundColor:'#3b82f6'},{label:'F',data:top8.map(([,v])=>v.F),backgroundColor:'#a855f7'}]},options:{indexAxis:'y',plugins:{legend:{position:'top'}},scales:{x:{stacked:true},y:{stacked:true}}}});
+  const ageCounts={};AGE_GROUPS_DET.forEach(ag=>ageCounts[ag]={M:0,F:0});
+  pats.forEach(p=>{const ag=getAgeGroupDet(Number(p.idade));if(ageCounts[ag]){ageCounts[ag][(p.genero||'M')]++;}});
+  _charts['ch-age']=new Chart(document.getElementById('ch-age'),{type:'bar',data:{labels:AGE_GROUPS_DET,datasets:[{label:'M',data:AGE_GROUPS_DET.map(ag=>ageCounts[ag].M),backgroundColor:'#3b82f6'},{label:'F',data:AGE_GROUPS_DET.map(ag=>ageCounts[ag].F),backgroundColor:'#a855f7'}]},options:{plugins:{legend:{position:'top'}},scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true}}}});
+}
+
+function renderAnCID(pats){
+  const byDiag=getByDiag(pats);
+  const sorted=Object.entries(byDiag).sort((a,b)=>b[1].total-a[1].total);
+  if(!sorted.length){document.getElementById('an-cid-content').innerHTML='<div class="empty"><div class="empty-ico">🔬</div><h3>Sem dados</h3></div>';return;}
+  const total=pats.length;
+  document.getElementById('an-cid-content').innerHTML=`
+    <div class="card" style="padding:0;overflow-x:auto">
+    <table>
+      <thead>
+        <tr><th rowspan="2">CID-10</th><th rowspan="2">Diagnóstico</th>
+          <th colspan="2" class="tc" style="border-left:1px solid var(--bd)">Geral</th>
+          ${AGE_GROUPS.map(ag=>`<th colspan="2" class="tc" style="border-left:1px solid var(--bd)">${ag}</th>`).join('')}
+        </tr>
+        <tr>
+          <th class="tc" style="border-left:1px solid var(--bd)">M</th><th class="tc">F</th>
+          ${AGE_GROUPS.map(()=>'<th class="tc" style="border-left:1px solid var(--bd);color:#3b82f6">M</th><th class="tc" style="color:#a855f7">F</th>').join('')}
+        </tr>
+      </thead>
+      <tbody>${sorted.map(([d,v])=>{
+        const row=AGE_GROUPS.map(ag=>{
+          const aData=v.byAge[ag]||{M:0,F:0};
+          return `<td class="tc" style="border-left:1px solid var(--bd)">${aData.M||'·'}</td><td class="tc">${aData.F||'·'}</td>`;
+        }).join('');
+        return`<tr>
+          <td style="font-family:monospace;font-weight:700;font-size:.8rem;white-space:nowrap">${v.cid}</td>
+          <td style="font-weight:500;font-size:.82rem">${d}</td>
+          <td class="tc" style="border-left:1px solid var(--bd)"><span class="bm bm-m">${v.M}</span></td>
+          <td class="tc"><span class="bm bm-f">${v.F}</span></td>
+          ${row}
+        </tr>`;
+      }).join('')}
+      <tr style="background:#fef3c7;font-weight:700">
+        <td colspan="2">TOTAL</td>
+        <td class="tc" style="border-left:1px solid var(--bd)">${pats.filter(p=>p.genero==='M').length}</td>
+        <td class="tc">${pats.filter(p=>p.genero==='F').length}</td>
+        ${AGE_GROUPS.map(ag=>{const ac={M:0,F:0};pats.forEach(p=>{if((p.faixaEtaria||getAgeGroup(Number(p.idade)))===ag)ac[(p.genero||'M')]++;});return`<td class="tc" style="border-left:1px solid var(--bd)">${ac.M}</td><td class="tc">${ac.F}</td>`;}).join('')}
+      </tr>
+      </tbody>
+    </table></div>`;
+}
+
+function renderAnObitos(pats){
+  const obPats=pats.filter(p=>p.resultado==='obito');
+  const total=obPats.length;
+  if(!total){document.getElementById('an-obitos-content').innerHTML='<div class="empty"><div class="empty-ico">✝️</div><h3>Sem óbitos no período</h3></div>';return;}
+  const byDiag=getByDiag(obPats);
+  const sorted=Object.entries(byDiag).sort((a,b)=>b[1].total-a[1].total);
+  const ageCounts={};AGE_GROUPS.forEach(ag=>ageCounts[ag]={M:0,F:0,total:0});
+  obPats.forEach(p=>{const ag=p.faixaEtaria||getAgeGroup(Number(p.idade));if(ageCounts[ag]){ageCounts[ag][(p.genero||'M')]++;ageCounts[ag].total++;}});
+  document.getElementById('an-obitos-content').innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div>
+        <h4 style="font-size:.85rem;font-weight:600;margin-bottom:10px">Óbitos por CID e Diagnóstico</h4>
+        <div class="card" style="padding:0">
+        <table>
+          <thead><tr><th>CID-10</th><th>Diagnóstico</th><th class="tc">♂ M</th><th class="tc">♀ F</th><th class="tc">Total</th><th class="tc">%</th></tr></thead>
+          <tbody>${sorted.map(([d,v])=>`<tr>
+            <td style="font-family:monospace;font-weight:700;font-size:.8rem">${v.cid}</td>
+            <td style="font-weight:500;font-size:.82rem">${d}</td>
+            <td class="tc"><span class="bm bm-m">${v.M}</span></td>
+            <td class="tc"><span class="bm bm-f">${v.F}</span></td>
+            <td class="tc" style="font-weight:700">${v.total}</td>
+            <td class="tc">${(v.total/total*100).toFixed(1)}%</td>
+          </tr>`).join('')}</tbody>
+        </table></div>
+      </div>
+      <div>
+        <h4 style="font-size:.85rem;font-weight:600;margin-bottom:10px">Óbitos por Faixa Etária e Género</h4>
+        <div class="card" style="padding:0">
+        <table>
+          <thead><tr><th>Faixa Etária</th><th class="tc">♂ M</th><th class="tc">♀ F</th><th class="tc">Total</th></tr></thead>
+          <tbody>${AGE_GROUPS.map(ag=>`<tr>
+            <td>${ag}</td>
+            <td class="tc">${ageCounts[ag].M||'·'}</td>
+            <td class="tc">${ageCounts[ag].F||'·'}</td>
+            <td class="tc" style="font-weight:700">${ageCounts[ag].total}</td>
+          </tr>`).join('')}
+          <tr style="background:#fef3c7;font-weight:700">
+            <td>TOTAL</td>
+            <td class="tc">${obPats.filter(p=>p.genero==='M').length}</td>
+            <td class="tc">${obPats.filter(p=>p.genero==='F').length}</td>
+            <td class="tc">${total}</td>
+          </tr></tbody>
+        </table></div>
+      </div>
+    </div>`;
+}
+
+function renderAnAdmitidos(pats){
+  const admPats=pats.filter(p=>p.resultado==='internamento');
+  const total=admPats.length;
+  if(!total){document.getElementById('an-admitidos-content').innerHTML='<div class="empty"><div class="empty-ico">🛏️</div><h3>Sem internamentos no período</h3></div>';return;}
+  const byDiag=getByDiag(admPats);
+  const sorted=Object.entries(byDiag).sort((a,b)=>b[1].total-a[1].total);
+  const ageCounts={};AGE_GROUPS.forEach(ag=>ageCounts[ag]={M:0,F:0,total:0});
+  admPats.forEach(p=>{const ag=p.faixaEtaria||getAgeGroup(Number(p.idade));if(ageCounts[ag]){ageCounts[ag][(p.genero||'M')]++;ageCounts[ag].total++;}});
+  document.getElementById('an-admitidos-content').innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div>
+        <h4 style="font-size:.85rem;font-weight:600;margin-bottom:10px">Internamentos por CID e Diagnóstico</h4>
+        <div class="card" style="padding:0">
+        <table>
+          <thead><tr><th>CID-10</th><th>Diagnóstico</th><th class="tc">♂ M</th><th class="tc">♀ F</th><th class="tc">Total</th><th class="tc">%</th></tr></thead>
+          <tbody>${sorted.map(([d,v])=>`<tr>
+            <td style="font-family:monospace;font-weight:700;font-size:.8rem">${v.cid}</td>
+            <td style="font-weight:500;font-size:.82rem">${d}</td>
+            <td class="tc"><span class="bm bm-m">${v.M}</span></td>
+            <td class="tc"><span class="bm bm-f">${v.F}</span></td>
+            <td class="tc" style="font-weight:700">${v.total}</td>
+            <td class="tc">${(v.total/total*100).toFixed(1)}%</td>
+          </tr>`).join('')}</tbody>
+        </table></div>
+      </div>
+      <div>
+        <h4 style="font-size:.85rem;font-weight:600;margin-bottom:10px">Internamentos por Faixa Etária e Género</h4>
+        <div class="card" style="padding:0">
+        <table>
+          <thead><tr><th>Faixa Etária</th><th class="tc">♂ M</th><th class="tc">♀ F</th><th class="tc">Total</th></tr></thead>
+          <tbody>${AGE_GROUPS.map(ag=>`<tr>
+            <td>${ag}</td>
+            <td class="tc">${ageCounts[ag].M||'·'}</td>
+            <td class="tc">${ageCounts[ag].F||'·'}</td>
+            <td class="tc" style="font-weight:700">${ageCounts[ag].total}</td>
+          </tr>`).join('')}
+          <tr style="background:#fef3c7;font-weight:700">
+            <td>TOTAL</td>
+            <td class="tc">${admPats.filter(p=>p.genero==='M').length}</td>
+            <td class="tc">${admPats.filter(p=>p.genero==='F').length}</td>
+            <td class="tc">${total}</td>
+          </tr></tbody>
+        </table></div>
+      </div>
+    </div>`;
+}
+
+// ══ DATABASE ══
+function renderDB(){
+  const q=(document.getElementById('db-search').value||'').toLowerCase();
+  const gen=document.getElementById('db-gen').value;
+  const res=document.getElementById('db-res').value;
+  const from=document.getElementById('db-from').value;
+  const to=document.getElementById('db-to').value;
+  let pats=[...PATS].filter(p=>{
+    if(gen&&p.genero!==gen)return false;
+    if(res&&p.resultado!==res)return false;
+    if(from&&p.data<from)return false;
+    if(to&&p.data>to)return false;
+    if(q){const h=(p.nome+p.processo+getDiagLabel(p)+getDiagCID(p)).toLowerCase();if(!h.includes(q))return false;}
+    return true;
+  }).sort((a,b)=>(b.data||'').localeCompare(a.data||''));
+
+  const total=pats.length;
+  const pages=Math.ceil(total/DB_PER_PAGE)||1;
+  if(_dbPage>pages)_dbPage=1;
+  const slice=pats.slice((_dbPage-1)*DB_PER_PAGE,_dbPage*DB_PER_PAGE);
+
+  if(!slice.length){
+    document.getElementById('db-tbody').innerHTML=`<tr><td colspan="9"><div class="empty"><div class="empty-ico">🗃️</div><h3>Sem resultados</h3></div></td></tr>`;
+    document.getElementById('db-pag').innerHTML='';return;
+  }
+
+  document.getElementById('db-tbody').innerHTML=slice.map(p=>`<tr onclick="editPat('${p.id}')">
+    <td>${fmt(p.data)}</td>
+    <td style="font-weight:500">${p.nome}</td>
+    <td class="tc">${p.idade}</td>
+    <td class="tc" style="font-size:.75rem">${p.faixaEtaria||getAgeGroup(Number(p.idade))}</td>
+    <td class="tc"><span class="bm bm-${(p.genero||'m').toLowerCase()}">${p.genero}</span></td>
+    <td class="tc" style="font-family:monospace;font-size:.78rem;font-weight:700">${getDiagCID(p)}</td>
+    <td style="font-size:.82rem">${getDiagLabel(p)}</td>
+    <td class="tc"><span class="bm ${resClass(p.resultado)}">${resShort(p.resultado)}</span></td>
+    <td class="tc" onclick="event.stopPropagation()">
+      <button class="btn-xs" style="background:#e0f2fe;color:#0369a1;border:none;cursor:pointer;border-radius:4px;padding:4px 8px" onclick="editPat('${p.id}')">✏️</button>
+      <button class="btn-xs" style="background:#fee2e2;color:#b91c1c;border:none;cursor:pointer;border-radius:4px;padding:4px 8px;margin-left:3px" onclick="confirmDelete('${p.id}')">🗑️</button>
+    </td>
+  </tr>`).join('');
+
+  let pagHtml=`<span class="pg-info">${total} registos · Página ${_dbPage}/${pages}</span>`;
+  if(pages>1){
+    if(_dbPage>1)pagHtml=`<button class="pg" onclick="_dbPage--;renderDB()">‹</button>`+pagHtml;
+    for(let i=1;i<=Math.min(pages,7);i++)pagHtml+=`<button class="pg${i===_dbPage?' active':''}" onclick="_dbPage=${i};renderDB()">${i}</button>`;
+    if(_dbPage<pages)pagHtml+=`<button class="pg" onclick="_dbPage++;renderDB()">›</button>`;
+  }
+  document.getElementById('db-pag').innerHTML=pagHtml;
+}
+
+function resetFilters(){['db-search','db-gen','db-res','db-from','db-to'].forEach(id=>document.getElementById(id).value='');_dbPage=1;renderDB();}
+
+function confirmDelete(id){_delId=id;document.getElementById('del-modal').classList.add('open');}
+document.getElementById('del-confirm-btn').onclick=function(){
+  if(!_delId)return;PATS=PATS.filter(p=>p.id!==_delId);saveData();_delId=null;
+  document.getElementById('del-modal').classList.remove('open');renderDB();renderHome();
+  showToast('Registo eliminado','ok');
+};
+
+function exportCSV(){
+  const rows=[['Data','Hora','Nome','Processo','Idade','F.Etária','Género','CID-10','Diagnóstico','Resultado','Destino','Causa Morte','Obs']];
+  PATS.forEach(p=>rows.push([p.data,p.hora||'',p.nome,p.processo||'',p.idade,p.faixaEtaria||getAgeGroup(Number(p.idade)),p.genero,getDiagCID(p),getDiagLabel(p),RES_LABELS[p.resultado]||p.resultado||'',p.intDestino||p.trfDestino||'',p.causaMorte||'',p.observacoes||'']));
+  const csv=rows.map(r=>r.map(c=>'"'+(String(c).replace(/"/g,'""'))+'"').join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,﻿'+encodeURIComponent(csv);
+  a.download='BancoUrgencia_CirurgiaGeral_'+today()+'.csv';
+  a.click();showToast('✅ CSV exportado','ok');
+}
+
+// ══ DAILY MOVEMENT ══
+function initMovTab(){
+  document.getElementById('mov-data').value=today();
+  renderMovHist();
+}
+
+function saveMov(){
+  const data=document.getElementById('mov-data').value;
+  const total=Number(document.getElementById('mov-total').value)||0;
+  if(!data){showToast('Data obrigatória','err');return;}
+  if(!total){showToast('Total de atendimentos obrigatório','err');return;}
+  const mov={
+    data, total,
+    altas:Number(document.getElementById('mov-altas').value)||0,
+    internamentos:Number(document.getElementById('mov-internamentos').value)||0,
+    transferencias:Number(document.getElementById('mov-transf').value)||0,
+    obitos:Number(document.getElementById('mov-obitos').value)||0,
+    fugas:Number(document.getElementById('mov-fugas').value)||0,
+    masc:Number(document.getElementById('mov-masc').value)||0,
+    fem:Number(document.getElementById('mov-fem').value)||0,
+    _ts:Date.now()
+  };
+  const idx=MOVS.findIndex(m=>m.data===data);
+  if(idx>=0)MOVS[idx]=mov;else MOVS.push(mov);
+  MOVS.sort((a,b)=>b.data.localeCompare(a.data));
+  saveMovs();
+  const mortRate=total?(mov.obitos/total*100).toFixed(1):'0.0';
+  const intRate=total?(mov.internamentos/total*100).toFixed(1):'0.0';
+  document.getElementById('mov-indicadores').innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="kpi" style="padding:12px"><div class="kpi-val" style="font-size:1.6rem;color:#b45309">${total}</div><div class="kpi-lbl">Total Atendimentos</div></div>
+      <div class="kpi" style="padding:12px"><div class="kpi-val" style="font-size:1.6rem;color:#dc2626">${mortRate}%</div><div class="kpi-lbl">Tx. Mortalidade</div></div>
+      <div class="kpi" style="padding:12px"><div class="kpi-val" style="font-size:1.6rem;color:#d97706">${intRate}%</div><div class="kpi-lbl">Tx. Internamento</div></div>
+      <div class="kpi" style="padding:12px"><div class="kpi-val" style="font-size:1.6rem;color:#1e40af">${mov.masc}</div><div class="kpi-lbl">♂ Masculinos</div></div>
+    </div>`;
+  renderMovHist();showToast('✅ Movimento gravado','ok');
+}
+
+function renderMovHist(){
+  const slice=MOVS.slice(0,30);
+  if(!slice.length){document.getElementById('mov-hist').innerHTML='<div class="empty"><div class="empty-ico">📅</div><h3>Sem registos</h3></div>';return;}
+  document.getElementById('mov-hist').innerHTML=`<div class="tbl-wrap"><table>
+    <thead><tr><th>Data</th><th class="tc">Total</th><th class="tc">Altas</th><th class="tc">Int.</th><th class="tc">Óbitos</th><th class="tc">Tx.Mort.</th></tr></thead>
+    <tbody>${slice.map(m=>{const tx=m.total?(m.obitos/m.total*100).toFixed(0):'0';return`<tr>
+      <td>${fmt(m.data)}</td><td class="tc" style="font-weight:700">${m.total}</td>
+      <td class="tc">${m.altas}</td><td class="tc">${m.internamentos}</td>
+      <td class="tc">${m.obitos?`<span class="bm bm-obt">${m.obitos}</span>`:'0'}</td>
+      <td class="tc"><span style="font-weight:600;color:${Number(tx)>=5?'#dc2626':Number(tx)>=2?'#d97706':'#059669'}">${tx}%</span></td>
+    </tr>`;}).join('')}</tbody>
+  </table></div>`;
+}
+
+// ══ PDF ══
+function exportAnalysisPDF(){
+  const pats=getFilteredPats();
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+  doc.setFillColor(146,64,14);doc.rect(0,0,297,28,'F');
+  doc.setTextColor(255,255,255);doc.setFontSize(12);doc.setFont('helvetica','bold');
+  doc.text('BANCO DE URGÊNCIA — CIRURGIA GERAL',14,10);
+  doc.setFontSize(8);doc.setFont('helvetica','normal');
+  doc.text('Hospital do Prenda · Relatório de Análise Clínica · '+new Date().toLocaleDateString('pt-PT'),14,17);
+  doc.setTextColor(0,0,0);
+  const byDiag=getByDiag(pats);
+  const rows=Object.entries(byDiag).sort((a,b)=>b[1].total-a[1].total).map(([d,v])=>[v.cid,d,v.M,v.F,v.total,pats.length?(v.total/pats.length*100).toFixed(1)+'%':'0%',v.obitos,v.internamentos]);
+  doc.autoTable({startY:32,head:[['CID-10','Diagnóstico','M','F','Total','%','Óbitos','Internamentos']],body:rows,
+    headStyles:{fillColor:[146,64,14],textColor:255,fontSize:8,fontStyle:'bold'},
+    bodyStyles:{fontSize:8},alternateRowStyles:{fillColor:[254,243,199]},
+    columnStyles:{0:{cellWidth:20,fontStyle:'bold'},1:{cellWidth:65},2:{halign:'center'},3:{halign:'center'},4:{halign:'center',fontStyle:'bold'},5:{halign:'center'},6:{halign:'center'},7:{halign:'center'}},
+    margin:{left:14,right:14}});
+  doc.save('BancoUrgencia_CirurgiaGeral_Analise_'+today()+'.pdf');
+  showToast('✅ PDF exportado','ok');
+}
+
+// ══ BACKUP ══
+function openBackup(){
+  const payload={version:1,exported:new Date().toISOString(),service:'Banco de Urgência — Cirurgia Geral',count:PATS.length,data:PATS};
+  const now=new Date();
+  const ts=now.getFullYear()+String(now.getMonth()+1).padStart(2,'0')+String(now.getDate()).padStart(2,'0')+'_'+String(now.getHours()).padStart(2,'0')+String(now.getMinutes()).padStart(2,'0');
+  const a=document.createElement('a');
+  a.href='data:application/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(payload,null,2));
+  a.download='backup_BU_CirurgiaGeral_'+ts+'.json';
+  a.click();showToast('⬇️ Backup exportado — '+PATS.length+' registos','ok');
+}
+
+document.getElementById('merge-btn').onclick=function(){
+  if(!_pendingImport)return;
+  let added=0,updated=0,kept=0;
+  _pendingImport.forEach(imp=>{
+    const idx=PATS.findIndex(p=>p.id===imp.id);
+    if(idx<0){PATS.push(imp);added++;}
+    else if((imp._ts||0)>(PATS[idx]._ts||0)){PATS[idx]={...imp};updated++;}
+    else kept++;
+  });
+  saveData();_pendingImport=null;
+  document.getElementById('backup-modal').classList.remove('open');
+  renderHome();renderDB();showToast('✅ Mesclado: '+added+' novos, '+updated+' actualizados, '+kept+' mantidos','ok');
+};
+document.getElementById('replace-btn').onclick=function(){
+  if(!_pendingImport)return;
+  PATS=[..._pendingImport];saveData();_pendingImport=null;
+  document.getElementById('backup-modal').classList.remove('open');
+  renderHome();renderDB();showToast('✅ Dados substituídos','ok');
+};
+
+// Config modal
+function openCfgModal(){
+  document.getElementById('cfg-cap').value=CFG.capacidade;
+  document.getElementById('cfg-nome').value=CFG.nomeServico;
+  document.getElementById('cfg-modal').classList.add('open');
+}
+function closeCfgModal(){document.getElementById('cfg-modal').classList.remove('open');}
+
+// Close modals on backdrop
+document.querySelectorAll('.modal-ov').forEach(m=>m.addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');}));
+
+// ══ INIT ══
+loadData();loadCfg();loadMovs();
+updateSidebar();renderHome();
+document.getElementById('home-date').textContent=new Date().toLocaleDateString('pt-PT',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+resetWiz();
+</script>
+</body>
+</html>

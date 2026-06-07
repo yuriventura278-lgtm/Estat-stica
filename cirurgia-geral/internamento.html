@@ -222,6 +222,9 @@ select[multiple]{min-height:120px}
   <div class="nav-item" onclick="showTab('analysis')" id="nb-analysis"><span class="nav-ico">📊</span>Análise Clínica</div>
   <div class="nav-item" onclick="showTab('db')" id="nb-db"><span class="nav-ico">🗃️</span>Base de Dados</div>
   <div class="nav-item" onclick="showTab('reports')" id="nb-reports"><span class="nav-ico">📋</span>Relatórios</div>
+  <div class="nav-sep"></div>
+  <div class="nav-item" onclick="showTab('mov')" id="nb-mov"><span class="nav-ico">📅</span>Movimento Diário</div>
+  <div class="nav-item" onclick="openCfgModal()" id="nb-cfg"><span class="nav-ico">⚙️</span>Configurações</div>
   <div class="sb-stat" id="sb-stat">A carregar…</div>
 </nav>
 
@@ -491,8 +494,8 @@ select[multiple]{min-height:120px}
       <table>
         <thead><tr>
           <th>Admissão</th><th>Nome</th><th>Processo</th>
-          <th class="tc">Idade</th><th class="tc">Género</th>
-          <th>Diagnóstico</th><th>Procedimentos</th>
+          <th class="tc">Idade</th><th class="tc">F.Etária</th><th class="tc">Gén.</th>
+          <th class="tc">CID-10</th><th>Diagnóstico</th><th>Procedimentos</th>
           <th class="tc">Dias</th><th class="tc">Estado</th>
           <th class="tc">Acções</th>
         </tr></thead>
@@ -545,7 +548,89 @@ select[multiple]{min-height:120px}
   </div>
 </div>
 
+<!-- ══ MOVIMENTO DIÁRIO ══ -->
+<div class="tab-sec" id="tab-mov">
+  <div class="pg-title">Movimento Diário</div>
+  <div class="pg-sub">Registo diário de doentes e camas do serviço</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+    <!-- Form -->
+    <div class="card">
+      <div class="card-title">📝 Registo do Dia</div>
+      <div class="form-g" style="margin-bottom:12px">
+        <label class="form-lbl">Data <span class="req">*</span></label>
+        <input type="date" id="mov-data" value="">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div class="form-g">
+          <label class="form-lbl">Camas Reais (configuradas)</label>
+          <input type="number" id="mov-camas-conf" disabled style="background:#f1f5f9">
+        </div>
+        <div class="form-g">
+          <label class="form-lbl">Dias Camas <span class="req">*</span></label>
+          <input type="number" id="mov-dias-camas" placeholder="= camas × dias período" min="0">
+        </div>
+        <div class="form-g">
+          <label class="form-lbl">Dias Doentes <span class="req">*</span></label>
+          <input type="number" id="mov-dias-doentes" placeholder="Soma dos dias de cada doente" min="0">
+        </div>
+        <div class="form-g">
+          <label class="form-lbl">Admissões</label>
+          <input type="number" id="mov-admissoes" min="0" value="0">
+        </div>
+        <div class="form-g">
+          <label class="form-lbl">Altas</label>
+          <input type="number" id="mov-altas" min="0" value="0">
+        </div>
+        <div class="form-g">
+          <label class="form-lbl">Óbitos</label>
+          <input type="number" id="mov-obitos" min="0" value="0">
+        </div>
+        <div class="form-g">
+          <label class="form-lbl">Transferências</label>
+          <input type="number" id="mov-transferencias" min="0" value="0">
+        </div>
+        <div class="form-g">
+          <label class="form-lbl">Doentes Existentes</label>
+          <input type="number" id="mov-existentes" placeholder="Início do dia" min="0">
+        </div>
+      </div>
+      <button class="btn btn-pri" onclick="saveMov()" style="width:100%">💾 Gravar Movimento</button>
+    </div>
+    <!-- Indicadores calculados -->
+    <div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title">📊 Indicadores Calculados</div>
+        <div id="mov-indicadores" style="font-size:.85rem;color:var(--mut)">Preencha os dados e clique em Gravar.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">📅 Histórico de Movimentos</div>
+        <div id="mov-hist"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 </main>
+
+<!-- Modal: Config -->
+<div class="modal-ov" id="cfg-modal">
+  <div class="modal-box">
+    <h3>⚙️ Configurações do Serviço</h3>
+    <div class="form-g" style="margin-bottom:14px">
+      <label class="form-lbl">Número real de camas do serviço</label>
+      <input type="number" id="cfg-camas" min="1" max="200" placeholder="Ex: 30">
+      <div style="font-size:.75rem;color:var(--mut);margin-top:4px">Este valor é usado para calcular a taxa de ocupação e os dias camas.</div>
+    </div>
+    <div class="form-g" style="margin-bottom:14px">
+      <label class="form-lbl">Nome do serviço / enfermaria</label>
+      <input type="text" id="cfg-nome" placeholder="Ex: Cirurgia Geral — Ala Norte">
+    </div>
+    <div class="mbns">
+      <button class="mbn" style="background:var(--bd)" onclick="closeCfgModal()">Cancelar</button>
+      <button class="mbn" style="background:var(--acc);color:#fff" onclick="saveCfg()">Gravar</button>
+    </div>
+  </div>
+</div>
 
 <!-- Modal: Delete confirm -->
 <div class="modal-ov" id="del-modal">
@@ -602,38 +687,38 @@ select[multiple]{min-height:120px}
 <script>
 // ══ CONSTANTS ══
 const DIAGNOSES = [
-  {cat:'Urgência', name:'Apendicite Aguda'},
-  {cat:'Urgência', name:'Peritonite'},
-  {cat:'Urgência', name:'Oclusão Intestinal'},
-  {cat:'Urgência', name:'Traumatismo Abdominal'},
-  {cat:'Urgência', name:'Hemoperitoneu'},
-  {cat:'Urgência', name:'Hérnia Encarcerada / Estrangulada'},
-  {cat:'Urgência', name:'Abcesso Abdominal / Peri-retal'},
-  {cat:'Urgência', name:'Perfuração de Víscera Oca'},
-  {cat:'Urgência', name:'Vólvulo do Sigmoide'},
-  {cat:'Urgência', name:'Hemorragia Digestiva Alta'},
-  {cat:'Urgência', name:'Hemorragia Digestiva Baixa'},
-  {cat:'Urgência', name:'Pancreatite Aguda'},
-  {cat:'Urgência', name:'Isquemia Mesentérica'},
-  {cat:'Electiva', name:'Hérnia Inguinal'},
-  {cat:'Electiva', name:'Hérnia Umbilical'},
-  {cat:'Electiva', name:'Hérnia Epigástrica'},
-  {cat:'Electiva', name:'Hérnia Incisional'},
-  {cat:'Electiva', name:'Colelitíase / Colecistite Crónica'},
-  {cat:'Electiva', name:'Neoplasia do Cólon'},
-  {cat:'Electiva', name:'Neoplasia Gástrica'},
-  {cat:'Electiva', name:'Neoplasia do Recto'},
-  {cat:'Electiva', name:'Neoplasia Hepática'},
-  {cat:'Electiva', name:'Neoplasia do Pâncreas'},
-  {cat:'Electiva', name:'Doença Hemorroidal'},
-  {cat:'Electiva', name:'Estenose Intestinal'},
-  {cat:'Electiva', name:'Patologia Mamária Benigna'},
-  {cat:'Electiva', name:'Neoplasia da Mama'},
-  {cat:'Outros', name:'Fistula Entero-Cutânea'},
-  {cat:'Outros', name:'Lesão Iatrogénica'},
-  {cat:'Outros', name:'Hérnia Diafragmática'},
-  {cat:'Outros', name:'Patologia Esplénica'},
-  {cat:'Outros', name:'Outro'},
+  {cat:'Urgência', name:'Apendicite Aguda',              cid:'K35.9'},
+  {cat:'Urgência', name:'Peritonite',                    cid:'K65.0'},
+  {cat:'Urgência', name:'Oclusão Intestinal',            cid:'K56.7'},
+  {cat:'Urgência', name:'Traumatismo Abdominal',         cid:'S36.9'},
+  {cat:'Urgência', name:'Hemoperitoneu',                 cid:'S36.8'},
+  {cat:'Urgência', name:'Hérnia Encarcerada / Estrangulada', cid:'K40.3'},
+  {cat:'Urgência', name:'Abcesso Abdominal / Peri-retal',cid:'K65.0'},
+  {cat:'Urgência', name:'Perfuração de Víscera Oca',     cid:'K63.1'},
+  {cat:'Urgência', name:'Vólvulo do Sigmoide',           cid:'K56.2'},
+  {cat:'Urgência', name:'Hemorragia Digestiva Alta',     cid:'K92.1'},
+  {cat:'Urgência', name:'Hemorragia Digestiva Baixa',    cid:'K92.2'},
+  {cat:'Urgência', name:'Pancreatite Aguda',             cid:'K85.9'},
+  {cat:'Urgência', name:'Isquemia Mesentérica',          cid:'K55.0'},
+  {cat:'Electiva', name:'Hérnia Inguinal',               cid:'K40.9'},
+  {cat:'Electiva', name:'Hérnia Umbilical',              cid:'K42.9'},
+  {cat:'Electiva', name:'Hérnia Epigástrica',            cid:'K43.9'},
+  {cat:'Electiva', name:'Hérnia Incisional',             cid:'K43.2'},
+  {cat:'Electiva', name:'Colelitíase / Colecistite Crónica', cid:'K80.1'},
+  {cat:'Electiva', name:'Neoplasia do Cólon',            cid:'C18.9'},
+  {cat:'Electiva', name:'Neoplasia Gástrica',            cid:'C16.9'},
+  {cat:'Electiva', name:'Neoplasia do Recto',            cid:'C20'},
+  {cat:'Electiva', name:'Neoplasia Hepática',            cid:'C22.9'},
+  {cat:'Electiva', name:'Neoplasia do Pâncreas',         cid:'C25.9'},
+  {cat:'Electiva', name:'Doença Hemorroidal',            cid:'K64.9'},
+  {cat:'Electiva', name:'Estenose Intestinal',           cid:'K56.6'},
+  {cat:'Electiva', name:'Patologia Mamária Benigna',     cid:'N60.9'},
+  {cat:'Electiva', name:'Neoplasia da Mama',             cid:'C50.9'},
+  {cat:'Outros',   name:'Fistula Entero-Cutânea',        cid:'K63.2'},
+  {cat:'Outros',   name:'Lesão Iatrogénica',             cid:'T81.9'},
+  {cat:'Outros',   name:'Hérnia Diafragmática',          cid:'K44.9'},
+  {cat:'Outros',   name:'Patologia Esplénica',           cid:'D73.9'},
+  {cat:'Outros',   name:'Outro',                         cid:'Z99.9'},
 ];
 
 const PROCEDURES = [
@@ -646,7 +731,8 @@ const PROCEDURES = [
   'Biópsia / Exérese de Lesão','Sem Procedimento Cirúrgico','Outro Procedimento',
 ];
 
-const AGE_GROUPS = ['< 1 ano','1–4 anos','5–14 anos','15–29 anos','30–44 anos','45–59 anos','60–74 anos','≥ 75 anos'];
+const AGE_GROUPS = ['< 15 anos', '≥ 15 anos'];
+const AGE_GROUPS_DET = ['< 1 ano','1–4 anos','5–14 anos','15–29 anos','30–44 anos','45–59 anos','60–74 anos','≥ 75 anos'];
 
 const RES_LABELS = {
   internado:'Internado', alta_clinica:'Alta Clínica',
@@ -691,15 +777,13 @@ function fmt(d) { if(!d) return '—'; const p=d.split('-'); return p[2]+'/'+p[1
 function genId() { return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
 
 function getAgeGroup(age) {
-  const a = Number(age)||0;
-  if(a<1) return '< 1 ano';
-  if(a<=4) return '1–4 anos';
-  if(a<=14) return '5–14 anos';
-  if(a<=29) return '15–29 anos';
-  if(a<=44) return '30–44 anos';
-  if(a<=59) return '45–59 anos';
-  if(a<=74) return '60–74 anos';
-  return '≥ 75 anos';
+  return Number(age) < 15 ? '< 15 anos' : '≥ 15 anos';
+}
+function getAgeGroupDet(age) {
+  const a=Number(age)||0;
+  if(a<1)return'< 1 ano';if(a<=4)return'1–4 anos';if(a<=14)return'5–14 anos';
+  if(a<=29)return'15–29 anos';if(a<=44)return'30–44 anos';if(a<=59)return'45–59 anos';
+  if(a<=74)return'60–74 anos';return'≥ 75 anos';
 }
 
 function calcLOS(p) {
@@ -726,6 +810,7 @@ function showTab(id) {
   if(id==='home') renderHome();
   if(id==='analysis') renderAnalysis();
   if(id==='db') { _dbPage=1; renderDB(); }
+  if(id==='mov') initMovTab();
 }
 
 function updateSidebar() {
@@ -896,13 +981,13 @@ function buildDiagSelect() {
   const q=(document.getElementById('f-diag-search').value||'').toLowerCase();
   sel.innerHTML='<option value="">— Seleccione um diagnóstico —</option>';
   const cats={};
-  DIAGNOSES.forEach(d=>{ if(!q||d.name.toLowerCase().includes(q)){
+  DIAGNOSES.forEach(d=>{ if(!q||d.name.toLowerCase().includes(q)||d.cid.toLowerCase().includes(q)){
     if(!cats[d.cat]) cats[d.cat]=[];
-    cats[d.cat].push(d.name);
+    cats[d.cat].push(d);
   }});
-  Object.entries(cats).forEach(([cat,names])=>{
+  Object.entries(cats).forEach(([cat,diagObjs])=>{
     const og=document.createElement('optgroup'); og.label='── '+cat+' ──';
-    names.forEach(n=>{ const o=document.createElement('option'); o.value=n; o.textContent=n; if(n===_wiz.diagnosticoAdmissao) o.selected=true; og.appendChild(o); });
+    diagObjs.forEach(d=>{ const o=document.createElement('option'); o.value=d.name; o.textContent=d.cid+' — '+d.name; if(d.name===_wiz.diagnosticoAdmissao) o.selected=true; og.appendChild(o); });
     sel.appendChild(og);
   });
 }
@@ -1191,10 +1276,10 @@ function renderAnResumo(pats) {
   const top8=sortedDiag.slice(0,8);
   _charts['ch-diag']=new Chart(document.getElementById('ch-diag'),{type:'bar',data:{labels:top8.map(([d])=>d.length>25?d.slice(0,23)+'…':d),datasets:[{label:'M',data:top8.map(([,v])=>v.M),backgroundColor:'#3b82f6'},{label:'F',data:top8.map(([,v])=>v.F),backgroundColor:'#a855f7'}]},options:{indexAxis:'y',plugins:{legend:{position:'top'}},scales:{x:{stacked:true},y:{stacked:true}}}});
 
-  // Age group bar
-  const ageCounts={}; AGE_GROUPS.forEach(ag=>ageCounts[ag]={M:0,F:0});
-  pats.forEach(p=>{const ag=p.faixaEtaria||getAgeGroup(Number(p.idade));if(ageCounts[ag]){ageCounts[ag][p.genero||'M']++;}});
-  _charts['ch-age']=new Chart(document.getElementById('ch-age'),{type:'bar',data:{labels:AGE_GROUPS,datasets:[{label:'M',data:AGE_GROUPS.map(ag=>ageCounts[ag].M),backgroundColor:'#3b82f6'},{label:'F',data:AGE_GROUPS.map(ag=>ageCounts[ag].F),backgroundColor:'#a855f7'}]},options:{plugins:{legend:{position:'top'}},scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true}}}});
+  // Age group bar (detailed breakdown)
+  const ageCounts={}; AGE_GROUPS_DET.forEach(ag=>ageCounts[ag]={M:0,F:0});
+  pats.forEach(p=>{const ag=getAgeGroupDet(Number(p.idade));if(ageCounts[ag]){ageCounts[ag][p.genero||'M']++;}});
+  _charts['ch-age']=new Chart(document.getElementById('ch-age'),{type:'bar',data:{labels:AGE_GROUPS_DET,datasets:[{label:'M',data:AGE_GROUPS_DET.map(ag=>ageCounts[ag].M),backgroundColor:'#3b82f6'},{label:'F',data:AGE_GROUPS_DET.map(ag=>ageCounts[ag].F),backgroundColor:'#a855f7'}]},options:{plugins:{legend:{position:'top'}},scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true}}}});
 }
 
 function renderAnDiag(pats) {
@@ -1206,12 +1291,13 @@ function renderAnDiag(pats) {
     <div class="card" style="padding:0">
     <div class="tbl-wrap"><table>
       <thead><tr>
-        <th>Diagnóstico</th><th class="tc">♂ M</th><th class="tc">♀ F</th>
+        <th>CID-10</th><th>Diagnóstico</th><th class="tc">♂ M</th><th class="tc">♀ F</th>
         <th class="tc">Total</th><th class="tc">%</th>
         <th class="tc">Óbitos</th><th class="tc">Tx.Mort.</th>
         <th class="tc">Idade Méd.</th><th class="tc">Dias Méd.</th>
       </tr></thead>
-      <tbody>${sorted.map(([d,v])=>`<tr>
+      <tbody>${sorted.map(([d,v])=>{const cid=(DIAGNOSES.find(x=>x.name===d)||{}).cid||'—';return`<tr>
+        <td><span style="font-family:monospace;font-size:.8rem;background:#f1f5f9;padding:2px 6px;border-radius:4px">${cid}</span></td>
         <td style="font-weight:500">${d}</td>
         <td class="tc"><span class="bm bm-m">${v.M}</span></td>
         <td class="tc"><span class="bm bm-f">${v.F}</span></td>
@@ -1221,7 +1307,7 @@ function renderAnDiag(pats) {
         <td class="tc">${v.total?(v.obitos/v.total*100).toFixed(1)+'%':'—'}</td>
         <td class="tc">${v.total?Math.round(v.totalAge/v.total):'—'}</td>
         <td class="tc">${v.total?Math.round(v.totalLOS/v.total):'—'}</td>
-      </tr>`).join('')}</tbody>
+      </tr>`}).join('')}</tbody>
     </table></div></div>`;
 }
 
@@ -1318,7 +1404,7 @@ function renderDB() {
   const slice=pats.slice((_dbPage-1)*DB_PER_PAGE, _dbPage*DB_PER_PAGE);
 
   if(!slice.length) {
-    document.getElementById('db-tbody').innerHTML=`<tr><td colspan="10"><div class="empty"><div class="empty-ico">🗃️</div><h3>Sem resultados</h3><p>Altere os filtros ou registe novos doentes.</p></div></td></tr>`;
+    document.getElementById('db-tbody').innerHTML=`<tr><td colspan="12"><div class="empty"><div class="empty-ico">🗃️</div><h3>Sem resultados</h3><p>Altere os filtros ou registe novos doentes.</p></div></td></tr>`;
     document.getElementById('db-pag').innerHTML='';
     return;
   }
@@ -1328,7 +1414,9 @@ function renderDB() {
     <td style="font-weight:500">${p.nome}</td>
     <td style="font-family:monospace;font-size:.78rem">${p.processo||'—'}</td>
     <td class="tc">${p.idade}</td>
+    <td class="tc" style="font-size:.75rem">${p.faixaEtaria||getAgeGroup(Number(p.idade))}</td>
     <td class="tc"><span class="bm bm-${(p.genero||'m').toLowerCase()}">${p.genero}</span></td>
+    <td class="tc" style="font-family:monospace;font-size:.78rem">${getDiagCID(p)}</td>
     <td>${getDiagLabel(p)}</td>
     <td style="font-size:.78rem;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(p.procedimentos||[]).join(', ')||'—'}</td>
     <td class="tc">${calcLOS(p)}</td>
@@ -1569,8 +1657,102 @@ function clearAllData(){
   showToast('Todos os dados eliminados.','ok');
 }
 
+// ══ CID HELPERS ══
+function getDiagCID(p) {
+  const d=p.diagnosticoFinal||p.diagnosticoAdmissao;
+  if(!d||d==='Outro') return '—';
+  const found=DIAGNOSES.find(x=>x.name===d);
+  return found?found.cid:'—';
+}
+
+// ══ CONFIG ══
+const CFG_KEY='cirg_geral_cfg';
+let CFG={totalCamas:30,nomeServico:'Cirurgia Geral'};
+function loadCfg(){try{const r=localStorage.getItem(CFG_KEY);if(r)CFG={...CFG,...JSON.parse(r)};}catch(e){}}
+function saveCfg(){
+  CFG.totalCamas=Number(document.getElementById('cfg-camas').value)||30;
+  CFG.nomeServico=document.getElementById('cfg-nome').value||'Cirurgia Geral';
+  localStorage.setItem(CFG_KEY,JSON.stringify(CFG));
+  closeCfgModal(); showToast('✅ Configurações gravadas','ok');
+  updateMovCamasConf();
+}
+function openCfgModal(){
+  document.getElementById('cfg-camas').value=CFG.totalCamas;
+  document.getElementById('cfg-nome').value=CFG.nomeServico;
+  document.getElementById('cfg-modal').classList.add('open');
+}
+function closeCfgModal(){ document.getElementById('cfg-modal').classList.remove('open'); }
+function updateMovCamasConf(){ const el=document.getElementById('mov-camas-conf'); if(el) el.value=CFG.totalCamas; }
+
+// ══ DAILY MOVEMENT ══
+const MOV_KEY='cirg_geral_mov';
+let MOVS=[];
+function loadMovs(){try{MOVS=JSON.parse(localStorage.getItem(MOV_KEY)||'[]');}catch(e){MOVS=[];}}
+function saveMovs(){localStorage.setItem(MOV_KEY,JSON.stringify(MOVS));}
+
+function saveMov(){
+  const data=document.getElementById('mov-data').value;
+  const diasCamas=Number(document.getElementById('mov-dias-camas').value)||0;
+  const diasDoentes=Number(document.getElementById('mov-dias-doentes').value)||0;
+  if(!data){showToast('Data obrigatória','err');return;}
+  if(!diasCamas){showToast('Dias camas obrigatório','err');return;}
+  if(!diasDoentes){showToast('Dias doentes obrigatório','err');return;}
+  const mov={
+    data, diasCamas, diasDoentes,
+    admissoes:Number(document.getElementById('mov-admissoes').value)||0,
+    altas:Number(document.getElementById('mov-altas').value)||0,
+    obitos:Number(document.getElementById('mov-obitos').value)||0,
+    transferencias:Number(document.getElementById('mov-transferencias').value)||0,
+    existentes:Number(document.getElementById('mov-existentes').value)||0,
+    totalCamas:CFG.totalCamas,
+    _ts:Date.now()
+  };
+  const idx=MOVS.findIndex(m=>m.data===data);
+  if(idx>=0) MOVS[idx]=mov; else MOVS.push(mov);
+  MOVS.sort((a,b)=>b.data.localeCompare(a.data));
+  saveMovs();
+  showMovIndicadores(mov);
+  renderMovHist();
+  showToast('✅ Movimento gravado','ok');
+}
+
+function showMovIndicadores(mov){
+  const taxaOcup=mov.diasCamas?(mov.diasDoentes/mov.diasCamas*100).toFixed(1):'0.0';
+  const rotacao=mov.diasDoentes?(((mov.altas+mov.obitos+mov.transferencias)/mov.diasDoentes)*CFG.totalCamas).toFixed(2):'0.00';
+  const permanencia=(mov.altas+mov.obitos+mov.transferencias)?(mov.diasDoentes/(mov.altas+mov.obitos+mov.transferencias)).toFixed(1):'0.0';
+  document.getElementById('mov-indicadores').innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="kpi" style="padding:12px"><div class="kpi-val" style="font-size:1.6rem;color:#1e40af">${taxaOcup}%</div><div class="kpi-lbl">Taxa de Ocupação</div></div>
+      <div class="kpi" style="padding:12px"><div class="kpi-val" style="font-size:1.6rem;color:#7c3aed">${permanencia}</div><div class="kpi-lbl">Tempo Médio (dias)</div></div>
+      <div class="kpi" style="padding:12px"><div class="kpi-val" style="font-size:1.6rem;color:#059669">${rotacao}</div><div class="kpi-lbl">Índice de Rotação</div></div>
+      <div class="kpi" style="padding:12px"><div class="kpi-val" style="font-size:1.6rem;color:#d97706">${mov.diasDoentes}</div><div class="kpi-lbl">Dias Doentes</div></div>
+    </div>`;
+}
+
+function renderMovHist(){
+  const slice=MOVS.slice(0,30);
+  if(!slice.length){document.getElementById('mov-hist').innerHTML='<div class="empty"><div class="empty-ico">📅</div><h3>Sem registos</h3></div>';return;}
+  document.getElementById('mov-hist').innerHTML=`<div class="tbl-wrap"><table>
+    <thead><tr><th>Data</th><th class="tc">D.Camas</th><th class="tc">D.Doentes</th><th class="tc">Adm.</th><th class="tc">Altas</th><th class="tc">Óbitos</th><th class="tc">Tx.Ocup.</th></tr></thead>
+    <tbody>${slice.map(m=>{const tx=m.diasCamas?(m.diasDoentes/m.diasCamas*100).toFixed(0):'0';return`<tr>
+      <td>${fmt(m.data)}</td><td class="tc">${m.diasCamas}</td><td class="tc">${m.diasDoentes}</td>
+      <td class="tc">${m.admissoes}</td><td class="tc">${m.altas}</td>
+      <td class="tc">${m.obitos?`<span class="bm bm-obt">${m.obitos}</span>`:'0'}</td>
+      <td class="tc"><span style="font-weight:600;color:${Number(tx)>=85?'#dc2626':Number(tx)>=70?'#d97706':'#059669'}">${tx}%</span></td>
+    </tr>`;}).join('')}</tbody>
+  </table></div>`;
+}
+
+function initMovTab(){
+  document.getElementById('mov-data').value=today();
+  updateMovCamasConf();
+  renderMovHist();
+}
+
 // ══ INIT ══
 loadData();
+loadCfg();
+loadMovs();
 updateSidebar();
 renderHome();
 document.getElementById('home-date').textContent=new Date().toLocaleDateString('pt-PT',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
