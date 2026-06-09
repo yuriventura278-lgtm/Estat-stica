@@ -243,6 +243,9 @@ select option{background:var(--surface)}
   <div class="nav-item" onclick="showSection('uci')" id="nav-uci">
     <span class="nav-icon">&#127973;</span> UCI
   </div>
+  <div class="nav-item" onclick="showSection('diag')" id="nav-diag">
+    <span class="nav-icon">&#128196;</span> Diagnósticos
+  </div>
   <div class="nav-group">Registos</div>
   <div class="nav-item" onclick="showSection('transferencias')" id="nav-transferencias">
     <span class="nav-icon">&#128260;</span> Transferências
@@ -576,6 +579,59 @@ select option{background:var(--surface)}
     </div>
   </div>
 
+  <!-- ── DIAGNÓSTICOS ─────────────────────────────────── -->
+  <div class="section" id="sec-diag">
+    <div class="section-header">
+      <h2>&#128196; Diagnósticos do Dia</h2>
+      <p>Doenças mais frequentes registadas no Banco de Urgência — pode adicionar várias</p>
+    </div>
+    <div class="card">
+      <div class="card-head card-lb-blue" style="cursor:default">
+        <span class="card-title"><span class="ci">&#128196;</span> Medicina Interna — Diagnósticos</span>
+      </div>
+      <div class="card-body">
+        <div id="diag-med-list"></div>
+        <button class="btn-add" onclick="addDoenca('diag-med-list')">+ Adicionar Diagnóstico</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head card-lb-amber" style="cursor:default">
+        <span class="card-title"><span class="ci">&#128196;</span> Cirurgia Geral — Diagnósticos</span>
+      </div>
+      <div class="card-body">
+        <div id="diag-cir-list"></div>
+        <button class="btn-add" onclick="addDoenca('diag-cir-list')">+ Adicionar Diagnóstico</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head card-lb-red" style="cursor:default">
+        <span class="card-title"><span class="ci">&#128196;</span> Ortopedia — Diagnósticos</span>
+      </div>
+      <div class="card-body">
+        <div id="diag-ort-list"></div>
+        <button class="btn-add" onclick="addDoenca('diag-ort-list')">+ Adicionar Diagnóstico</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head card-lb-green" style="cursor:default">
+        <span class="card-title"><span class="ci">&#128196;</span> Neurocirurgia — Diagnósticos</span>
+      </div>
+      <div class="card-body">
+        <div id="diag-neu-list"></div>
+        <button class="btn-add" onclick="addDoenca('diag-neu-list')">+ Adicionar Diagnóstico</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head card-lb-purple" style="cursor:default">
+        <span class="card-title"><span class="ci">&#128196;</span> Maxilo Facial — Diagnósticos</span>
+      </div>
+      <div class="card-body">
+        <div id="diag-max-list"></div>
+        <button class="btn-add" onclick="addDoenca('diag-max-list')">+ Adicionar Diagnóstico</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ── TRANSFERÊNCIAS ───────────────────────────────── -->
   <div class="section" id="sec-transferencias">
     <div class="section-header">
@@ -674,6 +730,12 @@ select option{background:var(--surface)}
       </div>
       <div class="card-body" id="stat-sin"></div>
     </div>
+    <div class="card" id="stat-diag-card" style="display:none">
+      <div class="card-head card-lb-blue" style="cursor:default">
+        <span class="card-title"><span class="ci">&#128196;</span> Doenças Mais Frequentes (Diagnósticos)</span>
+      </div>
+      <div class="card-body" id="stat-diag"></div>
+    </div>
   </div>
 
 </div><!-- /main -->
@@ -701,10 +763,16 @@ const UNIDADES = [
 const ESPECIALIDADES = ["Cirurgia Geral","Cirurgia Maxilo Facial","Medicina Interna",
   "Neurocirurgia","Oftalmologia","Ortopedia","Otorrinolaringologia"];
 const CAUSAS_OBITO = [
-  "PCR — Paragem Cardíaca","Sepsis / Choque Séptico","Trauma Grave",
-  "Insuficiência Respiratória","AVC Isquémico","AVC Hemorrágico","IAM — Enfarte Agudo",
-  "Insuficiência Cardíaca","Insuficiência Hepática","Insuficiência Renal Aguda",
-  "Embolia Pulmonar","Choque Hipovolémico","Hemorragia Interna","Tumor / Neoplasia","Outra Causa"
+  "Broncopneumonia","Morte Súbita / Causa Desconhecida","Hemorragia Intracerebral",
+  "Insuficiência Cardíaca Congestiva","Morte Instantânea","Doença Cardíaca Hipertensiva",
+  "Meningococcemia","Malária Grave (P. Falciparum)","HIV/SIDA",
+  "Traumatismo Intracraniano","Sequelas de AVC","Infarto Cerebral",
+  "Pneumonia Congénita","Morte sem Assistência","Morte <24h após Início de Sintomas",
+  "Embolia Pulmonar c/ Cor Pulmonale Agudo","Hemorragia Intracerebral do Tronco Cerebral",
+  "Doença Renal Hipertensiva c/ Insuf. Renal","Hemorragia Subaracnóide",
+  "Pneumonia por Microorganismo","Diarréia e Gastroenterite Infecciosa",
+  "Malária por P. Falciparum","Hemorragia Intracerebral Intraventricular",
+  "Insuficiência Respiratória Aguda","Meningite / Meningoencefalite","Outra Causa"
 ];
 const SINISTRALIDADE = ["Acidentes de Viação","Agressões Físicas","Acidentes Domésticos",
   "Acidentes de Trabalho","Ferimentos por Arma Branca",
@@ -717,6 +785,29 @@ const ESP_PQCIR = ["Cirurgia Geral","Ortopedia","Maxilo Facial",
   "Neurocirurgia","Otorrinolaringologia","Oftalmologia"];
 const GENEROS = ["M ≥15","F ≥15","M <15","F <15"];
 const BLOCO_ESPS = ["Cirurgia Geral","Ortopedia","Neurocirurgia","Maxilo Facial"];
+const DOENCAS = [
+  "Malária Não Especificada (B54)","Hipertensão Essencial (I10)",
+  "Malária por P. Falciparum (B50)","Infarto Cerebral (I63)",
+  "Hemorragia Intracerebral (I61)","Diarréia e Gastroenterite Infecciosa (A09)",
+  "Insuficiência Renal Crónica (N18)","Diabetes Mellitus Tipo 2 (E11)",
+  "AVC Não Especificado (I64)","HIV/SIDA (B20)",
+  "Broncopneumonia (J18.0)","Dorsalgia (M54)",
+  "Insuficiência Cardíaca Congestiva (I50.0)","Tuberculose Pulmonar (A15)",
+  "Doença Renal Hipertensiva c/ Insuf. Renal (I12.0)","Malária Grave P. Falciparum (B50.8)",
+  "Cefaléia (R51)","Gastrite Aguda (K29.1)",
+  "Nasofaringite Aguda / Resfriado (J00)","Celulite da Face (L03.2)",
+  "Gastrite Superficial Crónica (K29.3)","Epilepsia (G40)",
+  "Traumatismo Intracraniano (S06)","Outros Transtornos Urinários (N39)",
+  "Diabetes Mellitus Tipo 1 (E10)","Encefalopatia Hipertensiva (I67.4)",
+  "Mal Estar / Fadiga (R53)","Dor Torácica (R07)",
+  "Febre de Origem Desconhecida (R50)","Cardiomiopatia Dilatada (I42.0)",
+  "Insuficiência Renal Aguda (N17)","Hérnia Inguinal (K40)",
+  "Pneumonia Não Especificada (J18.9)","Asma (J45)",
+  "Anemia Falciforme com Crise (D57.0)","Abdome Agudo (R10.0)",
+  "Apendicite Aguda (K35)","Peritonite (K65)",
+  "Gravidez Ectópica (O00)","Insuficiência Cardíaca (I50)",
+  "Encefalopatia por Malária (B50.0)","Outra Doença"
+];
 
 // ── Estado ───────────────────────────────────────────────
 const STORE_KEY = "bu_html_v2";
@@ -935,6 +1026,15 @@ function addExtraEsp(){
   el.appendChild(row);
 }
 
+function addDoenca(listId){
+  const el=document.getElementById(listId);
+  const row=document.createElement("div"); row.className="dyn-row";
+  row.innerHTML=`${makeSelect(DOENCAS,"")}
+    <input type="number" min="0" value="1" style="width:70px" title="N.º de casos"/>
+    <button class="btn-del" onclick="this.parentElement.remove()">&#10005;</button>`;
+  el.appendChild(row);
+}
+
 function addExtraProc(){
   const el=document.getElementById("extra-proc-list");
   const row=document.createElement("div"); row.className="dyn-row";
@@ -1066,6 +1166,13 @@ function collectDay(){
   PROCEDIMENTOS.forEach(p=>{ pq.procs[p]=gv("pq-proc-"+slugify(p)); });
   pq.extra_procs=serializeList("extra-proc-list");
   day.pq=pq;
+  day.diag={
+    med:serializeList("diag-med-list"),
+    cir:serializeList("diag-cir-list"),
+    ort:serializeList("diag-ort-list"),
+    neu:serializeList("diag-neu-list"),
+    max:serializeList("diag-max-list"),
+  };
   return day;
 }
 
@@ -1130,6 +1237,10 @@ function applyDay(day){
     const inputs=[...row.querySelectorAll("input")];
     inputs.forEach((inp,i)=>inp.value=obj["f"+i]||"");
   });
+  const diag=day.diag||{};
+  ["med","cir","ort","neu","max"].forEach(sec=>{
+    deserializeList("diag-"+sec+"-list",diag[sec]||[],addDoenca);
+  });
   updateSummary(); updateTransfTotal(); updatePqTotals();
 }
 
@@ -1140,7 +1251,8 @@ function clearAllInputs(){
   ["tr-recv-list","tr-done-list","med-recv-list","med-done-list","med-obitos-list",
    "cir-recv-list","cir-done-list","cir-obitos-list","ort-recv-list","ort-done-list","ort-obitos-list",
    "neu-recv-list","neu-done-list","neu-obitos-list","max-recv-list","max-done-list","max-obitos-list",
-   "uci-obitos-list","extra-unid-list","extra-esp-list","extra-proc-list"].forEach(id=>{
+   "uci-obitos-list","extra-unid-list","extra-esp-list","extra-proc-list",
+   "diag-med-list","diag-cir-list","diag-ort-list","diag-neu-list","diag-max-list"].forEach(id=>{
     const el=document.getElementById(id); if(el) el.innerHTML="";
   });
 }
@@ -1266,6 +1378,20 @@ function renderStats(){
       `<div class="stat-row"><span>${k}</span><span class="badge badge-amber">${v}</span></div>`
     ).join("");
   } else { sinCard.style.display="none"; sinEl.innerHTML=""; }
+  const diagMap={};
+  entries.forEach(d=>{
+    ["med","cir","ort","neu","max"].forEach(sec=>{
+      (d.diag?.[sec]||[]).forEach(o=>{ const c=o.f0; const v=parseInt(o.f1||0)||0; if(c&&c!=="-- Selecionar --"&&v>0) diagMap[c]=(diagMap[c]||0)+v; });
+    });
+  });
+  const diagCard=document.getElementById("stat-diag-card");
+  const diagEl=document.getElementById("stat-diag");
+  if(Object.keys(diagMap).length){
+    diagCard.style.display="";
+    diagEl.innerHTML=Object.entries(diagMap).sort(([,a],[,b])=>b-a).map(([k,v])=>
+      `<div class="stat-row"><span>${k}</span><span class="badge badge-blue">${v}</span></div>`
+    ).join("");
+  } else { diagCard.style.display="none"; diagEl.innerHTML=""; }
 }
 </script>
 </body>
