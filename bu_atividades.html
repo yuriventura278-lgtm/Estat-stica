@@ -1,0 +1,1272 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Banco de Urgência — Hospital do Prenda</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --header-h:56px;--staff-h:38px;--sidebar-w:234px;
+  --bg:#f4f6fa;--surface:#fff;--surface2:#f1f5f9;
+  --border:#e2e8f0;--text:#0f172a;--muted:#64748b;
+  --accent:#1a56db;--green:#10b981;--amber:#f59e0b;--red:#ef4444;--purple:#7c3aed;
+  --fh:'Inter',sans-serif;--fm:'IBM Plex Mono',monospace;
+}
+html.dark{--bg:#0c0f14;--surface:#141820;--surface2:#0f1520;--border:rgba(30,40,64,.9);--text:#e2e8f0;--muted:#64748b;}
+body{background:var(--bg);color:var(--text);font-family:var(--fh);min-height:100vh;transition:background .2s,color .2s}
+
+/* ── Login overlay ───────────────────────────────────────── */
+#login-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+#login-box{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:36px 40px;width:360px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+#login-box h2{font-size:20px;font-weight:800;color:var(--accent);margin-bottom:4px}
+#login-box p{color:var(--muted);font-size:13px;margin-bottom:24px}
+#login-box label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px}
+#login-box input{width:100%;border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:14px;background:var(--bg);color:var(--text);font-family:var(--fh);margin-bottom:14px;outline:none}
+#login-box input:focus{border-color:var(--accent)}
+#login-box .btn-login{width:100%;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px;font-weight:700;font-size:14px;cursor:pointer;margin-top:4px}
+#login-box .btn-login:hover{opacity:.9}
+#login-err{color:var(--red);font-size:12px;margin-top:8px;display:none}
+
+/* ── Staff bar ───────────────────────────────────────────── */
+#staff-bar{position:fixed;top:0;left:0;right:0;height:var(--staff-h);background:var(--accent);color:#fff;display:flex;align-items:center;padding:0 16px;gap:12px;z-index:200;font-size:12px}
+#staff-bar .sb-logo{font-weight:800;font-size:13px;letter-spacing:-.3px;white-space:nowrap}
+#staff-bar .sb-sep{opacity:.35;font-size:16px}
+#staff-bar .sb-user{display:flex;align-items:center;gap:6px}
+#staff-bar .sb-avatar{width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+#staff-bar .sb-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+#staff-bar input[type=date]{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);border-radius:6px;color:#fff;padding:3px 8px;font-size:12px;font-family:var(--fh);outline:none;cursor:pointer}
+#staff-bar input[type=date]:focus{background:rgba(255,255,255,.25)}
+.sb-btn{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:600;cursor:pointer;font-family:var(--fh)}
+.sb-btn:hover{background:rgba(255,255,255,.25)}
+
+/* ── Header ──────────────────────────────────────────────── */
+#hdr{position:fixed;top:var(--staff-h);left:0;right:0;height:var(--header-h);background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:14px;z-index:190}
+#hdr .hdr-title{font-size:16px;font-weight:800;color:var(--text)}
+#hdr .hdr-sub{font-size:11px;color:var(--muted);background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:2px 8px}
+#hdr .hdr-right{margin-left:auto;display:flex;gap:8px;align-items:center}
+.hdr-btn{border:1px solid var(--border);background:var(--surface2);color:var(--text);border-radius:7px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:var(--fh)}
+.hdr-btn:hover{border-color:var(--accent);color:var(--accent)}
+.hdr-btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.hdr-btn.primary:hover{opacity:.9;color:#fff}
+
+/* ── Sidebar ─────────────────────────────────────────────── */
+#sidebar{position:fixed;top:calc(var(--staff-h) + var(--header-h));left:0;width:var(--sidebar-w);bottom:0;background:var(--surface);border-right:1px solid var(--border);overflow-y:auto;z-index:180;padding:12px 0}
+.nav-group{padding:6px 14px 3px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted)}
+.nav-item{display:flex;align-items:center;gap:10px;padding:8px 18px;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;border-left:3px solid transparent;transition:all .15s;text-decoration:none}
+.nav-item:hover{background:var(--surface2);color:var(--text)}
+.nav-item.active{background:color-mix(in srgb,var(--accent) 10%,transparent);color:var(--accent);border-left-color:var(--accent);font-weight:600}
+.nav-icon{width:18px;text-align:center;font-size:14px;flex-shrink:0}
+.nav-badge{margin-left:auto;background:var(--accent);color:#fff;border-radius:10px;padding:1px 7px;font-size:10px;font-weight:700}
+
+/* ── Main content ────────────────────────────────────────── */
+#main{margin-top:calc(var(--staff-h) + var(--header-h));margin-left:var(--sidebar-w);padding:24px;min-height:calc(100vh - var(--staff-h) - var(--header-h))}
+.section{display:none}
+.section.active{display:block}
+.section-header{margin-bottom:20px}
+.section-header h2{font-size:20px;font-weight:800;color:var(--text);margin-bottom:4px}
+.section-header p{font-size:13px;color:var(--muted)}
+
+/* ── KPI boxes ───────────────────────────────────────────── */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+.kpi-box{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px}
+.kpi-val{font-size:28px;font-weight:800;font-family:var(--fm);line-height:1}
+.kpi-lbl{font-size:11px;color:var(--muted);margin-top:4px;font-weight:500}
+.kpi-accent{color:var(--accent)}
+.kpi-green{color:var(--green)}
+.kpi-amber{color:var(--amber)}
+.kpi-red{color:var(--red)}
+.kpi-purple{color:var(--purple)}
+
+/* ── Cards ───────────────────────────────────────────────── */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:16px}
+.card-head{background:var(--surface2);padding:12px 18px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none;border-bottom:1px solid var(--border)}
+.card-head:hover{background:color-mix(in srgb,var(--accent) 5%,var(--surface2))}
+.card-title{font-weight:700;font-size:14px;display:flex;align-items:center;gap:8px}
+.card-title .ci{font-size:16px}
+.card-tog{color:var(--muted);font-size:12px;transition:transform .2s}
+.card-body{padding:18px}
+.card-body.hidden{display:none}
+.card-lb-blue{border-left:4px solid var(--accent)}
+.card-lb-green{border-left:4px solid var(--green)}
+.card-lb-amber{border-left:4px solid var(--amber)}
+.card-lb-red{border-left:4px solid var(--red)}
+.card-lb-purple{border-left:4px solid var(--purple)}
+
+/* ── Section title inside card ───────────────────────────── */
+.sec-title{color:var(--accent);font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin:14px 0 8px;border-bottom:1px solid var(--border);padding-bottom:4px;display:flex;align-items:center;gap:6px}
+.sec-title:first-child{margin-top:0}
+
+/* ── Form fields ─────────────────────────────────────────── */
+.field{display:flex;flex-direction:column;gap:3px}
+.field label{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+input[type=number],input[type=text],input[type=date],select,textarea{
+  background:var(--bg);border:1px solid var(--border);border-radius:7px;
+  padding:7px 10px;color:var(--text);font-size:13px;width:100%;outline:none;
+  font-family:var(--fh);transition:border-color .15s}
+input[type=number]:focus,input[type=text]:focus,input[type=date]:focus,
+select:focus,textarea:focus{border-color:var(--accent);background:var(--surface)}
+input[type=number]{text-align:center;font-family:var(--fm);font-weight:600}
+select option{background:var(--surface)}
+
+/* ── Grids ───────────────────────────────────────────────── */
+.g2{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.g5{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+
+/* ── Dynamic rows ────────────────────────────────────────── */
+.dyn-row{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 10px}
+.dyn-row select,.dyn-row input{background:var(--surface);font-size:12px}
+.btn-add{background:color-mix(in srgb,var(--accent) 12%,transparent);border:1px dashed var(--accent);color:var(--accent);border-radius:7px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:var(--fh)}
+.btn-add:hover{background:color-mix(in srgb,var(--accent) 20%,transparent)}
+.btn-del{background:color-mix(in srgb,var(--red) 12%,transparent);border:1px solid color-mix(in srgb,var(--red) 30%,transparent);color:var(--red);border-radius:6px;padding:4px 9px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--fh);flex-shrink:0}
+.btn-del:hover{background:color-mix(in srgb,var(--red) 20%,transparent)}
+
+/* ── Badges ──────────────────────────────────────────────── */
+.badge{border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;font-family:var(--fm)}
+.badge-blue{background:color-mix(in srgb,var(--accent) 12%,transparent);color:var(--accent);border:1px solid color-mix(in srgb,var(--accent) 25%,transparent)}
+.badge-green{background:color-mix(in srgb,var(--green) 12%,transparent);color:var(--green);border:1px solid color-mix(in srgb,var(--green) 25%,transparent)}
+.badge-amber{background:color-mix(in srgb,var(--amber) 12%,transparent);color:var(--amber);border:1px solid color-mix(in srgb,var(--amber) 25%,transparent)}
+.badge-red{background:color-mix(in srgb,var(--red) 12%,transparent);color:var(--red);border:1px solid color-mix(in srgb,var(--red) 25%,transparent)}
+
+/* ── Tables ──────────────────────────────────────────────── */
+.tbl{width:100%;border-collapse:collapse;font-size:12px}
+.tbl th{padding:8px 10px;color:var(--muted);border-bottom:2px solid var(--border);text-align:left;white-space:nowrap;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.tbl td{padding:6px 8px;border-bottom:1px solid var(--border)}
+.tbl tbody tr:last-child td{border-bottom:none}
+.tbl td input{padding:4px 6px;font-size:12px}
+
+/* ── Stats period bar ────────────────────────────────────── */
+.spb{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+.spb-btn{background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:20px;padding:5px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:var(--fh)}
+.spb-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.spb-btn:hover:not(.active){border-color:var(--accent);color:var(--accent)}
+
+/* ── Stat rows ───────────────────────────────────────────── */
+.stat-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px}
+.stat-row:last-child{border-bottom:none}
+
+/* ── Toast ───────────────────────────────────────────────── */
+#toast{position:fixed;bottom:24px;right:24px;background:var(--green);color:#fff;padding:10px 20px;border-radius:9px;font-weight:700;font-size:13px;display:none;z-index:999;box-shadow:0 4px 16px rgba(0,0,0,.2)}
+
+/* ── Responsive ──────────────────────────────────────────── */
+@media(max-width:900px){
+  #sidebar{display:none}
+  #main{margin-left:0}
+  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:600px){
+  .g3{grid-template-columns:repeat(2,1fr)}
+  .g4{grid-template-columns:repeat(2,1fr)}
+  .g5{grid-template-columns:repeat(2,1fr)}
+  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-overlay">
+  <div id="login-box">
+    <h2>&#127973; Banco de Urgência</h2>
+    <p>Hospital do Prenda &mdash; Sistema de Gestão</p>
+    <label>Utilizador</label>
+    <input type="text" id="l-user" placeholder="nome de utilizador" autocomplete="username"/>
+    <label>Senha</label>
+    <input type="password" id="l-pass" placeholder="senha" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"/>
+    <button class="btn-login" onclick="doLogin()">Entrar</button>
+    <div id="login-err">&#10007; Credenciais inválidas</div>
+  </div>
+</div>
+
+<!-- STAFF BAR -->
+<div id="staff-bar">
+  <span class="sb-logo">&#127973; Banco de Urgência</span>
+  <span class="sb-sep">|</span>
+  <span style="color:rgba(255,255,255,.8);font-size:11px">Hospital do Prenda</span>
+  <div class="sb-right">
+    <input type="date" id="sel-date" onchange="changeDate()" title="Selecionar data"/>
+    <button class="sb-btn" onclick="saveData()">&#128190; Guardar</button>
+    <button class="sb-btn" onclick="exportBackup()" title="Exportar cópia de segurança">&#8595; Backup</button>
+    <button class="sb-btn" onclick="document.getElementById('import-file').click()" title="Importar backup">&#8593; Importar</button>
+    <input type="file" id="import-file" accept=".json" style="display:none" onchange="importBackup(event)"/>
+    <button class="sb-btn" onclick="toggleDark()" id="dark-btn">&#9790; Escuro</button>
+    <div class="sb-user">
+      <div class="sb-avatar" id="sb-avatar">?</div>
+      <span id="sb-username" style="font-weight:600"></span>
+    </div>
+    <button class="sb-btn" onclick="logout()">Sair</button>
+  </div>
+</div>
+
+<!-- HEADER -->
+<div id="hdr">
+  <span class="hdr-title">&#128203; Registo de Atividades Diárias</span>
+  <span class="hdr-sub" id="hdr-date-lbl"></span>
+  <div class="hdr-right">
+    <button class="hdr-btn" onclick="showSection('stats')">&#128200; Estatísticas</button>
+    <button class="hdr-btn primary" onclick="saveData()">&#128190; Guardar</button>
+  </div>
+</div>
+
+<!-- SIDEBAR -->
+<nav id="sidebar">
+  <div class="nav-group">Painel</div>
+  <div class="nav-item active" onclick="showSection('home')" id="nav-home">
+    <span class="nav-icon">&#127968;</span> Início / KPI
+  </div>
+  <div class="nav-group">Serviços</div>
+  <div class="nav-item" onclick="showSection('triagem')" id="nav-triagem">
+    <span class="nav-icon">&#128308;</span> Triagem
+  </div>
+  <div class="nav-item" onclick="showSection('med')" id="nav-med">
+    <span class="nav-icon">&#129658;</span> Medicina Interna
+  </div>
+  <div class="nav-item" onclick="showSection('cir')" id="nav-cir">
+    <span class="nav-icon">&#128295;</span> Cirurgia Geral
+  </div>
+  <div class="nav-item" onclick="showSection('ort')" id="nav-ort">
+    <span class="nav-icon">&#129460;</span> Ortopedia
+  </div>
+  <div class="nav-item" onclick="showSection('neu')" id="nav-neu">
+    <span class="nav-icon">&#129504;</span> Neurocirurgia
+  </div>
+  <div class="nav-item" onclick="showSection('max')" id="nav-max">
+    <span class="nav-icon">&#128512;</span> Maxilo Facial
+  </div>
+  <div class="nav-item" onclick="showSection('blo')" id="nav-blo">
+    <span class="nav-icon">&#128298;</span> Bloco Operatório
+  </div>
+  <div class="nav-item" onclick="showSection('uci')" id="nav-uci">
+    <span class="nav-icon">&#127973;</span> UCI
+  </div>
+  <div class="nav-group">Registos</div>
+  <div class="nav-item" onclick="showSection('transferencias')" id="nav-transferencias">
+    <span class="nav-icon">&#128260;</span> Transferências
+  </div>
+  <div class="nav-item" onclick="showSection('pq-cir')" id="nav-pq-cir">
+    <span class="nav-icon">&#129657;</span> Peq. Cirurgia
+  </div>
+  <div class="nav-group">Análise</div>
+  <div class="nav-item" onclick="showSection('stats')" id="nav-stats">
+    <span class="nav-icon">&#128200;</span> Estatísticas
+  </div>
+</nav>
+
+<!-- MAIN -->
+<div id="main">
+
+  <!-- ── HOME ─────────────────────────────────────────── -->
+  <div class="section active" id="sec-home">
+    <div class="section-header">
+      <h2>&#127968; Painel — Resumo do Dia</h2>
+      <p id="home-date-sub">Carregando...</p>
+    </div>
+    <div class="kpi-grid">
+      <div class="kpi-box card-lb-blue">
+        <div class="kpi-val kpi-accent" id="s-triados">0</div>
+        <div class="kpi-lbl">&#128308; Triados</div>
+      </div>
+      <div class="kpi-box card-lb-green">
+        <div class="kpi-val kpi-green" id="s-obs">0</div>
+        <div class="kpi-lbl">&#129658; Observados</div>
+      </div>
+      <div class="kpi-box card-lb-amber">
+        <div class="kpi-val kpi-amber" id="s-intern">0</div>
+        <div class="kpi-lbl">&#128203; Internamentos</div>
+      </div>
+      <div class="kpi-box card-lb-purple">
+        <div class="kpi-val kpi-purple" id="s-oper">0</div>
+        <div class="kpi-lbl">&#128298; Operados</div>
+      </div>
+      <div class="kpi-box card-lb-red">
+        <div class="kpi-val kpi-red" id="s-obitos">0</div>
+        <div class="kpi-lbl">&#9763; Óbitos</div>
+      </div>
+      <div class="kpi-box">
+        <div class="kpi-val" style="color:var(--muted)" id="s-uci">0</div>
+        <div class="kpi-lbl">&#127973; UCI — Deixados</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head card-lb-blue" style="cursor:default">
+        <span class="card-title"><span class="ci">&#128203;</span> Acesso Rápido</span>
+      </div>
+      <div class="card-body">
+        <div class="g3" style="gap:12px">
+          <button class="hdr-btn" onclick="showSection('triagem')" style="padding:14px;font-size:13px;text-align:left">&#128308; Triagem / Supervisão</button>
+          <button class="hdr-btn" onclick="showSection('med')" style="padding:14px;font-size:13px;text-align:left">&#129658; Medicina Interna</button>
+          <button class="hdr-btn" onclick="showSection('cir')" style="padding:14px;font-size:13px;text-align:left">&#128295; Cirurgia Geral</button>
+          <button class="hdr-btn" onclick="showSection('ort')" style="padding:14px;font-size:13px;text-align:left">&#129460; Ortopedia</button>
+          <button class="hdr-btn" onclick="showSection('neu')" style="padding:14px;font-size:13px;text-align:left">&#129504; Neurocirurgia</button>
+          <button class="hdr-btn" onclick="showSection('max')" style="padding:14px;font-size:13px;text-align:left">&#128512; Maxilo Facial</button>
+          <button class="hdr-btn" onclick="showSection('blo')" style="padding:14px;font-size:13px;text-align:left">&#128298; Bloco Operatório</button>
+          <button class="hdr-btn" onclick="showSection('uci')" style="padding:14px;font-size:13px;text-align:left">&#127973; UCI</button>
+          <button class="hdr-btn" onclick="showSection('transferencias')" style="padding:14px;font-size:13px;text-align:left">&#128260; Transferências</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TRIAGEM ───────────────────────────────────────── -->
+  <div class="section" id="sec-triagem">
+    <div class="section-header">
+      <h2>&#128308; Triagem / Supervisão</h2>
+      <p>Dados de triagem e supervisão diária</p>
+    </div>
+    <div class="card">
+      <div class="card-head card-lb-blue" onclick="toggleCard('triagem')">
+        <span class="card-title"><span class="ci">&#128300;</span> Indicadores Gerais</span>
+        <span class="card-tog" id="tog-triagem">&#9660;</span>
+      </div>
+      <div class="card-body" id="body-triagem">
+        <div class="g3">
+          <div class="field"><label>&#128200; Triados (N&#186;)</label><input type="number" min="0" id="tr-triados" value="0" oninput="updateSummary()"/></div>
+          <div class="field"><label>&#9763; Óbitos</label><input type="number" min="0" id="tr-obitos" value="0" oninput="updateSummary()"/></div>
+          <div class="field"><label>&#9989; Verificações</label><input type="number" min="0" id="tr-verif" value="0"/></div>
+        </div>
+        <div class="sec-title">&#127968; Existência Atual</div>
+        <div class="g4">
+          <div class="field"><label>SOH</label><input type="number" min="0" id="ex-SOH" value="0"/></div>
+          <div class="field"><label>SOM</label><input type="number" min="0" id="ex-SOM" value="0"/></div>
+          <div class="field"><label>PC</label><input type="number" min="0" id="ex-PC" value="0"/></div>
+          <div class="field"><label>TB</label><input type="number" min="0" id="ex-TB" value="0"/></div>
+        </div>
+        <div class="sec-title">&#8593; Transferências Recebidas</div>
+        <div id="tr-recv-list"></div>
+        <button class="btn-add" onclick="addTransf('tr-recv-list',true)">+ Adicionar</button>
+        <div class="sec-title">&#8595; Transferências Feitas</div>
+        <div id="tr-done-list"></div>
+        <button class="btn-add" onclick="addTransf('tr-done-list',true)">+ Adicionar</button>
+        <div class="sec-title">&#128221; Observação</div>
+        <textarea id="tr-obs" rows="3" style="resize:vertical"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── MEDICINA INTERNA ──────────────────────────────── -->
+  <div class="section" id="sec-med">
+    <div class="section-header">
+      <h2>&#129658; Medicina Interna</h2>
+      <p>Registo de atividade do serviço de medicina interna</p>
+    </div>
+    <div class="card">
+      <div class="card-head card-lb-blue" onclick="toggleCard('med')">
+        <span class="card-title"><span class="ci">&#129658;</span> Indicadores</span>
+        <span class="card-tog" id="tog-med">&#9660;</span>
+      </div>
+      <div class="card-body" id="body-med">
+        <div class="g3">
+          <div class="field"><label>&#128065; Observados</label><input type="number" min="0" id="med-obs" value="0" oninput="updateSummary()"/></div>
+          <div class="field"><label>&#127973; Internamentos</label><input type="number" min="0" id="med-intern" value="0" oninput="updateSummary()"/></div>
+          <div class="field"><label>&#128336; Hospital Dia</label><input type="number" min="0" id="med-hd" value="0"/></div>
+        </div>
+        <div class="sec-title">&#127968; Deixados</div>
+        <div class="g5" id="med-deixados"></div>
+        <div class="sec-title">&#8593; Transferências Recebidas</div>
+        <div id="med-recv-list"></div>
+        <button class="btn-add" onclick="addTransf('med-recv-list',false)">+ Adicionar</button>
+        <div class="sec-title">&#8595; Transferências Efetuadas</div>
+        <div id="med-done-list"></div>
+        <button class="btn-add" onclick="addTransf('med-done-list',false)">+ Adicionar</button>
+        <div class="sec-title">&#9763; Óbitos</div>
+        <div id="med-obitos-list"></div>
+        <button class="btn-add" onclick="addObito('med-obitos-list')">+ Adicionar Óbito</button>
+        <div class="sec-title">&#129395; Imagiologia</div>
+        <div class="g4" id="med-img"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── CIRURGIA GERAL ────────────────────────────────── -->
+  <div class="section" id="sec-cir">
+    <div class="section-header">
+      <h2>&#128295; Cirurgia Geral</h2>
+      <p>Registo de atividade do serviço de cirurgia geral</p>
+    </div>
+    <div class="card">
+      <div class="card-head card-lb-amber" onclick="toggleCard('cir')">
+        <span class="card-title"><span class="ci">&#128295;</span> Indicadores</span>
+        <span class="card-tog" id="tog-cir">&#9660;</span>
+      </div>
+      <div class="card-body" id="body-cir">
+        <div class="g3">
+          <div class="field"><label>&#128065; Observados</label><input type="number" min="0" id="cir-obs" value="0" oninput="updateSummary()"/></div>
+          <div class="field"><label>&#127973; Internamentos</label><input type="number" min="0" id="cir-intern" value="0" oninput="updateSummary()"/></div>
+          <div class="field"><label>&#9989; Verificações</label><input type="number" min="0" id="cir-verif" value="0"/></div>
+        </div>
+        <div class="sec-title">&#127968; Deixados</div>
+        <div class="g5" id="cir-deixados"></div>
+        <div class="sec-title">&#8593; Transferências Recebidas</div>
+        <div id="cir-recv-list"></div>
+        <button class="btn-add" onclick="addTransf('cir-recv-list',false)">+ Adicionar</button>
+        <div class="sec-title">&#8595; Transferências Efetuadas</div>
+        <div id="cir-done-list"></div>
+        <button class="btn-add" onclick="addTransf('cir-done-list',false)">+ Adicionar</button>
+        <div class="sec-title">&#9763; Óbitos</div>
+        <div id="cir-obitos-list"></div>
+        <button class="btn-add" onclick="addObito('cir-obitos-list')">+ Adicionar Óbito</button>
+        <div class="sec-title">&#9888; Sinistralidade</div>
+        <div class="g2" id="cir-sin"></div>
+        <div class="sec-title">&#129395; Imagiologia</div>
+        <div class="g4" id="cir-img"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── ORTOPEDIA ─────────────────────────────────────── -->
+  <div class="section" id="sec-ort">
+    <div class="section-header">
+      <h2>&#129460; Ortopedia e Traumatologia</h2>
+      <p>Registo de atividade do serviço de ortopedia</p>
+    </div>
+    <div class="card">
+      <div class="card-head card-lb-red" onclick="toggleCard('ort')">
+        <span class="card-title"><span class="ci">&#129460;</span> Indicadores</span>
+        <span class="card-tog" id="tog-ort">&#9660;</span>
+      </div>
+      <div class="card-body" id="body-ort">
+        <div class="g3">
+          <div class="field"><label>&#128065; Observados</label><input type="number" min="0" id="ort-obs" value="0" oninput="updateSummary()"/></div>
+          <div class="field"><label>&#127973; Internamentos</label><input type="number" min="0" id="ort-intern" value="0" oninput="updateSummary()"/></div>
+          <div class="field"><label>&#9989; Verificações</label><input type="number" min="0" id="ort-verif" value="0"/></div>
+        </div>
+        <div class="sec-title">&#127968; Deixados</div>
+        <div class="g5" id="ort-deixados"></div>
+        <div class="sec-title">&#8593; Transferências Recebidas</div>
+        <div id="ort-recv-list"></div>
+        <button class="btn-add" onclick="addTransf('ort-recv-list',false)">+ Adicionar</button>
+        <div class="sec-title">&#8595; Transferências Efetuadas</div>
+        <div id="ort-done-list"></div>
+        <button class="btn-add" onclick="addTransf('ort-done-list',false)">+ Adicionar</button>
+        <div class="sec-title">&#9763; Óbitos</div>
+        <div id="ort-obitos-list"></div>
+        <button class="btn-add" onclick="addObito('ort-obitos-list')">+ Adicionar Óbito</button>
+        <div class="sec-title">&#9888; Sinistralidade</div>
+        <div class="g2" id="ort-sin"></div>
+        <div class="sec-title">&#129395; Imagiologia</div>
+        <div class="g4" id="ort-img"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── NEUROCIRURGIA ─────────────────────────────────── -->
+  <div class="section" id="sec-neu">
+    <div class="section-header">
+      <h2>&#129504; Neurocirurgia</h2>
+      <p>Registo de atividade do serviço de neurocirurgia</p>
+    </div>
+    <div class="card">
+      <div class="card-head card-lb-green" onclick="toggleCard('neu')">
+        <span class="card-title"><span class="ci">&#129504;</span> Indicadores</span>
+        <span class="card-tog" id="tog-neu">&#9660;</span>
+      </div>
+      <div class="card-body" id="body-neu">
+        <div class="g3">
+          <div class="field"><label>&#128065; Observados</label><input type="number" min="0" id="neu-obs" value="0" oninput="updateSummary()"/></div>
+          <div class="field"><label>&#127973; Internamentos</label><input type="number" min="0" id="neu-intern" value="0" oninput="updateSummary()"/></div>
+          <div class="field"><label>&#9989; Verificações</label><input type="number" min="0" id="neu-verif" value="0"/></div>
+        </div>
+        <div class="sec-title">&#127968; Deixados</div>
+        <div class="g5" id="neu-deixados"></div>
+        <div class="sec-title">&#8593; Transferências Recebidas</div>
+        <div id="neu-recv-list"></div>
+        <button class="btn-add" onclick="addTransf('neu-recv-list',false)">+ Adicionar</button>
+        <div class="sec-title">&#8595; Transferências Efetuadas</div>
+        <div id="neu-done-list"></div>
+        <button class="btn-add" onclick="addTransf('neu-done-list',false)">+ Adicionar</button>
+        <div class="sec-title">&#9763; Óbitos</div>
+        <div id="neu-obitos-list"></div>
+        <button class="btn-add" onclick="addObito('neu-obitos-list')">+ Adicionar Óbito</button>
+        <div class="sec-title">&#9888; Sinistralidade</div>
+        <div class="g2" id="neu-sin"></div>
+        <div class="sec-title">&#129395; Imagiologia</div>
+        <div class="g4" id="neu-img"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── MAXILO FACIAL ─────────────────────────────────── -->
+  <div class="section" id="sec-max">
+    <div class="section-header">
+      <h2>&#128512; Maxilo Facial</h2>
+      <p>Registo de atividade do serviço de maxilo facial</p>
+    </div>
+    <div class="card">
+      <div class="card-head card-lb-purple" onclick="toggleCard('max')">
+        <span class="card-title"><span class="ci">&#128512;</span> Indicadores</span>
+        <span class="card-tog" id="tog-max">&#9660;</span>
+      </div>
+      <div class="card-body" id="body-max">
+        <div class="g3">
+          <div class="field"><label>&#128065; Observados</label><input type="number" min="0" id="max-obs" value="0" oninput="updateSummary()"/></div>
+          <div class="field"><label>&#127973; Internamentos</label><input type="number" min="0" id="max-intern" value="0" oninput="updateSummary()"/></div>
+          <div class="field"><label>&#9989; Verificações</label><input type="number" min="0" id="max-verif" value="0"/></div>
+        </div>
+        <div class="sec-title">&#127968; Deixados</div>
+        <div class="g5" id="max-deixados"></div>
+        <div class="sec-title">&#8593; Transferências Recebidas</div>
+        <div id="max-recv-list"></div>
+        <button class="btn-add" onclick="addTransf('max-recv-list',false)">+ Adicionar</button>
+        <div class="sec-title">&#8595; Transferências Efetuadas</div>
+        <div id="max-done-list"></div>
+        <button class="btn-add" onclick="addTransf('max-done-list',false)">+ Adicionar</button>
+        <div class="sec-title">&#9763; Óbitos</div>
+        <div id="max-obitos-list"></div>
+        <button class="btn-add" onclick="addObito('max-obitos-list')">+ Adicionar Óbito</button>
+        <div class="sec-title">&#9888; Sinistralidade</div>
+        <div class="g2" id="max-sin"></div>
+        <div class="sec-title">&#129395; Imagiologia</div>
+        <div class="g4" id="max-img"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── BLOCO OPERATÓRIO ──────────────────────────────── -->
+  <div class="section" id="sec-blo">
+    <div class="section-header">
+      <h2>&#128298; Bloco Operatório</h2>
+      <p>Registo de atividade cirúrgica</p>
+    </div>
+    <div class="card">
+      <div class="card-head card-lb-amber" onclick="toggleCard('blo')">
+        <span class="card-title"><span class="ci">&#128298;</span> Cirurgias</span>
+        <span class="card-tog" id="tog-blo">&#9660;</span>
+      </div>
+      <div class="card-body" id="body-blo">
+        <div class="g2" style="max-width:340px">
+          <div class="field">
+            <label>&#128200; Total Operados</label>
+            <input type="number" min="0" id="blo-total" value="0" oninput="updateSummary()"/>
+          </div>
+        </div>
+        <div class="sec-title">&#128203; Por Especialidade</div>
+        <div id="blo-esps"></div>
+        <div class="sec-title">&#129395; Imagiologia</div>
+        <div class="g4" id="blo-img"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── UCI ──────────────────────────────────────────── -->
+  <div class="section" id="sec-uci">
+    <div class="section-header">
+      <h2>&#127973; UCI — Unidade de Cuidados Intensivos</h2>
+      <p>Registo de atividade da UCI</p>
+    </div>
+    <div class="card">
+      <div class="card-head card-lb-red" onclick="toggleCard('uci')">
+        <span class="card-title"><span class="ci">&#127973;</span> UCI</span>
+        <span class="card-tog" id="tog-uci">&#9660;</span>
+      </div>
+      <div class="card-body" id="body-uci">
+        <div class="g2" style="max-width:340px">
+          <div class="field">
+            <label>&#127973; Doentes Deixados</label>
+            <input type="number" min="0" id="uci-deixados" value="0" oninput="updateSummary()"/>
+          </div>
+        </div>
+        <div class="sec-title">&#9763; Óbitos / Causas</div>
+        <div id="uci-obitos-list"></div>
+        <button class="btn-add" onclick="addObito('uci-obitos-list')">+ Adicionar Óbito</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TRANSFERÊNCIAS ───────────────────────────────── -->
+  <div class="section" id="sec-transferencias">
+    <div class="section-header">
+      <h2>&#128260; Transferências — Registo Detalhado</h2>
+      <p>Entradas por unidade hospitalar e especialidade</p>
+    </div>
+    <div class="card">
+      <div class="card-head card-lb-blue" style="cursor:default">
+        <span class="card-title"><span class="ci">&#127968;</span> Por Unidade Hospitalar</span>
+        <span id="lbl-total-unid" class="badge badge-blue">Total: 0</span>
+      </div>
+      <div class="card-body">
+        <div class="g2" id="transf-unidades"></div>
+        <div style="margin-top:10px">
+          <button class="btn-add" onclick="addExtraUnid()">+ Outro Hospital</button>
+        </div>
+        <div id="extra-unid-list" style="margin-top:8px"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head card-lb-green" style="cursor:default">
+        <span class="card-title"><span class="ci">&#128203;</span> Por Especialidade</span>
+        <span id="lbl-total-esp" class="badge badge-green">Total: 0</span>
+      </div>
+      <div class="card-body">
+        <div class="g2" id="transf-esps"></div>
+        <div style="margin-top:10px">
+          <button class="btn-add" onclick="addExtraEsp()">+ Outra Especialidade</button>
+        </div>
+        <div id="extra-esp-list" style="margin-top:8px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PEQUENA CIRURGIA ──────────────────────────────── -->
+  <div class="section" id="sec-pq-cir">
+    <div class="section-header">
+      <h2>&#129657; Pequena Cirurgia</h2>
+      <p>Observados por especialidade, género e faixa etária</p>
+    </div>
+    <div class="card">
+      <div class="card-head card-lb-green" style="cursor:default">
+        <span class="card-title"><span class="ci">&#129657;</span> Observados por Especialidade</span>
+      </div>
+      <div class="card-body">
+        <div style="overflow-x:auto">
+          <table class="tbl" id="pq-table"></table>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head card-lb-amber" style="cursor:default">
+        <span class="card-title"><span class="ci">&#128295;</span> Atos e Procedimentos</span>
+      </div>
+      <div class="card-body">
+        <div class="g2" id="pq-procs"></div>
+        <div style="margin-top:10px">
+          <button class="btn-add" onclick="addExtraProc()">+ Adicionar Procedimento</button>
+        </div>
+        <div id="extra-proc-list" style="margin-top:8px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── ESTATÍSTICAS ──────────────────────────────────── -->
+  <div class="section" id="sec-stats">
+    <div class="section-header">
+      <h2>&#128200; Estatísticas</h2>
+      <p>Análise agregada por período</p>
+    </div>
+    <div class="card">
+      <div class="card-head card-lb-blue" style="cursor:default">
+        <span class="card-title"><span class="ci">&#128337;</span> Período de Análise</span>
+      </div>
+      <div class="card-body">
+        <div class="spb">
+          <button class="spb-btn active" onclick="setPeriodo('semana',this)">Semana</button>
+          <button class="spb-btn" onclick="setPeriodo('mes',this)">Mês</button>
+          <button class="spb-btn" onclick="setPeriodo('trimestre',this)">Trimestre</button>
+          <button class="spb-btn" onclick="setPeriodo('semestre',this)">Semestre</button>
+          <button class="spb-btn" onclick="setPeriodo('anual',this)">Anual</button>
+          <span id="periodo-info" style="color:var(--muted);font-size:11px;align-self:center;margin-left:4px"></span>
+        </div>
+        <div class="kpi-grid" id="stat-boxes" style="margin-bottom:16px"></div>
+      </div>
+    </div>
+    <div class="card" id="stat-causas-card" style="display:none">
+      <div class="card-head card-lb-red" style="cursor:default">
+        <span class="card-title"><span class="ci">&#9763;</span> Principais Causas de Óbito</span>
+      </div>
+      <div class="card-body" id="stat-causas"></div>
+    </div>
+    <div class="card" id="stat-sin-card" style="display:none">
+      <div class="card-head card-lb-amber" style="cursor:default">
+        <span class="card-title"><span class="ci">&#9888;</span> Dados de Sinistralidade</span>
+      </div>
+      <div class="card-body" id="stat-sin"></div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<div id="toast">&#10003; Dados guardados!</div>
+
+<script>
+// ── Credenciais ───────────────────────────────────────────
+const USERS = {admin:"prenda2024", supervisor:"urgencia123", enfermeiro:"bu2024"};
+
+// ── Constantes ───────────────────────────────────────────
+const UNIDADES = [
+  "Cardeal Dom Alexandre do Nascimento","Centro de Saúde da Samba","CETEP",
+  "Clínica da Força Aérea","Clínica do Exército","Clínica Girassol",
+  "Clínica Medicare Center","Clínica Multiperfil","Clínica Sagrada Esperança",
+  "Dispensário","Hospital Divina Providência","Hospital do Kapalanga",
+  "Hospital dos Cajueiros","Hospital Especializado Pedalé",
+  "Hospital Geral de Luanda","Hospital Josina Machel — Maria Pia",
+  "Hospital Municipal da Samba","Hospital Municipal de Cacuaco",
+  "Hospital Municipal do Cazenga","Hospital Municipal do Sambizanga",
+  "Hospital Neves Bendinha","Hospital Pediátrico David Bernardino",
+  "IACC","Maternidade Lucrécia Paim","Maternidade Augusto Ngangula",
+  "Centros e Postos de Saúde"
+];
+const ESPECIALIDADES = ["Cirurgia Geral","Cirurgia Maxilo Facial","Medicina Interna",
+  "Neurocirurgia","Oftalmologia","Ortopedia","Otorrinolaringologia"];
+const CAUSAS_OBITO = [
+  "PCR — Paragem Cardíaca","Sepsis / Choque Séptico","Trauma Grave",
+  "Insuficiência Respiratória","AVC Isquémico","AVC Hemorrágico","IAM — Enfarte Agudo",
+  "Insuficiência Cardíaca","Insuficiência Hepática","Insuficiência Renal Aguda",
+  "Embolia Pulmonar","Choque Hipovolémico","Hemorragia Interna","Tumor / Neoplasia","Outra Causa"
+];
+const SINISTRALIDADE = ["Acidentes de Viação","Agressões Físicas","Acidentes Domésticos",
+  "Acidentes de Trabalho","Ferimentos por Arma Branca",
+  "Ferimentos por Projétil de Arma de Fogo","Quedas de Altura"];
+const DEIXADOS = ["SOH","SOM","TB","SxDA","SxFA"];
+const IMG = ["Raio-X","USG","TC","Ecografia"];
+const PROCEDIMENTOS = ["Curativos","Suturas","Gessos",
+  "Ferimentos por Projétil de Arma de Fogo","Ferimentos por Arma Branca"];
+const ESP_PQCIR = ["Cirurgia Geral","Ortopedia","Maxilo Facial",
+  "Neurocirurgia","Otorrinolaringologia","Oftalmologia"];
+const GENEROS = ["M ≥15","F ≥15","M <15","F <15"];
+const BLOCO_ESPS = ["Cirurgia Geral","Ortopedia","Neurocirurgia","Maxilo Facial"];
+
+// ── Estado ───────────────────────────────────────────────
+const STORE_KEY = "bu_html_v2";
+let allData = {};
+let selDate = todayStr();
+let statPeriodo = "semana";
+let currentUser = null;
+
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+function loadAll(){ try{ return JSON.parse(localStorage.getItem(STORE_KEY)||"{}"); }catch{ return {}; } }
+function saveAll(){ localStorage.setItem(STORE_KEY, JSON.stringify(allData)); }
+
+// ── Boot ─────────────────────────────────────────────────
+window.onload = function(){
+  allData = loadAll();
+  const saved = sessionStorage.getItem("bu_user");
+  if(saved){ currentUser=saved; showApp(); }
+  const d=document.getElementById("sel-date");
+  if(d) d.value=selDate;
+  updateDateLabels();
+};
+
+function showApp(){
+  document.getElementById("login-overlay").style.display="none";
+  document.getElementById("sb-username").textContent=currentUser;
+  document.getElementById("sb-avatar").textContent=currentUser.charAt(0).toUpperCase();
+  buildStaticParts();
+  loadDay();
+}
+
+function doLogin(){
+  const u=document.getElementById("l-user").value.trim();
+  const p=document.getElementById("l-pass").value;
+  if(USERS[u]===p){
+    currentUser=u;
+    sessionStorage.setItem("bu_user",u);
+    document.getElementById("login-err").style.display="none";
+    showApp();
+  } else {
+    document.getElementById("login-err").style.display="block";
+  }
+}
+
+function logout(){
+  sessionStorage.removeItem("bu_user");
+  currentUser=null;
+  document.getElementById("login-overlay").style.display="flex";
+  document.getElementById("l-user").value="";
+  document.getElementById("l-pass").value="";
+}
+
+function toggleDark(){
+  const dark=document.documentElement.classList.toggle("dark");
+  document.getElementById("dark-btn").textContent=dark?"☀ Claro":"☺ Escuro";
+  localStorage.setItem("bu_dark",dark?"1":"0");
+}
+
+(function(){
+  if(localStorage.getItem("bu_dark")==="1"){
+    document.documentElement.classList.add("dark");
+    setTimeout(()=>{ const b=document.getElementById("dark-btn"); if(b) b.textContent="☀ Claro"; },50);
+  }
+})();
+
+// ── Navigation ───────────────────────────────────────────
+function showSection(id){
+  document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
+  document.querySelectorAll(".nav-item").forEach(n=>n.classList.remove("active"));
+  const sec=document.getElementById("sec-"+id);
+  const nav=document.getElementById("nav-"+id);
+  if(sec) sec.classList.add("active");
+  if(nav) nav.classList.add("active");
+  if(id==="stats") renderStats();
+}
+
+// ── Build static DOM ─────────────────────────────────────
+function buildStaticParts(){
+  ["med","cir","ort","neu","max"].forEach(sec=>{
+    const el=document.getElementById(sec+"-deixados");
+    if(!el) return;
+    DEIXADOS.forEach(t=>{
+      const d=document.createElement("div"); d.className="field";
+      d.innerHTML=`<label>${t}</label><input type="number" min="0" id="${sec}-dex-${t}" value="0"/>`;
+      el.appendChild(d);
+    });
+  });
+  ["med","cir","ort","neu","max","blo"].forEach(sec=>{
+    const el=document.getElementById(sec+"-img");
+    if(!el) return;
+    IMG.forEach(t=>{
+      const d=document.createElement("div"); d.className="field";
+      d.innerHTML=`<label>${t}</label><input type="number" min="0" id="${sec}-img-${t}" value="0"/>`;
+      el.appendChild(d);
+    });
+  });
+  ["cir","ort","neu","max"].forEach(sec=>{
+    const el=document.getElementById(sec+"-sin");
+    if(!el) return;
+    SINISTRALIDADE.forEach(t=>{
+      const d=document.createElement("div"); d.className="field";
+      d.innerHTML=`<label>${t}</label><input type="number" min="0" id="${sec}-sin-${t}" value="0"/>`;
+      el.appendChild(d);
+    });
+  });
+  const bloEl=document.getElementById("blo-esps");
+  BLOCO_ESPS.forEach(esp=>{
+    const slug=esp.replace(/\s+/g,"-").toLowerCase();
+    const d=document.createElement("div"); d.style.marginBottom="14px";
+    d.innerHTML=`<div class="sec-title" style="margin-top:0">${esp}</div>
+      <div class="g2" style="max-width:320px">
+        <div class="field"><label>&#9203; Urgência</label><input type="number" min="0" id="blo-${slug}-urg" value="0"/></div>
+        <div class="field"><label>&#128197; Eletiva</label><input type="number" min="0" id="blo-${slug}-ele" value="0"/></div>
+      </div>`;
+    bloEl.appendChild(d);
+  });
+  const tuEl=document.getElementById("transf-unidades");
+  UNIDADES.forEach(u=>{
+    const slug=slugify(u);
+    const d=document.createElement("div"); d.className="field";
+    d.innerHTML=`<label>${u}</label><input type="number" min="0" id="tu-${slug}" value="0" oninput="updateTransfTotal()"/>`;
+    tuEl.appendChild(d);
+  });
+  const teEl=document.getElementById("transf-esps");
+  ESPECIALIDADES.forEach(e=>{
+    const slug=slugify(e);
+    const d=document.createElement("div"); d.className="field";
+    d.innerHTML=`<label>${e}</label><input type="number" min="0" id="te-${slug}" value="0" oninput="updateTransfTotal()"/>`;
+    teEl.appendChild(d);
+  });
+  buildPqTable();
+  const ppEl=document.getElementById("pq-procs");
+  PROCEDIMENTOS.forEach(p=>{
+    const slug=slugify(p);
+    const d=document.createElement("div"); d.className="field";
+    d.innerHTML=`<label>${p}</label><input type="number" min="0" id="pq-proc-${slug}" value="0"/>`;
+    ppEl.appendChild(d);
+  });
+}
+
+function buildPqTable(){
+  const tbl=document.getElementById("pq-table");
+  let html=`<thead><tr><th>Especialidade</th>`;
+  GENEROS.forEach(g=>{ html+=`<th>${g}</th>`; });
+  html+=`<th>Total</th></tr></thead><tbody>`;
+  ESP_PQCIR.forEach(esp=>{
+    const eslug=slugify(esp);
+    html+=`<tr><td style="white-space:nowrap;font-weight:600;color:var(--text)">${esp}</td>`;
+    GENEROS.forEach(g=>{
+      const gslug=slugify(g);
+      html+=`<td><input type="number" min="0" id="pq-${eslug}-${gslug}" value="0" style="width:60px" oninput="updatePqTotals()"/></td>`;
+    });
+    html+=`<td id="pq-tot-${eslug}"><span class="badge badge-blue">0</span></td></tr>`;
+  });
+  html+=`</tbody>`;
+  tbl.innerHTML=html;
+}
+
+function slugify(s){ return s.replace(/[^a-zA-Z0-9]/g,"-").toLowerCase(); }
+
+// ── Card toggle ───────────────────────────────────────────
+function toggleCard(id){
+  const body=document.getElementById("body-"+id);
+  const tog=document.getElementById("tog-"+id);
+  if(!body) return;
+  const hidden=body.classList.toggle("hidden");
+  if(tog) tog.style.transform=hidden?"rotate(-90deg)":"";
+}
+
+// ── UI helpers ────────────────────────────────────────────
+function makeSelect(opts,val){
+  let s=`<select style="min-width:150px;flex:2"><option value="">-- Selecionar --</option>`;
+  opts.forEach(o=>{ s+=`<option${o===val?' selected':''}>${o}</option>`; });
+  return s+"</select>";
+}
+
+function addTransf(listId,simple){
+  const el=document.getElementById(listId);
+  const row=document.createElement("div"); row.className="dyn-row";
+  if(simple){
+    row.innerHTML=`${makeSelect(UNIDADES,"")}
+      <input type="number" min="0" value="1" style="width:70px"/>
+      <button class="btn-del" onclick="this.parentElement.remove()">&#10005;</button>`;
+  } else {
+    row.innerHTML=`${makeSelect(UNIDADES,"")}
+      <input type="text" placeholder="Diagnóstico" style="flex:1;min-width:120px"/>
+      <input type="number" min="0" value="1" style="width:70px"/>
+      <button class="btn-del" onclick="this.parentElement.remove()">&#10005;</button>`;
+  }
+  el.appendChild(row);
+}
+
+function addObito(listId){
+  const el=document.getElementById(listId);
+  const row=document.createElement("div"); row.className="dyn-row";
+  row.innerHTML=`${makeSelect(CAUSAS_OBITO,"")}
+    <input type="number" min="0" value="1" style="width:70px"/>
+    <button class="btn-del" onclick="this.parentElement.remove()">&#10005;</button>`;
+  el.appendChild(row);
+}
+
+function addExtraUnid(){
+  const el=document.getElementById("extra-unid-list");
+  const row=document.createElement("div"); row.className="dyn-row";
+  row.innerHTML=`<input type="text" placeholder="Unidade Hospitalar" style="flex:2"/>
+    <input type="number" min="0" value="0" style="width:80px" oninput="updateTransfTotal()"/>
+    <button class="btn-del" onclick="this.parentElement.remove();updateTransfTotal()">&#10005;</button>`;
+  el.appendChild(row);
+}
+
+function addExtraEsp(){
+  const el=document.getElementById("extra-esp-list");
+  const row=document.createElement("div"); row.className="dyn-row";
+  row.innerHTML=`<input type="text" placeholder="Especialidade" style="flex:2"/>
+    <input type="number" min="0" value="0" style="width:80px" oninput="updateTransfTotal()"/>
+    <button class="btn-del" onclick="this.parentElement.remove();updateTransfTotal()">&#10005;</button>`;
+  el.appendChild(row);
+}
+
+function addExtraProc(){
+  const el=document.getElementById("extra-proc-list");
+  const row=document.createElement("div"); row.className="dyn-row";
+  row.innerHTML=`<input type="text" placeholder="Procedimento" style="flex:2"/>
+    <input type="number" min="0" value="0" style="width:80px"/>
+    <button class="btn-del" onclick="this.parentElement.remove()">&#10005;</button>`;
+  el.appendChild(row);
+}
+
+// ── Summary / totals ──────────────────────────────────────
+function updateSummary(){
+  const v=id=>parseInt(document.getElementById(id)?.value||0)||0;
+  const obs=v("med-obs")+v("cir-obs")+v("ort-obs")+v("neu-obs")+v("max-obs");
+  const intern=v("med-intern")+v("cir-intern")+v("ort-intern")+v("neu-intern")+v("max-intern");
+  document.getElementById("s-triados").textContent=v("tr-triados");
+  document.getElementById("s-obs").textContent=obs;
+  document.getElementById("s-intern").textContent=intern;
+  document.getElementById("s-oper").textContent=v("blo-total");
+  let totalObitos=0;
+  ["med","cir","ort","neu","max","uci"].forEach(sec=>{
+    const el=document.getElementById(sec+"-obitos-list");
+    if(!el) return;
+    el.querySelectorAll("input[type=number]").forEach(i=>{ totalObitos+=parseInt(i.value||0)||0; });
+  });
+  document.getElementById("s-obitos").textContent=totalObitos;
+  document.getElementById("s-uci").textContent=v("uci-deixados");
+}
+
+function updateTransfTotal(){
+  let totalU=0;
+  UNIDADES.forEach(u=>{ totalU+=parseInt(document.getElementById("tu-"+slugify(u))?.value||0)||0; });
+  document.querySelectorAll("#extra-unid-list .dyn-row input[type=number]").forEach(i=>{ totalU+=parseInt(i.value||0)||0; });
+  let totalE=0;
+  ESPECIALIDADES.forEach(e=>{ totalE+=parseInt(document.getElementById("te-"+slugify(e))?.value||0)||0; });
+  document.querySelectorAll("#extra-esp-list .dyn-row input[type=number]").forEach(i=>{ totalE+=parseInt(i.value||0)||0; });
+  document.getElementById("lbl-total-unid").textContent="Total: "+totalU;
+  document.getElementById("lbl-total-esp").textContent="Total: "+totalE;
+}
+
+function updatePqTotals(){
+  ESP_PQCIR.forEach(esp=>{
+    const eslug=slugify(esp);
+    let tot=0;
+    GENEROS.forEach(g=>{ tot+=parseInt(document.getElementById(`pq-${eslug}-${slugify(g)}`)?.value||0)||0; });
+    document.getElementById("pq-tot-"+eslug).innerHTML=`<span class="badge badge-blue">${tot}</span>`;
+  });
+}
+
+// ── Date ──────────────────────────────────────────────────
+function updateDateLabels(){
+  const opts={weekday:"long",year:"numeric",month:"long",day:"numeric"};
+  const d=new Date(selDate+"T12:00:00");
+  const lbl=d.toLocaleDateString("pt-PT",opts);
+  const sub=document.getElementById("home-date-sub"); if(sub) sub.textContent=lbl;
+  const hdr=document.getElementById("hdr-date-lbl"); if(hdr) hdr.textContent=lbl;
+}
+
+// ── Serialize / Deserialize ───────────────────────────────
+function gv(id){ return parseInt(document.getElementById(id)?.value||0)||0; }
+function sv(id,val){ const el=document.getElementById(id); if(el) el.value=val||0; }
+function gvt(id){ return document.getElementById(id)?.value||""; }
+function svt(id,val){ const el=document.getElementById(id); if(el) el.value=val||""; }
+
+function serializeList(listId){
+  const rows=[];
+  document.getElementById(listId)?.querySelectorAll(".dyn-row").forEach(row=>{
+    const inputs=[...row.querySelectorAll("input,select")];
+    const obj={};
+    inputs.forEach((inp,i)=>{ obj["f"+i]=inp.value; });
+    rows.push(obj);
+  });
+  return rows;
+}
+
+function deserializeList(listId,rows,addFn,simpleTransf){
+  const el=document.getElementById(listId);
+  if(!el) return;
+  el.innerHTML="";
+  (rows||[]).forEach(obj=>{
+    addFn(listId,simpleTransf);
+    const inputs=[...el.lastChild.querySelectorAll("input,select")];
+    inputs.forEach((inp,i)=>{ inp.value=obj["f"+i]||""; });
+  });
+}
+
+function collectDay(){
+  const day={date:selDate};
+  day.triagem={
+    triados:gv("tr-triados"),obitos:gv("tr-obitos"),verif:gv("tr-verif"),
+    existencia:{SOH:gv("ex-SOH"),SOM:gv("ex-SOM"),PC:gv("ex-PC"),TB:gv("ex-TB")},
+    obs:gvt("tr-obs"),
+    recv:serializeList("tr-recv-list"),
+    done:serializeList("tr-done-list"),
+  };
+  ["med","cir","ort","neu","max"].forEach(sec=>{
+    const d={obs:gv(sec+"-obs"),intern:gv(sec+"-intern")};
+    if(sec==="med") d.hd=gv("med-hd");
+    else d.verif=gv(sec+"-verif");
+    DEIXADOS.forEach(t=>{ d["dex_"+t]=gv(sec+"-dex-"+t); });
+    IMG.forEach(t=>{ d["img_"+t]=gv(sec+"-img-"+t); });
+    if(sec!=="med") SINISTRALIDADE.forEach(t=>{ d["sin_"+t]=gv(sec+"-sin-"+t); });
+    d.recv=serializeList(sec+"-recv-list");
+    d.done=serializeList(sec+"-done-list");
+    d.obitos=serializeList(sec+"-obitos-list");
+    day[sec]=d;
+  });
+  const blo={total:gv("blo-total"),esps:{}};
+  BLOCO_ESPS.forEach(esp=>{
+    const s=slugify(esp);
+    blo.esps[esp]={urg:gv("blo-"+s+"-urg"),ele:gv("blo-"+s+"-ele")};
+  });
+  IMG.forEach(t=>{ blo["img_"+t]=gv("blo-img-"+t); });
+  day.bloco=blo;
+  day.uci={deixados:gv("uci-deixados"),obitos:serializeList("uci-obitos-list")};
+  const tu={};
+  UNIDADES.forEach(u=>{ tu[u]=gv("tu-"+slugify(u)); });
+  const te={};
+  ESPECIALIDADES.forEach(e=>{ te[e]=gv("te-"+slugify(e)); });
+  day.transf={
+    unidades:tu,esps:te,
+    extra_unid:serializeList("extra-unid-list"),
+    extra_esp:serializeList("extra-esp-list"),
+  };
+  const pq={esps:{},procs:{}};
+  ESP_PQCIR.forEach(esp=>{
+    pq.esps[esp]={};
+    GENEROS.forEach(g=>{ pq.esps[esp][g]=gv(`pq-${slugify(esp)}-${slugify(g)}`); });
+  });
+  PROCEDIMENTOS.forEach(p=>{ pq.procs[p]=gv("pq-proc-"+slugify(p)); });
+  pq.extra_procs=serializeList("extra-proc-list");
+  day.pq=pq;
+  return day;
+}
+
+function applyDay(day){
+  if(!day) return;
+  const tr=day.triagem||{};
+  sv("tr-triados",tr.triados); sv("tr-obitos",tr.obitos); sv("tr-verif",tr.verif);
+  sv("ex-SOH",tr.existencia?.SOH); sv("ex-SOM",tr.existencia?.SOM);
+  sv("ex-PC",tr.existencia?.PC); sv("ex-TB",tr.existencia?.TB);
+  svt("tr-obs",tr.obs);
+  deserializeList("tr-recv-list",tr.recv||[],addTransf,true);
+  deserializeList("tr-done-list",tr.done||[],addTransf,true);
+  ["med","cir","ort","neu","max"].forEach(sec=>{
+    const d=day[sec]||{};
+    sv(sec+"-obs",d.obs); sv(sec+"-intern",d.intern);
+    if(sec==="med") sv("med-hd",d.hd);
+    else sv(sec+"-verif",d.verif);
+    DEIXADOS.forEach(t=>sv(sec+"-dex-"+t,d["dex_"+t]));
+    IMG.forEach(t=>sv(sec+"-img-"+t,d["img_"+t]));
+    if(sec!=="med") SINISTRALIDADE.forEach(t=>sv(sec+"-sin-"+t,d["sin_"+t]));
+    deserializeList(sec+"-recv-list",d.recv||[],addTransf,false);
+    deserializeList(sec+"-done-list",d.done||[],addTransf,false);
+    deserializeList(sec+"-obitos-list",d.obitos||[],addObito);
+  });
+  const blo=day.bloco||{};
+  sv("blo-total",blo.total);
+  BLOCO_ESPS.forEach(esp=>{
+    const s=slugify(esp);
+    sv("blo-"+s+"-urg",blo.esps?.[esp]?.urg);
+    sv("blo-"+s+"-ele",blo.esps?.[esp]?.ele);
+  });
+  IMG.forEach(t=>sv("blo-img-"+t,blo["img_"+t]));
+  const uci=day.uci||{};
+  sv("uci-deixados",uci.deixados);
+  deserializeList("uci-obitos-list",uci.obitos||[],addObito);
+  const tr2=day.transf||{};
+  UNIDADES.forEach(u=>sv("tu-"+slugify(u),(tr2.unidades||{})[u]));
+  ESPECIALIDADES.forEach(e=>sv("te-"+slugify(e),(tr2.esps||{})[e]));
+  document.getElementById("extra-unid-list").innerHTML="";
+  (tr2.extra_unid||[]).forEach(obj=>{
+    addExtraUnid();
+    const row=document.getElementById("extra-unid-list").lastChild;
+    const inputs=[...row.querySelectorAll("input")];
+    inputs.forEach((inp,i)=>inp.value=obj["f"+i]||"");
+  });
+  document.getElementById("extra-esp-list").innerHTML="";
+  (tr2.extra_esp||[]).forEach(obj=>{
+    addExtraEsp();
+    const row=document.getElementById("extra-esp-list").lastChild;
+    const inputs=[...row.querySelectorAll("input")];
+    inputs.forEach((inp,i)=>inp.value=obj["f"+i]||"");
+  });
+  const pq=day.pq||{};
+  ESP_PQCIR.forEach(esp=>{
+    GENEROS.forEach(g=>sv(`pq-${slugify(esp)}-${slugify(g)}`,(pq.esps||{})[esp]?.[g]));
+  });
+  PROCEDIMENTOS.forEach(p=>sv("pq-proc-"+slugify(p),(pq.procs||{})[p]));
+  document.getElementById("extra-proc-list").innerHTML="";
+  (pq.extra_procs||[]).forEach(obj=>{
+    addExtraProc();
+    const row=document.getElementById("extra-proc-list").lastChild;
+    const inputs=[...row.querySelectorAll("input")];
+    inputs.forEach((inp,i)=>inp.value=obj["f"+i]||"");
+  });
+  updateSummary(); updateTransfTotal(); updatePqTotals();
+}
+
+function clearAllInputs(){
+  document.querySelectorAll("input[type=number]").forEach(e=>e.value=0);
+  document.querySelectorAll("input[type=text]").forEach(e=>e.value="");
+  document.querySelectorAll("textarea").forEach(e=>e.value="");
+  ["tr-recv-list","tr-done-list","med-recv-list","med-done-list","med-obitos-list",
+   "cir-recv-list","cir-done-list","cir-obitos-list","ort-recv-list","ort-done-list","ort-obitos-list",
+   "neu-recv-list","neu-done-list","neu-obitos-list","max-recv-list","max-done-list","max-obitos-list",
+   "uci-obitos-list","extra-unid-list","extra-esp-list","extra-proc-list"].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.innerHTML="";
+  });
+}
+
+function loadDay(){
+  clearAllInputs();
+  const day=allData[selDate];
+  if(day) applyDay(day);
+  else { updateSummary(); updateTransfTotal(); updatePqTotals(); }
+  updateDateLabels();
+}
+
+function changeDate(){
+  autoSave();
+  selDate=document.getElementById("sel-date").value;
+  loadDay();
+}
+
+function autoSave(){
+  allData[selDate]=collectDay();
+  saveAll();
+}
+
+function saveData(){
+  allData[selDate]=collectDay();
+  saveAll();
+  const t=document.getElementById("toast");
+  t.style.display="block";
+  setTimeout(()=>{ t.style.display="none"; },2200);
+}
+
+function exportBackup(){
+  const blob=new Blob([JSON.stringify({v:2,data:allData,exported:new Date().toISOString()},null,2)],{type:"application/json"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="bu_backup_"+selDate+".json";
+  a.click();
+}
+
+function importBackup(ev){
+  const file=ev.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const obj=JSON.parse(e.target.result);
+      const d=obj.data||obj;
+      Object.assign(allData,d);
+      saveAll(); loadDay();
+      alert("Backup importado com sucesso!");
+    }catch{ alert("Erro ao importar ficheiro."); }
+  };
+  reader.readAsText(file);
+  ev.target.value="";
+}
+
+// ── Statistics ────────────────────────────────────────────
+function setPeriodo(p,btn){
+  statPeriodo=p;
+  document.querySelectorAll(".spb-btn").forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active");
+  renderStats();
+}
+
+function renderStats(){
+  const now=new Date();
+  const entries=Object.values(allData).filter(d=>{
+    if(!d.date) return false;
+    const dt=new Date(d.date);
+    if(statPeriodo==="semana"){const s=new Date(now);s.setDate(now.getDate()-7);return dt>=s;}
+    if(statPeriodo==="mes"){return dt.getMonth()===now.getMonth()&&dt.getFullYear()===now.getFullYear();}
+    if(statPeriodo==="trimestre"){const s=new Date(now);s.setMonth(now.getMonth()-3);return dt>=s;}
+    if(statPeriodo==="semestre"){const s=new Date(now);s.setMonth(now.getMonth()-6);return dt>=s;}
+    return true;
+  });
+  document.getElementById("periodo-info").textContent=`${entries.length} dia(s) com dados`;
+  function sum(fn){ return entries.reduce((s,d)=>s+fn(d),0); }
+  const totalTriados=sum(d=>d.triagem?.triados||0);
+  const totalObs=sum(d=>(d.med?.obs||0)+(d.cir?.obs||0)+(d.ort?.obs||0)+(d.neu?.obs||0)+(d.max?.obs||0));
+  const totalIntern=sum(d=>(d.med?.intern||0)+(d.cir?.intern||0)+(d.ort?.intern||0)+(d.neu?.intern||0)+(d.max?.intern||0));
+  const totalOper=sum(d=>d.bloco?.total||0);
+  function sumObitos(day){
+    let t=0;
+    ["med","cir","ort","neu","max"].forEach(sec=>{ (day[sec]?.obitos||[]).forEach(o=>{ t+=parseInt(o.f1||0)||0; }); });
+    (day.uci?.obitos||[]).forEach(o=>{ t+=parseInt(o.f1||0)||0; });
+    return t;
+  }
+  const totalObitos=sum(sumObitos);
+  const n=entries.length||1;
+  const boxes=document.getElementById("stat-boxes");
+  boxes.innerHTML=`
+    <div class="kpi-box card-lb-blue"><div class="kpi-val kpi-accent">${totalTriados}</div><div class="kpi-lbl">Total Triados</div></div>
+    <div class="kpi-box card-lb-green"><div class="kpi-val kpi-green">${totalObs}</div><div class="kpi-lbl">Total Observados</div></div>
+    <div class="kpi-box card-lb-red"><div class="kpi-val kpi-red">${totalObitos}</div><div class="kpi-lbl">Total Óbitos</div></div>
+    <div class="kpi-box card-lb-purple"><div class="kpi-val kpi-purple">${totalOper}</div><div class="kpi-lbl">Total Operados</div></div>
+    <div class="kpi-box card-lb-amber"><div class="kpi-val kpi-amber">${totalIntern}</div><div class="kpi-lbl">Total Internamentos</div></div>
+    <div class="kpi-box"><div class="kpi-val" style="color:var(--muted)">${Math.round(totalObs/n)}</div><div class="kpi-lbl">Média Diária Obs.</div></div>`;
+  const causas={};
+  entries.forEach(d=>{
+    ["med","cir","ort","neu","max"].forEach(sec=>{
+      (d[sec]?.obitos||[]).forEach(o=>{ const c=o.f0; const v=parseInt(o.f1||0)||0; if(c&&c!=="-- Selecionar --"&&v>0) causas[c]=(causas[c]||0)+v; });
+    });
+    (d.uci?.obitos||[]).forEach(o=>{ const c=o.f0; const v=parseInt(o.f1||0)||0; if(c&&c!=="-- Selecionar --"&&v>0) causas[c]=(causas[c]||0)+v; });
+  });
+  const causCard=document.getElementById("stat-causas-card");
+  const causEl=document.getElementById("stat-causas");
+  if(Object.keys(causas).length){
+    causCard.style.display="";
+    causEl.innerHTML=Object.entries(causas).sort(([,a],[,b])=>b-a).map(([k,v])=>
+      `<div class="stat-row"><span>${k}</span><span class="badge badge-red">${v}</span></div>`
+    ).join("");
+  } else { causCard.style.display="none"; causEl.innerHTML=""; }
+  const sinMap={};
+  entries.forEach(d=>{
+    ["cir","ort","neu","max"].forEach(sec=>{
+      SINISTRALIDADE.forEach(t=>{ const v=parseInt(d[sec]?.["sin_"+t]||0)||0; if(v>0) sinMap[t]=(sinMap[t]||0)+v; });
+    });
+  });
+  const sinCard=document.getElementById("stat-sin-card");
+  const sinEl=document.getElementById("stat-sin");
+  if(Object.keys(sinMap).length){
+    sinCard.style.display="";
+    sinEl.innerHTML=Object.entries(sinMap).sort(([,a],[,b])=>b-a).map(([k,v])=>
+      `<div class="stat-row"><span>${k}</span><span class="badge badge-amber">${v}</span></div>`
+    ).join("");
+  } else { sinCard.style.display="none"; sinEl.innerHTML=""; }
+}
+</script>
+</body>
+</html>
