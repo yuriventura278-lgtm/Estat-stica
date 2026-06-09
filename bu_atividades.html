@@ -569,7 +569,13 @@ html.dark{--bg:#0c0f14;--surface:#141820;--border:#1e2840;--text:#e2e8f0;--muted
       </div>
       <div class="field">
         <label>Diagnóstico <span class="req">*</span></label>
-        <select id="mp-diag"><option value="">— Selecionar —</option></select>
+        <select id="mp-diag" onchange="toggleOutro('mp')"><option value="">— Selecionar —</option></select>
+      </div>
+    </div>
+    <div id="mp-outro-wrap" style="display:none;margin-bottom:10px">
+      <div class="field">
+        <label>Descrição / Outro Diagnóstico <span class="req">*</span></label>
+        <input type="text" id="mp-outro" placeholder="Descreva o diagnóstico"/>
       </div>
     </div>
     <div id="mp-err" style="color:var(--danger);font-size:.65rem;margin-bottom:8px;display:none">⚠ Todos os campos são obrigatórios</div>
@@ -589,11 +595,17 @@ html.dark{--bg:#0c0f14;--surface:#141820;--border:#1e2840;--text:#e2e8f0;--muted
     <div class="g2" style="margin-bottom:10px">
       <div class="field">
         <label>Causa de Óbito <span class="req">*</span></label>
-        <select id="mo-causa"><option value="">— Selecionar —</option></select>
+        <select id="mo-causa" onchange="toggleOutro('mo')"><option value="">— Selecionar —</option></select>
       </div>
       <div class="field">
         <label>N.º de Óbitos <span class="req">*</span></label>
         <input type="number" min="1" id="mo-n" value="1"/>
+      </div>
+    </div>
+    <div id="mo-outro-wrap" style="display:none;margin-bottom:10px">
+      <div class="field">
+        <label>Descrição / Outra Causa <span class="req">*</span></label>
+        <input type="text" id="mo-outro" placeholder="Descreva a causa do óbito"/>
       </div>
     </div>
     <div id="mo-err" style="color:var(--danger);font-size:.65rem;margin-bottom:8px;display:none">⚠ Causa obrigatória</div>
@@ -669,39 +681,76 @@ const UNIDADES = [
   "Centros e Postos de Saúde"
 ];
 const CAUSAS_OBITO = [
-  "Broncopneumonia","Morte Súbita / Causa Desconhecida","Hemorragia Intracerebral",
-  "Insuficiência Cardíaca Congestiva","Morte Instantânea","Doença Cardíaca Hipertensiva",
-  "Meningococcemia","Malária Grave (P. Falciparum)","HIV/SIDA",
-  "Traumatismo Intracraniano","Sequelas de AVC","Infarto Cerebral",
-  "Pneumonia Congénita","Morte sem Assistência","Morte <24h após Início de Sintomas",
-  "Embolia Pulmonar c/ Cor Pulmonale Agudo","Hemorragia Intracerebral do Tronco Cerebral",
-  "Doença Renal Hipertensiva c/ Insuf. Renal","Hemorragia Subaracnóide",
-  "Pneumonia por Microorganismo","Diarréia e Gastroenterite Infecciosa",
-  "Malária por P. Falciparum","Hemorragia Intracerebral Intraventricular",
-  "Insuficiência Respiratória Aguda","Meningite / Meningoencefalite","Outra Causa"
+  "Broncopneumonia",
+  "Diarréia e Gastroenterite Infecciosa",
+  "Doença Cardíaca Hipertensiva",
+  "Doença Renal Hipertensiva c/ Insuf. Renal",
+  "Embolia Pulmonar c/ Cor Pulmonale Agudo",
+  "Hemorragia Intracerebral",
+  "Hemorragia Intracerebral do Tronco Cerebral",
+  "Hemorragia Intracerebral Intraventricular",
+  "Hemorragia Subaracnóide",
+  "HIV/SIDA",
+  "Infarto Cerebral",
+  "Insuficiência Cardíaca Congestiva",
+  "Insuficiência Respiratória Aguda",
+  "Malária Grave (P. Falciparum)",
+  "Malária por P. Falciparum",
+  "Meningite / Meningoencefalite",
+  "Meningococcemia",
+  "Morte <24h após Início de Sintomas",
+  "Morte Instantânea",
+  "Morte sem Assistência",
+  "Morte Súbita / Causa Desconhecida",
+  "Pneumonia Congénita",
+  "Pneumonia por Microorganismo",
+  "Sequelas de AVC",
+  "Traumatismo Intracraniano",
+  "Outra Causa"
 ];
 const DOENCAS = [
-  "Malária Não Especificada (B54)","Hipertensão Essencial (I10)",
-  "Malária por P. Falciparum (B50)","Infarto Cerebral (I63)",
-  "Hemorragia Intracerebral (I61)","Diarréia e Gastroenterite Infecciosa (A09)",
-  "Insuficiência Renal Crónica (N18)","Diabetes Mellitus Tipo 2 (E11)",
-  "AVC Não Especificado (I64)","HIV/SIDA (B20)",
-  "Broncopneumonia (J18.0)","Dorsalgia (M54)",
-  "Insuficiência Cardíaca Congestiva (I50.0)","Tuberculose Pulmonar (A15)",
-  "Doença Renal Hipertensiva c/ Insuf. Renal (I12.0)","Malária Grave P. Falciparum (B50.8)",
-  "Cefaléia (R51)","Gastrite Aguda (K29.1)",
-  "Nasofaringite Aguda / Resfriado (J00)","Celulite da Face (L03.2)",
-  "Gastrite Superficial Crónica (K29.3)","Epilepsia (G40)",
-  "Traumatismo Intracraniano (S06)","Outros Transtornos Urinários (N39)",
-  "Diabetes Mellitus Tipo 1 (E10)","Encefalopatia Hipertensiva (I67.4)",
-  "Mal Estar / Fadiga (R53)","Dor Torácica (R07)",
-  "Febre de Origem Desconhecida (R50)","Cardiomiopatia Dilatada (I42.0)",
-  "Insuficiência Renal Aguda (N17)","Hérnia Inguinal (K40)",
-  "Pneumonia Não Especificada (J18.9)","Asma (J45)",
-  "Anemia Falciforme com Crise (D57.0)","Abdome Agudo (R10.0)",
-  "Apendicite Aguda (K35)","Peritonite (K65)",
-  "Gravidez Ectópica (O00)","Insuficiência Cardíaca (I50)",
-  "Encefalopatia por Malária (B50.0)","Outra Doença"
+  "Abdome Agudo (R10.0)",
+  "Anemia Falciforme com Crise (D57.0)",
+  "Apendicite Aguda (K35)",
+  "Asma (J45)",
+  "AVC Não Especificado (I64)",
+  "Broncopneumonia (J18.0)",
+  "Cardiomiopatia Dilatada (I42.0)",
+  "Cefaléia (R51)",
+  "Celulite da Face (L03.2)",
+  "Diabetes Mellitus Tipo 1 (E10)",
+  "Diabetes Mellitus Tipo 2 (E11)",
+  "Diarréia e Gastroenterite Infecciosa (A09)",
+  "Doença Renal Hipertensiva c/ Insuf. Renal (I12.0)",
+  "Dor Torácica (R07)",
+  "Dorsalgia (M54)",
+  "Encefalopatia Hipertensiva (I67.4)",
+  "Encefalopatia por Malária (B50.0)",
+  "Epilepsia (G40)",
+  "Febre de Origem Desconhecida (R50)",
+  "Gastrite Aguda (K29.1)",
+  "Gastrite Superficial Crónica (K29.3)",
+  "Gravidez Ectópica (O00)",
+  "Hemorragia Intracerebral (I61)",
+  "Hérnia Inguinal (K40)",
+  "Hipertensão Essencial (I10)",
+  "HIV/SIDA (B20)",
+  "Infarto Cerebral (I63)",
+  "Insuficiência Cardíaca (I50)",
+  "Insuficiência Cardíaca Congestiva (I50.0)",
+  "Insuficiência Renal Aguda (N17)",
+  "Insuficiência Renal Crónica (N18)",
+  "Mal Estar / Fadiga (R53)",
+  "Malária Grave P. Falciparum (B50.8)",
+  "Malária Não Especificada (B54)",
+  "Malária por P. Falciparum (B50)",
+  "Nasofaringite Aguda / Resfriado (J00)",
+  "Outros Transtornos Urinários (N39)",
+  "Peritonite (K65)",
+  "Pneumonia Não Especificada (J18.9)",
+  "Traumatismo Intracraniano (S06)",
+  "Tuberculose Pulmonar (A15)",
+  "Outra Doença"
 ];
 const SINISTRALIDADE = ["Acidentes de Viação","Agressões Físicas","Acidentes Domésticos",
   "Acidentes de Trabalho","Ferimentos por Arma Branca",
@@ -738,6 +787,31 @@ function ensureDay(date){
   if(!allData[d].pq) allData[d].pq = {rows:{},procs:{}};
   if(!allData[d].diag) allData[d].diag = {};
   return allData[d];
+}
+
+
+/* ══ OUTRO FIELD TOGGLE ══ */
+function toggleDiagOutro(sel){
+  const inp = sel.parentElement.querySelector('.diag-outro-inp');
+  if(!inp) return;
+  inp.style.display = sel.value.startsWith('Outra') ? 'block' : 'none';
+  if(!sel.value.startsWith('Outra')) inp.value='';
+}
+function toggleOutro(prefix){
+  const sel = document.getElementById(prefix+"-causa") || document.getElementById(prefix+"-diag");
+  const wrap = document.getElementById(prefix+"-outro-wrap");
+  if(!sel || !wrap) return;
+  const isOutro = sel.value.startsWith("Outra");
+  wrap.style.display = isOutro ? "" : "none";
+  if(!isOutro) { const inp=document.getElementById(prefix+"-outro"); if(inp) inp.value=""; }
+}
+function getOutroVal(prefix){
+  const sel = document.getElementById(prefix+"-causa") || document.getElementById(prefix+"-diag");
+  if(!sel) return "";
+  if(sel.value.startsWith("Outra")){
+    const inp=document.getElementById(prefix+"-outro"); return (inp?.value||"").trim();
+  }
+  return sel.value;
 }
 
 /* ══ BOOT ══ */
@@ -1178,12 +1252,15 @@ function renderDiagList(svc, records){
   records.forEach(rec=>{
     const row=document.createElement("div");
     row.style.cssText="display:flex;gap:6px;align-items:flex-end;margin-bottom:6px;background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:6px 8px";
+    const isOutraDiag = rec.doenca && rec.doenca.startsWith('Outra');
+    const outraDisplayVal = isOutraDiag ? (rec.outraDesc||'') : '';
     row.innerHTML=`<div class="field" style="flex:2">
         <label>Diagnóstico</label>
-        <select onchange="updateDiagField('${svc}','${rec.id}','doenca',this.value);autoSave()">
+        <select onchange="updateDiagField('${svc}','${rec.id}','doenca',this.value);toggleDiagOutro(this);autoSave()">
           <option value="">— Selecionar —</option>
           ${DOENCAS.map(d=>`<option value="${d}"${d===rec.doenca?' selected':''}>${d}</option>`).join("")}
         </select>
+        <input type="text" placeholder="Descreva o diagnóstico" style="margin-top:4px;display:${isOutraDiag?'block':'none'}" class="diag-outro-inp" value="${outraDisplayVal}" oninput="updateDiagField('${svc}','${rec.id}','outraDesc',this.value);autoSave()"/>
       </div>
       <div class="field" style="width:110px">
         <label>Sexo</label>
