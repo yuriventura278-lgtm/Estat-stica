@@ -164,6 +164,19 @@ select option{background:var(--surface)}
   .g5{grid-template-columns:repeat(2,1fr)}
   .kpi-grid{grid-template-columns:repeat(2,1fr)}
 }
+
+/* ── Print / PDF ─────────────────────────────────────────── */
+@media print{
+  #staff-bar,#hdr,#sidebar,#login-overlay,#toast,
+  .btn-add,.btn-del,.hdr-btn,.sb-btn,.nav-item,.nav-group,
+  .card-tog,.section-header button{display:none!important}
+  body{background:#fff!important;color:#000!important;font-size:11px}
+  #main{margin:0!important;padding:8px!important}
+  .section{display:block!important}
+  .kpi-box,.card{border:1px solid #ccc!important;box-shadow:none!important;break-inside:avoid}
+  .kpi-val{font-size:20px!important}
+  .dyn-row{background:#fff!important;border:1px solid #ddd!important}
+}
 </style>
 </head>
 <body>
@@ -208,6 +221,7 @@ select option{background:var(--surface)}
   <span class="hdr-sub" id="hdr-date-lbl"></span>
   <div class="hdr-right">
     <button class="hdr-btn" onclick="showSection('stats')">&#128200; Estatísticas</button>
+    <button class="hdr-btn" onclick="printDay()">&#128438; Imprimir / PDF</button>
     <button class="hdr-btn primary" onclick="saveData()">&#128190; Guardar</button>
   </div>
 </div>
@@ -986,16 +1000,10 @@ function makeSelect(opts,val){
 function addTransf(listId,simple){
   const el=document.getElementById(listId);
   const row=document.createElement("div"); row.className="dyn-row";
-  if(simple){
-    row.innerHTML=`${makeSelect(UNIDADES,"")}
-      <input type="number" min="0" value="1" style="width:70px"/>
-      <button class="btn-del" onclick="this.parentElement.remove()">&#10005;</button>`;
-  } else {
-    row.innerHTML=`${makeSelect(UNIDADES,"")}
-      <input type="text" placeholder="Diagnóstico" style="flex:1;min-width:120px"/>
-      <input type="number" min="0" value="1" style="width:70px"/>
-      <button class="btn-del" onclick="this.parentElement.remove()">&#10005;</button>`;
-  }
+  row.innerHTML=`${makeSelect(UNIDADES,"")}
+    <input type="text" placeholder="Descrição / Diagnóstico" style="flex:1;min-width:120px"/>
+    <input type="number" min="0" value="1" style="width:70px" title="N.º de doentes"/>
+    <button class="btn-del" onclick="this.parentElement.remove()">&#10005;</button>`;
   el.appendChild(row);
 }
 
@@ -1183,8 +1191,8 @@ function applyDay(day){
   sv("ex-SOH",tr.existencia?.SOH); sv("ex-SOM",tr.existencia?.SOM);
   sv("ex-PC",tr.existencia?.PC); sv("ex-TB",tr.existencia?.TB);
   svt("tr-obs",tr.obs);
-  deserializeList("tr-recv-list",tr.recv||[],addTransf,true);
-  deserializeList("tr-done-list",tr.done||[],addTransf,true);
+  deserializeList("tr-recv-list",tr.recv||[],addTransf);
+  deserializeList("tr-done-list",tr.done||[],addTransf);
   ["med","cir","ort","neu","max"].forEach(sec=>{
     const d=day[sec]||{};
     sv(sec+"-obs",d.obs); sv(sec+"-intern",d.intern);
@@ -1193,8 +1201,8 @@ function applyDay(day){
     DEIXADOS.forEach(t=>sv(sec+"-dex-"+t,d["dex_"+t]));
     IMG.forEach(t=>sv(sec+"-img-"+t,d["img_"+t]));
     if(sec!=="med") SINISTRALIDADE.forEach(t=>sv(sec+"-sin-"+t,d["sin_"+t]));
-    deserializeList(sec+"-recv-list",d.recv||[],addTransf,false);
-    deserializeList(sec+"-done-list",d.done||[],addTransf,false);
+    deserializeList(sec+"-recv-list",d.recv||[],addTransf);
+    deserializeList(sec+"-done-list",d.done||[],addTransf);
     deserializeList(sec+"-obitos-list",d.obitos||[],addObito);
   });
   const blo=day.bloco||{};
@@ -1306,6 +1314,130 @@ function importBackup(ev){
   };
   reader.readAsText(file);
   ev.target.value="";
+}
+
+// ── Print / PDF ───────────────────────────────────────────
+function printDay(){
+  saveData();
+  const day=allData[selDate]||collectDay();
+  const dateLabel=new Date(selDate+"T12:00:00").toLocaleDateString("pt-PT",{weekday:"long",year:"numeric",month:"long",day:"numeric"});
+  const obs=(day.med?.obs||0)+(day.cir?.obs||0)+(day.ort?.obs||0)+(day.neu?.obs||0)+(day.max?.obs||0);
+  const intern=(day.med?.intern||0)+(day.cir?.intern||0)+(day.ort?.intern||0)+(day.neu?.intern||0)+(day.max?.intern||0);
+  let obitos=0;
+  ["med","cir","ort","neu","max"].forEach(s=>{ (day[s]?.obitos||[]).forEach(o=>{ obitos+=parseInt(o.f1||0)||0; }); });
+  (day.uci?.obitos||[]).forEach(o=>{ obitos+=parseInt(o.f1||0)||0; });
+
+  function rowList(list,labels){
+    if(!list||!list.length) return "<em style='color:#999'>Nenhum registo</em>";
+    return list.map(r=>{
+      const vals=labels.map((l,i)=>r["f"+i]||"").filter(v=>v&&v!=="-- Selecionar --");
+      return `<div style="padding:3px 0;border-bottom:1px solid #eee">${vals.join(" &mdash; ")}</div>`;
+    }).join("");
+  }
+  function secBlock(title,sec,icon){
+    const d=day[sec]||{};
+    const obs2=d.obs||0; const intern2=d.intern||0;
+    let html=`<h2>${icon} ${title}</h2>
+    <table><tr><th>Observados</th><th>Internamentos</th><th>${sec==="med"?"Hosp. Dia":"Verificações"}</th></tr>
+    <tr><td>${obs2}</td><td>${intern2}</td><td>${sec==="med"?(d.hd||0):(d.verif||0)}</td></tr></table>`;
+    const dexs=DEIXADOS.map(t=>`<td>${d["dex_"+t]||0}</td>`).join("");
+    html+=`<h3>Deixados</h3><table><tr>${DEIXADOS.map(t=>`<th>${t}</th>`).join("")}</tr><tr>${dexs}</tr></table>`;
+    const imgs=IMG.map(t=>`<td>${d["img_"+t]||0}</td>`).join("");
+    html+=`<h3>Imagiologia</h3><table><tr>${IMG.map(t=>`<th>${t}</th>`).join("")}</tr><tr>${imgs}</tr></table>`;
+    if(sec!=="med"){
+      const sins=SINISTRALIDADE.map(t=>`<tr><td>${t}</td><td>${d["sin_"+t]||0}</td></tr>`).join("");
+      html+=`<h3>Sinistralidade</h3><table>${sins}</table>`;
+    }
+    if((d.recv||[]).length||(d.done||[]).length){
+      html+=`<h3>Transferências Recebidas</h3>${rowList(d.recv,["Unidade","Descrição","Qtd"])}`;
+      html+=`<h3>Transferências Efetuadas</h3>${rowList(d.done,["Unidade","Descrição","Qtd"])}`;
+    }
+    if((d.obitos||[]).length){
+      html+=`<h3>&#9763; Óbitos</h3>${rowList(d.obitos,["Causa","N.º"])}`;
+    }
+    const dlist=(day.diag||{})[sec]||[];
+    if(dlist.length){
+      html+=`<h3>Diagnósticos</h3>${rowList(dlist,["Doença","Casos"])}`;
+    }
+    return html;
+  }
+
+  let h=`<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8">
+  <title>Relatório BU — ${selDate}</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:Arial,sans-serif;font-size:11px;color:#000;padding:16mm 14mm}
+    h1{font-size:15px;font-weight:bold;border-bottom:2px solid #1a56db;padding-bottom:6px;margin-bottom:4px;color:#1a56db}
+    .subtitle{font-size:11px;color:#555;margin-bottom:14px}
+    h2{font-size:12px;font-weight:bold;background:#1a56db;color:#fff;padding:4px 8px;margin:14px 0 6px;border-radius:4px}
+    h3{font-size:11px;color:#333;margin:8px 0 3px;font-weight:600;border-left:3px solid #1a56db;padding-left:5px}
+    table{width:100%;border-collapse:collapse;margin-bottom:8px;font-size:10px}
+    th{background:#f0f4ff;border:1px solid #ccc;padding:4px 6px;text-align:left;font-weight:600}
+    td{border:1px solid #ddd;padding:4px 6px}
+    .kpi-row{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+    .kpi{border:2px solid #1a56db;border-radius:6px;padding:8px 14px;text-align:center;min-width:90px}
+    .kpi-val{font-size:22px;font-weight:bold;color:#1a56db}
+    .kpi-lbl{font-size:9px;color:#555;margin-top:2px}
+    em{font-size:10px}
+    @media print{body{padding:8mm}h2{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+  </style></head><body>
+  <h1>&#127973; Hospital do Prenda — Banco de Urgência</h1>
+  <div class="subtitle">Relatório de Atividades Diárias &nbsp;|&nbsp; ${dateLabel} &nbsp;|&nbsp; Utilizador: ${currentUser||"-"}</div>
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-val">${day.triagem?.triados||0}</div><div class="kpi-lbl">Triados</div></div>
+    <div class="kpi"><div class="kpi-val">${obs}</div><div class="kpi-lbl">Observados</div></div>
+    <div class="kpi"><div class="kpi-val">${intern}</div><div class="kpi-lbl">Internamentos</div></div>
+    <div class="kpi"><div class="kpi-val">${day.bloco?.total||0}</div><div class="kpi-lbl">Operados</div></div>
+    <div class="kpi"><div class="kpi-val">${obitos}</div><div class="kpi-lbl">Óbitos</div></div>
+    <div class="kpi"><div class="kpi-val">${day.uci?.deixados||0}</div><div class="kpi-lbl">UCI Deixados</div></div>
+  </div>
+  <h2>&#128308; Triagem / Supervisão</h2>
+  <table><tr><th>Triados</th><th>Óbitos</th><th>Verificações</th><th>SOH</th><th>SOM</th><th>PC</th><th>TB</th></tr>
+  <tr><td>${day.triagem?.triados||0}</td><td>${day.triagem?.obitos||0}</td><td>${day.triagem?.verif||0}</td>
+  <td>${day.triagem?.existencia?.SOH||0}</td><td>${day.triagem?.existencia?.SOM||0}</td>
+  <td>${day.triagem?.existencia?.PC||0}</td><td>${day.triagem?.existencia?.TB||0}</td></tr></table>
+  ${(day.triagem?.recv||[]).length?`<h3>Transf. Recebidas</h3>${rowList(day.triagem.recv,["Unidade","Descrição","Qtd"])}`:""}
+  ${(day.triagem?.done||[]).length?`<h3>Transf. Feitas</h3>${rowList(day.triagem.done,["Unidade","Descrição","Qtd"])}`:""}
+  ${day.triagem?.obs?`<h3>Observação</h3><p>${day.triagem.obs}</p>`:""}
+  ${secBlock("Medicina Interna","med","&#129658;")}
+  ${secBlock("Cirurgia Geral","cir","&#128295;")}
+  ${secBlock("Ortopedia e Traumatologia","ort","&#129460;")}
+  ${secBlock("Neurocirurgia","neu","&#129504;")}
+  ${secBlock("Maxilo Facial","max","&#128512;")}
+  <h2>&#128298; Bloco Operatório</h2>
+  <table><tr><th>Especialidade</th><th>Urgência</th><th>Eletiva</th></tr>
+  ${BLOCO_ESPS.map(esp=>{const s=slugify(esp);const e=day.bloco?.esps?.[esp]||{};return`<tr><td>${esp}</td><td>${e.urg||0}</td><td>${e.ele||0}</td></tr>`;}).join("")}
+  <tr><td><strong>Total</strong></td><td colspan="2"><strong>${day.bloco?.total||0}</strong></td></tr></table>
+  <h2>&#127973; UCI</h2>
+  <p>Doentes Deixados: <strong>${day.uci?.deixados||0}</strong></p>
+  ${(day.uci?.obitos||[]).length?`<h3>Óbitos</h3>${rowList(day.uci.obitos,["Causa","N.º"])}`:""}
+  <h2>&#128260; Transferências Detalhadas</h2>
+  <h3>Por Unidade Hospitalar</h3>
+  <table>${UNIDADES.map(u=>{const v=(day.transf?.unidades||{})[u]||0;return v?`<tr><td>${u}</td><td>${v}</td></tr>`:""}).join("")}
+  ${(day.transf?.extra_unid||[]).map(r=>`<tr><td>${r.f0||""}</td><td>${r.f1||0}</td></tr>`).join("")}</table>
+  <h3>Por Especialidade</h3>
+  <table>${ESPECIALIDADES.map(e=>{const v=(day.transf?.esps||{})[e]||0;return v?`<tr><td>${e}</td><td>${v}</td></tr>`:""}).join("")}
+  ${(day.transf?.extra_esp||[]).map(r=>`<tr><td>${r.f0||""}</td><td>${r.f1||0}</td></tr>`).join("")}</table>
+  <h2>&#129657; Pequena Cirurgia</h2>
+  <table><tr><th>Especialidade</th>${GENEROS.map(g=>`<th>${g}</th>`).join("")}<th>Total</th></tr>
+  ${ESP_PQCIR.map(esp=>{
+    const pqe=(day.pq?.esps||{})[esp]||{};
+    const tot=GENEROS.reduce((s,g)=>s+(pqe[g]||0),0);
+    return`<tr><td>${esp}</td>${GENEROS.map(g=>`<td>${pqe[g]||0}</td>`).join("")}<td><strong>${tot}</strong></td></tr>`;
+  }).join("")}</table>
+  <h3>Procedimentos</h3>
+  <table>${PROCEDIMENTOS.map(p=>{const v=(day.pq?.procs||{})[p]||0;return`<tr><td>${p}</td><td>${v}</td></tr>`;}).join("")}
+  ${(day.pq?.extra_procs||[]).map(r=>`<tr><td>${r.f0||""}</td><td>${r.f1||0}</td></tr>`).join("")}</table>
+  <p style="margin-top:20px;font-size:10px;color:#999;border-top:1px solid #ddd;padding-top:6px">
+    Impresso em ${new Date().toLocaleString("pt-PT")} &nbsp;|&nbsp; Hospital do Prenda &mdash; Banco de Urgência
+  </p>
+  </body></html>`;
+
+  const w=window.open("","_blank","width=900,height=700");
+  w.document.write(h);
+  w.document.close();
+  w.focus();
+  setTimeout(()=>{ w.print(); },600);
 }
 
 // ── Statistics ────────────────────────────────────────────
