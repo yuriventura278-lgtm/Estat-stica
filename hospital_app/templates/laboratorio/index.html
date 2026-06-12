@@ -1,0 +1,419 @@
+{% extends "base.html" %}
+{% block titulo %}Laboratório — Hospital do Prenda{% endblock %}
+
+{% block conteudo %}
+<div style="display:flex;min-height:calc(100vh - 64px);">
+
+  <!-- ─── BARRA LATERAL ─────────────────────────────────────── -->
+  <aside style="width:220px;background:var(--s1);border-right:1px solid var(--bd);
+    padding:16px 12px;display:flex;flex-direction:column;gap:4px;flex-shrink:0;">
+
+    <div style="font-size:10px;font-weight:700;color:var(--mut);text-transform:uppercase;
+      letter-spacing:1px;padding:8px 8px 4px;">🧪 Laboratório</div>
+
+    <button class="nav-btn active" id="nav-home"        onclick="mostrarTab('home',this)">🏠 Início</button>
+    <button class="nav-btn"        id="nav-requisicoes" onclick="mostrarTab('requisicoes',this)">📋 Requisições</button>
+    <button class="nav-btn"        id="nav-resultados"  onclick="mostrarTab('resultados',this)">✅ Resultados</button>
+
+    <div style="margin-top:auto;padding-top:16px;border-top:1px solid var(--bd);">
+      <div class="form-group" style="margin-bottom:8px;">
+        <label>Data</label>
+        <input type="date" id="data-sel" value="{{ hoje }}"
+          style="padding:7px 10px;border:1px solid var(--bd);border-radius:8px;font-size:12px;"
+          onchange="mudarData(this.value)">
+      </div>
+      <button class="btn btn-outline btn-sm" style="width:100%;justify-content:center;"
+        onclick="exportarDados()">📥 Exportar JSON</button>
+    </div>
+  </aside>
+
+  <!-- ─── CONTEÚDO PRINCIPAL ────────────────────────────────── -->
+  <main style="flex:1;padding:24px;overflow-y:auto;">
+
+    <!-- ── TAB: INÍCIO ────────────────────────────────────────── -->
+    <div id="tab-home" class="tab-pane">
+      <h2 style="font-size:17px;font-weight:700;margin-bottom:16px;">🧪 Laboratório Clínico</h2>
+
+      <!-- Grelha de estatísticas -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:24px;">
+        <div class="card" style="text-align:center;padding:16px;">
+          <div style="font-size:28px;font-family:var(--fm);font-weight:700;color:var(--acc);" id="stat-total">—</div>
+          <div style="font-size:11px;color:var(--mut);margin-top:4px;">Total Requisições</div>
+        </div>
+        <div class="card" style="text-align:center;padding:16px;">
+          <div style="font-size:28px;font-family:var(--fm);font-weight:700;color:var(--amb);" id="stat-pendentes">—</div>
+          <div style="font-size:11px;color:var(--mut);margin-top:4px;">Pendentes</div>
+        </div>
+        <div class="card" style="text-align:center;padding:16px;">
+          <div style="font-size:28px;font-family:var(--fm);font-weight:700;color:var(--grn);" id="stat-concluidos">—</div>
+          <div style="font-size:11px;color:var(--mut);margin-top:4px;">Concluídos</div>
+        </div>
+        <div class="card" style="text-align:center;padding:16px;">
+          <div style="font-size:28px;font-family:var(--fm);font-weight:700;color:var(--red);" id="stat-urgentes">—</div>
+          <div style="font-size:11px;color:var(--mut);margin-top:4px;">Urgentes</div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="abrirModalRequisicao()">+ Nova Requisição</button>
+        <button class="btn btn-outline" onclick="mostrarTab('requisicoes',document.getElementById('nav-requisicoes'))">Ver Requisições</button>
+      </div>
+    </div>
+
+    <!-- ── TAB: REQUISIÇÕES ──────────────────────────────────── -->
+    <div id="tab-requisicoes" class="tab-pane" style="display:none;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <h2 style="font-size:17px;font-weight:700;">📋 Requisições</h2>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <!-- Filtro por estado -->
+          <select id="filtro-estado" onchange="carregarRequisicoes()"
+            style="padding:7px 10px;border:1px solid var(--bd);border-radius:8px;font-size:12px;">
+            <option value="">Todos os estados</option>
+            <option value="pendente">Pendente</option>
+            <option value="em_curso">Em Curso</option>
+            <option value="concluido">Concluído</option>
+          </select>
+          <button class="btn btn-primary btn-sm" onclick="abrirModalRequisicao()">+ Nova Requisição</button>
+        </div>
+      </div>
+
+      <div class="card" style="padding:0;overflow:hidden;">
+        <table>
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>NUP</th>
+              <th>Análise</th>
+              <th>Urgente</th>
+              <th>Estado</th>
+              <th>Data</th>
+              <th>Acções</th>
+            </tr>
+          </thead>
+          <tbody id="tabela-requisicoes">
+            <tr><td colspan="7" style="text-align:center;color:var(--mut);padding:24px;">A carregar...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── TAB: RESULTADOS ───────────────────────────────────── -->
+    <div id="tab-resultados" class="tab-pane" style="display:none;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <h2 style="font-size:17px;font-weight:700;">✅ Resultados</h2>
+      </div>
+
+      <div class="card" style="padding:0;overflow:hidden;">
+        <table>
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>NUP</th>
+              <th>Análise</th>
+              <th>Urgente</th>
+              <th>Resultado</th>
+              <th>Data Resultado</th>
+              <th>Acções</th>
+            </tr>
+          </thead>
+          <tbody id="tabela-resultados">
+            <tr><td colspan="7" style="text-align:center;color:var(--mut);padding:24px;">A carregar...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ─── MODAL: NOVA REQUISIÇÃO ───────────────────────────── -->
+<div id="modal-requisicao" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span class="modal-title">Nova Requisição</span>
+      <button class="modal-close" onclick="fecharModal('modal-requisicao')">✕</button>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="form-group" style="grid-column:1/-1;">
+        <label>Nome Completo *</label>
+        <input type="text" id="r-nome" placeholder="Nome do doente">
+      </div>
+      <div class="form-group">
+        <label>NUP</label>
+        <input type="text" id="r-nup" placeholder="Número Único do Paciente">
+      </div>
+      <div class="form-group">
+        <label>Sexo</label>
+        <select id="r-sexo">
+          <option value="">— Seleccionar —</option>
+          <option value="M">Masculino</option>
+          <option value="F">Feminino</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Idade</label>
+        <input type="number" id="r-idade" min="0" max="150" placeholder="Anos">
+      </div>
+      <div class="form-group" style="grid-column:1/-1;">
+        <label>Tipo de Análise *</label>
+        <input type="text" id="r-analise" placeholder="Ex: Hemograma completo, Glicemia...">
+      </div>
+      <div class="form-group">
+        <label>Médico Requisitante</label>
+        <input type="text" id="r-medico" placeholder="Nome do médico">
+      </div>
+      <div class="form-group">
+        <label>Data Requisição *</label>
+        <input type="date" id="r-data">
+      </div>
+      <div class="form-group" style="grid-column:1/-1;flex-direction:row;align-items:center;gap:10px;">
+        <input type="checkbox" id="r-urgente" style="width:16px;height:16px;">
+        <label style="text-transform:none;letter-spacing:0;font-size:13px;cursor:pointer;" for="r-urgente">Marcar como Urgente</label>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="fecharModal('modal-requisicao')">Cancelar</button>
+      <button class="btn btn-primary" data-acao="guardar" onclick="guardarRequisicao()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── MODAL: REGISTAR RESULTADO ────────────────────────── -->
+<div id="modal-resultado" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span class="modal-title">Registar Resultado</span>
+      <button class="modal-close" onclick="fecharModal('modal-resultado')">✕</button>
+    </div>
+
+    <input type="hidden" id="res-req-id">
+    <p id="res-paciente-nome" style="font-weight:600;color:var(--acc);margin-bottom:16px;"></p>
+
+    <div class="form-group">
+      <label>Resultado *</label>
+      <textarea id="res-resultado" rows="4" placeholder="Descreva os resultados da análise..."></textarea>
+    </div>
+    <div class="form-group">
+      <label>Data do Resultado</label>
+      <input type="date" id="res-data">
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="fecharModal('modal-resultado')">Cancelar</button>
+      <button class="btn btn-primary" data-acao="guardar" onclick="guardarResultado()">💾 Registar Resultado</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block estilos %}
+<style>
+.nav-btn{width:100%;text-align:left;padding:9px 12px;border:none;border-radius:8px;
+  font-family:var(--fh);font-size:13px;font-weight:500;cursor:pointer;
+  background:transparent;color:var(--txt);transition:all .15s;}
+.nav-btn:hover{background:rgba(26,86,219,0.06);color:var(--acc);}
+.nav-btn.active{background:rgba(26,86,219,0.1);color:var(--acc);font-weight:700;}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* ─── Estado da página ────────────────────────────────────── */
+var dataActual = '{{ hoje }}';
+
+/* ─── Escapar HTML para evitar XSS ──────────────────────── */
+function esc(s) {
+  return String(s||'')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ─── Fechar modal ao clicar fora ───────────────────────── */
+document.querySelectorAll('.modal-overlay').forEach(function(el){
+  el.addEventListener('click', function(e){ if(e.target===el) fecharModal(el.id); });
+});
+
+/* ─── Navegação entre abas ───────────────────────────────── */
+function mostrarTab(nome, btnClicado) {
+  document.querySelectorAll('.tab-pane').forEach(function(el){ el.style.display='none'; });
+  document.getElementById('tab-'+nome).style.display = 'block';
+  document.querySelectorAll('.nav-btn').forEach(function(b){ b.classList.remove('active'); });
+  if(btnClicado) btnClicado.classList.add('active');
+
+  if(nome === 'home')         carregarEstatisticas();
+  if(nome === 'requisicoes')  carregarRequisicoes();
+  if(nome === 'resultados')   carregarResultados();
+}
+
+function mudarData(novaData) {
+  dataActual = novaData;
+  carregarEstatisticas();
+}
+
+/* ─── Carregar estatísticas ──────────────────────────────── */
+async function carregarEstatisticas() {
+  var r = await api('GET', '/api/lab/estatisticas?data=' + dataActual);
+  if(!r) return;
+  var d = r.dados;
+  document.getElementById('stat-total').textContent     = d.total      ?? '—';
+  document.getElementById('stat-pendentes').textContent = d.pendentes   ?? '—';
+  document.getElementById('stat-concluidos').textContent= d.concluidos  ?? '—';
+  document.getElementById('stat-urgentes').textContent  = d.urgentes    ?? '—';
+}
+
+/* ─── Badge de estado ────────────────────────────────────── */
+function badgeEstado(estado) {
+  var mapa = {
+    pendente: {bg:'rgba(217,119,6,0.12)',  cor:'var(--amb)', txt:'Pendente'},
+    em_curso: {bg:'rgba(26,86,219,0.1)',   cor:'var(--acc)', txt:'Em Curso'},
+    concluido:{bg:'rgba(5,150,105,0.1)',   cor:'var(--grn)', txt:'Concluído'},
+  };
+  var s = mapa[estado] || {bg:'var(--bd)', cor:'var(--mut)', txt: esc(estado)};
+  return '<span class="badge" style="background:'+s.bg+';color:'+s.cor+';">'+s.txt+'</span>';
+}
+
+/* ─── Carregar lista de requisições ─────────────────────── */
+async function carregarRequisicoes() {
+  var estado = document.getElementById('filtro-estado').value;
+  var url = '/api/lab/requisicoes?data=' + dataActual;
+  if(estado) url += '&estado=' + estado;
+  var r = await api('GET', url);
+  if(!r) return;
+  var tbody = document.getElementById('tabela-requisicoes');
+  if(!r.dados || !r.dados.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--mut);padding:24px;">Sem requisições para esta data</td></tr>';
+    return;
+  }
+  tbody.innerHTML = r.dados.map(function(d){
+    var urgBadge = d.urgente
+      ? '<span class="badge" style="background:rgba(220,38,38,0.1);color:var(--red);">Urgente</span>'
+      : '<span class="badge" style="background:var(--s2);color:var(--mut);">Normal</span>';
+    return '<tr tabindex="0">' +
+      '<td style="font-weight:600;">'+esc(d.nome)+'</td>' +
+      '<td style="font-family:var(--fm);font-size:12px;">'+esc(d.nup||'—')+'</td>' +
+      '<td>'+esc(d.analise||d.tipo_analise||'—')+'</td>' +
+      '<td>'+urgBadge+'</td>' +
+      '<td>'+badgeEstado(d.estado)+'</td>' +
+      '<td style="font-family:var(--fm);font-size:12px;">'+(d.data_requisicao||d.data||'—')+'</td>' +
+      '<td style="white-space:nowrap;">' +
+        '<button class="btn btn-outline btn-sm" onclick="abrirModalResultado(\''+d.id+'\',\''+esc(d.nome)+'\')">Resultado</button> ' +
+        '<button class="btn btn-danger btn-sm" onclick="eliminarRequisicao(\''+d.id+'\')">✕</button>' +
+      '</td>' +
+    '</tr>';
+  }).join('');
+}
+
+/* ─── Carregar resultados concluídos ─────────────────────── */
+async function carregarResultados() {
+  var r = await api('GET', '/api/lab/requisicoes?estado=concluido');
+  if(!r) return;
+  var tbody = document.getElementById('tabela-resultados');
+  if(!r.dados || !r.dados.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--mut);padding:24px;">Sem resultados disponíveis</td></tr>';
+    return;
+  }
+  tbody.innerHTML = r.dados.map(function(d){
+    var urgBadge = d.urgente
+      ? '<span class="badge" style="background:rgba(220,38,38,0.1);color:var(--red);">Urgente</span>'
+      : '<span class="badge" style="background:var(--s2);color:var(--mut);">Normal</span>';
+    return '<tr tabindex="0">' +
+      '<td style="font-weight:600;">'+esc(d.nome)+'</td>' +
+      '<td style="font-family:var(--fm);font-size:12px;">'+esc(d.nup||'—')+'</td>' +
+      '<td>'+esc(d.analise||d.tipo_analise||'—')+'</td>' +
+      '<td>'+urgBadge+'</td>' +
+      '<td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+esc(d.resultado||'—')+'</td>' +
+      '<td style="font-family:var(--fm);font-size:12px;">'+(d.data_resultado||'—')+'</td>' +
+      '<td><button class="btn btn-danger btn-sm" onclick="eliminarRequisicao(\''+d.id+'\')">✕</button></td>' +
+    '</tr>';
+  }).join('');
+}
+
+/* ─── Abrir/guardar modal de nova requisição ─────────────── */
+function abrirModalRequisicao() {
+  ['r-nome','r-nup','r-analise','r-medico'].forEach(function(f){
+    document.getElementById(f).value = '';
+  });
+  document.getElementById('r-sexo').value = '';
+  document.getElementById('r-idade').value = '';
+  document.getElementById('r-urgente').checked = false;
+  document.getElementById('r-data').value = dataActual;
+  abrirModal('modal-requisicao');
+}
+
+async function guardarRequisicao() {
+  var nome = document.getElementById('r-nome').value.trim();
+  if(!nome) { toast('O nome do doente é obrigatório', 'warn'); return; }
+  var analise = document.getElementById('r-analise').value.trim();
+  if(!analise) { toast('O tipo de análise é obrigatório', 'warn'); return; }
+
+  var dados = {
+    nome:              nome,
+    nup:               document.getElementById('r-nup').value.trim(),
+    sexo:              document.getElementById('r-sexo').value,
+    idade:             parseInt(document.getElementById('r-idade').value) || null,
+    tipo_analise:      analise,
+    urgente:           document.getElementById('r-urgente').checked,
+    medico_requisitante: document.getElementById('r-medico').value.trim(),
+    data_requisicao:   document.getElementById('r-data').value || dataActual,
+  };
+
+  var r = await api('POST', '/api/lab/requisicoes', dados);
+  if(r) {
+    toast('Requisição criada com sucesso', 'save');
+    fecharModal('modal-requisicao');
+    carregarRequisicoes();
+    carregarEstatisticas();
+  }
+}
+
+/* ─── Abrir/guardar modal de resultado ───────────────────── */
+function abrirModalResultado(reqId, nomeDoente) {
+  document.getElementById('res-req-id').value = reqId;
+  document.getElementById('res-paciente-nome').textContent = nomeDoente;
+  document.getElementById('res-resultado').value = '';
+  document.getElementById('res-data').value = dataActual;
+  abrirModal('modal-resultado');
+}
+
+async function guardarResultado() {
+  var resultado = document.getElementById('res-resultado').value.trim();
+  if(!resultado) { toast('O resultado é obrigatório', 'warn'); return; }
+  var id = document.getElementById('res-req-id').value;
+  var dados = {
+    resultado:     resultado,
+    data_resultado: document.getElementById('res-data').value || dataActual,
+  };
+  var r = await api('PUT', '/api/lab/requisicoes/' + id + '/resultado', dados);
+  if(r) {
+    toast('Resultado registado com sucesso', 'save');
+    fecharModal('modal-resultado');
+    carregarRequisicoes();
+    carregarResultados();
+    carregarEstatisticas();
+  }
+}
+
+/* ─── Eliminar requisição ────────────────────────────────── */
+async function eliminarRequisicao(id) {
+  if(!confirm('Confirma a eliminação desta requisição?')) return;
+  var r = await api('DELETE', '/api/lab/requisicoes/' + id);
+  if(r) {
+    toast('Requisição eliminada', 'del');
+    carregarRequisicoes();
+    carregarEstatisticas();
+  }
+}
+
+function exportarDados() {
+  toast('A preparar exportação...', 'info');
+  window.location.href = '/api/lab/exportar';
+}
+
+/* ─── Inicializar a página ───────────────────────────────── */
+document.addEventListener('DOMContentLoaded', function(){
+  carregarEstatisticas();
+});
+</script>
+{% endblock %}

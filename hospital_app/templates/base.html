@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{% block titulo %}Hospital do Prenda{% endblock %}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ── Variáveis de cor (tema azul/branco Hospital do Prenda) ── */
+:root{
+  --bg:#F0F2F5;--s1:#FFFFFF;--s2:#F8F9FB;
+  --bd:rgba(0,0,0,0.08);--bda:rgba(26,86,219,0.18);
+  --acc:#1a56db;--a2:#1447c0;
+  --red:#DC2626;--amb:#D97706;--grn:#059669;--pur:#7C3AED;
+  --txt:#1A1A2E;--mut:#6B7280;
+  --fh:'Inter',sans-serif;--fm:'Roboto Mono',monospace;
+  --sw:230px;--hh:64px;
+  --shadow:0 1px 4px rgba(0,0,0,0.06),0 4px 16px rgba(0,0,0,0.04);
+}
+
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--fh);background:var(--bg);color:var(--txt);min-height:100vh;}
+
+/* ── Header ── */
+.hdr{height:var(--hh);background:var(--s1);border-bottom:1px solid var(--bd);
+  display:flex;align-items:center;padding:0 24px;gap:16px;
+  box-shadow:0 2px 8px rgba(0,0,0,0.04);position:sticky;top:0;z-index:100;}
+.hdr-logo{width:36px;height:36px;background:var(--acc);border-radius:9px;
+  display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:16px;}
+.hdr-title{font-size:15px;font-weight:700;color:var(--txt);}
+.hdr-sub{font-size:12px;color:var(--mut);margin-left:auto;}
+
+/* ── Botões ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;
+  font-family:var(--fh);font-size:13px;font-weight:600;cursor:pointer;border:none;
+  transition:all .18s;}
+.btn-primary{background:var(--acc);color:#fff;}
+.btn-primary:hover{background:var(--a2);}
+.btn-outline{background:transparent;color:var(--acc);border:1px solid var(--bda);}
+.btn-outline:hover{background:rgba(26,86,219,0.05);}
+.btn-danger{background:transparent;color:var(--red);border:1px solid rgba(220,38,38,0.25);}
+.btn-danger:hover{background:rgba(220,38,38,0.06);}
+.btn-sm{padding:5px 10px;font-size:12px;}
+
+/* ── Formulários ── */
+.form-group{display:flex;flex-direction:column;gap:5px;margin-bottom:14px;}
+.form-group label{font-size:12px;font-weight:600;color:var(--mut);text-transform:uppercase;letter-spacing:.5px;}
+.form-group input,.form-group select,.form-group textarea{
+  padding:9px 12px;border:1px solid var(--bd);border-radius:8px;
+  font-family:var(--fh);font-size:13px;color:var(--txt);background:var(--s1);
+  transition:border .18s,box-shadow .18s;}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{
+  outline:none;border-color:var(--acc);box-shadow:0 0 0 3px rgba(26,86,219,0.12);}
+
+/* ── Cards / Painéis ── */
+.card{background:var(--s1);border:1px solid var(--bd);border-radius:12px;
+  padding:20px;box-shadow:var(--shadow);}
+.card-title{font-size:13px;font-weight:700;color:var(--txt);margin-bottom:16px;
+  padding-bottom:10px;border-bottom:1px solid var(--bd);}
+
+/* ── Tabelas ── */
+table{width:100%;border-collapse:collapse;font-size:13px;}
+th{font-size:11px;font-weight:700;color:var(--mut);text-transform:uppercase;
+  letter-spacing:.5px;padding:10px 12px;border-bottom:2px solid var(--bd);
+  background:var(--s2);text-align:left;}
+td{padding:10px 12px;border-bottom:1px solid var(--bd);vertical-align:middle;}
+tbody tr{transition:background .12s;}
+tbody tr:hover{background:rgba(26,86,219,0.03);}
+tbody tr:focus{outline:2px solid var(--acc);outline-offset:-2px;background:rgba(26,86,219,0.06);}
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;}
+.badge-m{background:rgba(26,86,219,0.1);color:var(--acc);}
+.badge-f{background:rgba(124,58,237,0.1);color:var(--pur);}
+
+/* ── Toast stack ── */
+#toast-stack{position:fixed;bottom:18px;right:18px;display:flex;flex-direction:column-reverse;
+  gap:8px;z-index:9999;pointer-events:none;max-width:320px;}
+.tk{display:flex;align-items:flex-start;gap:10px;padding:11px 14px 8px;border-radius:10px;
+  background:#fff;border:1px solid var(--bd);box-shadow:0 4px 20px rgba(0,0,0,0.12);
+  pointer-events:all;cursor:pointer;overflow:hidden;position:relative;
+  animation:tkIn .22s ease;min-width:220px;}
+@keyframes tkIn{from{opacity:0;transform:translateX(28px)}to{opacity:1;transform:translateX(0)}}
+.tk-icon{font-size:18px;line-height:1;flex-shrink:0;margin-top:1px;}
+.tk-body{flex:1;min-width:0;}
+.tk-title{font-family:var(--fh);font-size:12px;font-weight:700;line-height:1.2;}
+.tk-msg{font-family:var(--fh);font-size:11px;font-weight:400;color:var(--mut);margin-top:2px;line-height:1.3;}
+.tk-bar{position:absolute;bottom:0;left:0;height:3px;animation:tkBar var(--tk-dur,3s) linear forwards;}
+@keyframes tkBar{from{width:100%}to{width:0%}}
+.tk-save .tk-title{color:var(--acc);}.tk-save .tk-bar{background:var(--acc);}
+.tk-del  .tk-title{color:var(--pur);}.tk-del .tk-bar{background:var(--pur);}
+.tk-err  .tk-title{color:var(--red);}.tk-err .tk-bar{background:var(--red);}
+.tk-warn .tk-title{color:var(--amb);}.tk-warn .tk-bar{background:var(--amb);}
+.tk-ok   .tk-title{color:var(--grn);}.tk-ok .tk-bar{background:var(--grn);}
+
+/* ── Modal ── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.35);
+  z-index:500;align-items:center;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal-box{background:var(--s1);border-radius:14px;padding:24px;width:100%;max-width:480px;
+  box-shadow:0 24px 48px rgba(0,0,0,0.18);max-height:90vh;overflow-y:auto;}
+.modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+.modal-title{font-size:15px;font-weight:700;}
+.modal-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--mut);
+  width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center;}
+.modal-close:hover{background:var(--s2);}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:20px;
+  padding-top:16px;border-top:1px solid var(--bd);}
+</style>
+{% block estilos %}{% endblock %}
+</head>
+<body>
+
+<!-- Cabeçalho comum a todas as páginas -->
+<header class="hdr">
+  <div class="hdr-logo">H</div>
+  <span class="hdr-title">Hospital do Prenda</span>
+  <nav style="display:flex;gap:6px;margin-left:20px;flex-wrap:wrap;">
+    <a href="/" class="btn btn-outline btn-sm" style="text-decoration:none;">🏠</a>
+    <a href="/cirurgia" class="btn btn-outline btn-sm" style="text-decoration:none;">🔪 Cirurgia</a>
+    <a href="/laboratorio" class="btn btn-outline btn-sm" style="text-decoration:none;">🧪 Lab</a>
+    <a href="/hiv" class="btn btn-outline btn-sm" style="text-decoration:none;">🏥 VIH</a>
+    <a href="/hemoterapia" class="btn btn-outline btn-sm" style="text-decoration:none;">🩸 Hemo</a>
+    <a href="/imagiologia" class="btn btn-outline btn-sm" style="text-decoration:none;">🩻 Imag</a>
+    <a href="/consulta" class="btn btn-outline btn-sm" style="text-decoration:none;">👨‍⚕️ Consulta</a>
+    <a href="/bloco" class="btn btn-outline btn-sm" style="text-decoration:none;">🏨 Bloco</a>
+    <a href="/fisioterapia" class="btn btn-outline btn-sm" style="text-decoration:none;">🦴 Fisio</a>
+  </nav>
+  <div style="display:flex;align-items:center;gap:10px;margin-left:auto;">
+    {% if utilizador %}
+    <span style="font-size:12px;color:var(--mut);">
+      👤 <strong>{{ utilizador.nome_completo }}</strong>
+      <span style="background:rgba(26,86,219,0.1);color:var(--acc);padding:2px 7px;
+        border-radius:10px;font-size:10px;font-weight:700;margin-left:4px;">{{ utilizador.cargo|upper }}</span>
+    </span>
+    <a href="/logout" class="btn btn-outline btn-sm" style="text-decoration:none;color:var(--red);border-color:rgba(220,38,38,0.2);">Sair</a>
+    {% endif %}
+    <span style="font-size:12px;color:var(--mut);" id="relogio">--:--:--</span>
+  </div>
+</header>
+
+<!-- Conteúdo específico de cada página -->
+{% block conteudo %}{% endblock %}
+
+<!-- Container de notificações (aparece automaticamente) -->
+<div id="toast-stack"></div>
+
+<!-- JavaScript comum a todas as páginas -->
+<script>
+// ── Relógio ──────────────────────────────────────────────
+setInterval(function(){
+  var r=document.getElementById('relogio');
+  if(r)r.textContent=new Date().toLocaleTimeString('pt-PT');
+},1000);
+
+// ── Sistema de notificações (toasts) ─────────────────────
+var _TK={
+  ok:   {icon:'✅',titulo:'Concluído',   classe:'tk-ok',  dur:3000},
+  save: {icon:'💾',titulo:'Guardado',    classe:'tk-save',dur:3000},
+  del:  {icon:'🗑️',titulo:'Eliminado',   classe:'tk-del', dur:3000},
+  edit: {icon:'✏️',titulo:'Actualizado', classe:'tk-edit',dur:3000},
+  err:  {icon:'❌',titulo:'Erro',        classe:'tk-err', dur:5000},
+  warn: {icon:'⚠️',titulo:'Atenção',     classe:'tk-warn',dur:4000},
+  info: {icon:'ℹ️',titulo:'Info',        classe:'tk-info',dur:3000},
+};
+
+function toast(msg, tipo) {
+  /* Mostra uma notificação empilhada no canto inferior direito */
+  var cfg = _TK[tipo] || _TK.info;
+  var stack = document.getElementById('toast-stack');
+  var existentes = stack.querySelectorAll('.tk');
+  if(existentes.length >= 4) existentes[existentes.length-1].remove();
+
+  var el = document.createElement('div');
+  el.className = 'tk ' + cfg.classe;
+  el.style.setProperty('--tk-dur', cfg.dur + 'ms');
+  el.innerHTML =
+    '<span class="tk-icon">' + cfg.icon + '</span>' +
+    '<div class="tk-body">' +
+      '<div class="tk-title">' + cfg.titulo + '</div>' +
+      '<div class="tk-msg">' + msg + '</div>' +
+    '</div>' +
+    '<div class="tk-bar"></div>';
+
+  el.addEventListener('click', function(){ _fecharToast(el); });
+  stack.prepend(el);
+  setTimeout(function(){ _fecharToast(el); }, cfg.dur + 200);
+}
+
+function _fecharToast(el) {
+  if(!el.parentNode) return;
+  el.style.transition = 'opacity .2s, transform .2s';
+  el.style.opacity = '0';
+  el.style.transform = 'translateX(28px)';
+  setTimeout(function(){ el.remove(); }, 220);
+}
+
+// ── Navegação por teclado ─────────────────────────────────
+document.addEventListener('keydown', function(e) {
+  var tag = document.activeElement && document.activeElement.tagName;
+  var emCampo = (tag==='INPUT' || tag==='TEXTAREA' || tag==='SELECT');
+
+  // Escape → fecha modal aberto
+  if(e.key === 'Escape') {
+    var abertos = Array.from(document.querySelectorAll('.modal-overlay.open'));
+    if(abertos.length) {
+      e.preventDefault();
+      abertos[abertos.length-1].classList.remove('open');
+    }
+    return;
+  }
+
+  // Setas ↑↓ em linhas de tabela
+  if(!emCampo && (e.key==='ArrowUp' || e.key==='ArrowDown')) {
+    var tr = document.activeElement;
+    if(tr && tr.tagName === 'TR') {
+      e.preventDefault();
+      var linhas = Array.from(tr.closest('tbody').querySelectorAll('tr[tabindex]'));
+      var idx = linhas.indexOf(tr);
+      var prox = e.key==='ArrowDown' ? linhas[idx+1] : linhas[idx-1];
+      if(prox) prox.focus();
+    }
+    return;
+  }
+
+  // Ctrl+S → guardar
+  if((e.ctrlKey || e.metaKey) && e.key === 's') {
+    e.preventDefault();
+    var btnGuardar = document.querySelector('[data-acao="guardar"]');
+    if(btnGuardar) btnGuardar.click();
+    return;
+  }
+});
+
+// ── Função auxiliar: chamar a API ─────────────────────────
+async function api(metodo, url, corpo) {
+  /*
+   * Envia um pedido HTTP para o servidor Python (Flask).
+   * Parâmetros:
+   *   metodo  → 'GET', 'POST', 'PUT', 'DELETE'
+   *   url     → caminho da API, ex: '/api/cirurgia/doentes'
+   *   corpo   → objecto JavaScript a enviar como JSON (opcional)
+   */
+  var opcoes = {
+    method: metodo,
+    headers: { 'Content-Type': 'application/json' },
+  };
+  if(corpo) opcoes.body = JSON.stringify(corpo);
+
+  try {
+    var resp = await fetch(url, opcoes);
+    var dados = await resp.json();
+    if(!dados.ok) {
+      toast(dados.mensagem || 'Erro desconhecido', 'err');
+      return null;
+    }
+    return dados;
+  } catch(err) {
+    toast('Erro de ligação ao servidor: ' + err.message, 'err');
+    return null;
+  }
+}
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,62 @@
+═══════════════════════════════════════════════════════════
+  HOSPITAL DO PRENDA — Sistema de Gestão Hospitalar
+  Luanda, Angola
+═══════════════════════════════════════════════════════════
+
+REQUISITOS
+──────────
+  • Python 3.8 ou superior
+  • Ligação à internet apenas para a instalação inicial
+
+INSTALAÇÃO (fazer apenas UMA VEZ)
+──────────────────────────────────
+  Windows:  Duplo clique em  →  INSTALAR.bat
+
+  Mac/Linux: No terminal:
+             chmod +x INICIAR_MAC_LINUX.sh
+             ./INICIAR_MAC_LINUX.sh
+
+INICIAR O SISTEMA
+─────────────────
+  Windows:  Duplo clique em  →  INICIAR.bat
+
+  Mac/Linux: ./INICIAR_MAC_LINUX.sh
+
+  O browser abre automaticamente em:
+  → http://localhost:5000
+
+PRIMEIRO LOGIN
+──────────────
+  Utilizador: admin
+  Senha:      admin123
+
+  ⚠ Na primeira entrada, o sistema pede para criar
+    uma nova senha por segurança.
+
+SERVIÇOS DISPONÍVEIS
+────────────────────
+  🔪  Cirurgia Geral
+  🧪  Laboratório
+  🏥  VIH / SIDA
+  🩸  Hemoterapia
+  🩻  Imagiologia
+  👨‍⚕️  Consulta Externa
+  🏨  Bloco Operatório
+  🦴  Fisioterapia
+
+DADOS
+─────
+  Os dados ficam guardados em:  data/hospital.db
+  Exportar backup:  botão "Exportar JSON" em cada serviço
+
+GESTÃO DE UTILIZADORES
+──────────────────────
+  Entrar como admin → menu "Gerir Utilizadores"
+  Criar contas para médicos, enfermeiros e técnicos.
+
+PARAR O SERVIDOR
+────────────────
+  Windows:  Fechar a janela preta do terminal
+  Mac/Linux: Ctrl+C no terminal
+
+═══════════════════════════════════════════════════════════

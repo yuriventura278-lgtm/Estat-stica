@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Alterar Senha — Hospital do Prenda</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Inter',sans-serif;background:linear-gradient(135deg,#1a56db,#1447c0);
+  min-height:100vh;display:flex;align-items:center;justify-content:center;}
+.card{background:#fff;border-radius:16px;padding:36px;width:100%;max-width:380px;
+  box-shadow:0 24px 64px rgba(0,0,0,0.25);}
+.icon{font-size:36px;text-align:center;margin-bottom:12px;}
+h1{font-size:18px;font-weight:700;text-align:center;color:#1A1A2E;margin-bottom:6px;}
+p.sub{font-size:13px;color:#6B7280;text-align:center;margin-bottom:24px;}
+.fg{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;}
+.fg label{font-size:11px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:.5px;}
+.fg input{padding:10px 13px;border:1px solid rgba(0,0,0,0.12);border-radius:8px;
+  font-family:'Inter',sans-serif;font-size:13px;}
+.fg input:focus{outline:none;border-color:#1a56db;box-shadow:0 0 0 3px rgba(26,86,219,0.12);}
+.btn{width:100%;padding:12px;background:#1a56db;color:#fff;border:none;border-radius:9px;
+  font-weight:700;font-size:14px;cursor:pointer;margin-top:6px;}
+.alerta{background:rgba(220,38,38,0.07);border:1px solid rgba(220,38,38,0.2);
+  border-radius:8px;padding:10px;color:#DC2626;font-size:12px;margin-bottom:14px;}
+.aviso{background:rgba(217,119,6,0.07);border:1px solid rgba(217,119,6,0.2);
+  border-radius:8px;padding:10px;color:#D97706;font-size:12px;margin-bottom:14px;}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="icon">🔐</div>
+  <h1>Alterar Senha</h1>
+  <p class="sub">
+    {% if primeira_sessao %}
+      Por segurança, defina uma nova senha antes de continuar.
+    {% else %}
+      Introduza a sua senha actual e a nova senha.
+    {% endif %}
+  </p>
+
+  {% if erro %}<div class="alerta">❌ {{ erro }}</div>{% endif %}
+  {% if aviso %}<div class="aviso">⚠️ {{ aviso }}</div>{% endif %}
+
+  <form method="POST" action="/alterar-senha">
+    {% if not primeira_sessao %}
+    <div class="fg">
+      <label>Senha Actual</label>
+      <input type="password" name="senha_actual" placeholder="•••���••••" required>
+    </div>
+    {% endif %}
+    <div class="fg">
+      <label>Nova Senha</label>
+      <input type="password" name="senha_nova" placeholder="Mínimo 6 caracteres" minlength="6" required>
+    </div>
+    <div class="fg">
+      <label>Confirmar Nova Senha</label>
+      <input type="password" name="senha_confirmar" placeholder="Repita a nova senha" required>
+    </div>
+    <button type="submit" class="btn">Guardar Nova Senha</button>
+  </form>
+</div>
+</body>
+</html>

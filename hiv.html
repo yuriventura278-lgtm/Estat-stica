@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hospital do Prenda — VIH</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+
+<!-- Base de Dados Cross-Device: IndexedDB + Firebase (hprenda-db.js v4) -->
+<script src="hprenda-db.js"></script>
+<script src="hprenda-crud.js"></script>
+<script src="hprenda-export.js"></script>
+
+<style>
+:root {
+  --bg:#F0F2F5; --surface:#FFFFFF; --surface2:#F8F9FB; --navy:#FFFFFF; --navy2:#F8F9FB; --navy3:#F0F2F5;
+  --border:rgba(0,0,0,0.08); --border2:rgba(0,0,0,0.14);
+  --blue:#1a56db; --blue2:#1447c0; --blue3:#3b82f6;
+  --cyan:#06b6d4; --cyan2:#0891b2;
+  --green:#059669; --green2:#10b981; --green3:#6ee7b7;
+  --amber:#d97706; --amber2:#f59e0b;
+  --red:#dc2626; --red2:#ef4444;
+  --purple:#7c3aed; --purple2:#a78bfa;
+  --rose:#be185d; --rose2:#ec4899;
+  --teal:#0d9488; --teal2:#14b8a6;
+  --text:#1A1A2E; --text-muted:#6B7280;
+  --radius:12px; --radius-sm:8px;
+  --shadow:0 1px 4px rgba(0,0,0,0.06),0 4px 16px rgba(0,0,0,0.04);
+  --shadow-lg:0 8px 32px rgba(0,0,0,0.10);
+  /* HIV accent — KEEP red/rose */
+  --hiv:#b91c1c; --hiv2:#ef4444; --hiv3:#fca5a5;
+  --ind:#7c3aed; --ind2:#a78bfa; --ind3:#ddd6fe;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:"Inter",sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;overflow-x:hidden;}
+body::before{display:none;}
+@keyframes gridShift{0%{transform:translateY(0)}100%{transform:translateY(48px)}}
+
+/* TOPBAR */
+.topbar{background:#ffffff;border-bottom:1px solid var(--border2);padding:0 28px;height:62px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200;box-shadow:0 1px 4px rgba(0,0,0,0.08);}
+.topbar-brand{display:flex;align-items:center;gap:14px;}
+.topbar-logo{width:42px;height:42px;border-radius:10px;overflow:hidden;}
+.topbar-logo img{width:42px;height:42px;object-fit:cover;border-radius:10px;}
+.topbar-name{font-family:"Syne",sans-serif;font-size:16px;font-weight:700;letter-spacing:0.02em;color:var(--text);}
+.topbar-sub{font-size:11px;color:rgba(185,28,28,0.8);margin-top:1px;}
+.topbar-right{display:flex;align-items:center;gap:10px;}
+.topbar-time{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--hiv);background:rgba(185,28,28,0.06);padding:6px 12px;border-radius:6px;border:1px solid rgba(185,28,28,0.15);}
+.sync-badge{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:rgba(185,28,28,0.7);background:rgba(185,28,28,0.05);border:1px solid rgba(185,28,28,0.15);padding:5px 10px;border-radius:6px;}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:#ef4444;box-shadow:0 0 6px #ef4444;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+
+/* LAYOUT */
+.layout{display:flex;min-height:calc(100vh - 62px);position:relative;z-index:1;}
+.sidebar{width:240px;flex-shrink:0;background:#ffffff;border-right:1px solid var(--border2);padding:24px 0;position:sticky;top:62px;height:calc(100vh - 62px);overflow-y:auto;display:flex;flex-direction:column;box-shadow:1px 0 4px rgba(0,0,0,0.04);}
+.sidebar-logo-area{padding:0 20px 20px;border-bottom:1px solid var(--border);margin-bottom:16px;}
+.sidebar-hospital-name{font-family:"Syne",sans-serif;font-size:13px;font-weight:700;color:var(--text);letter-spacing:0.05em;text-transform:uppercase;}
+.sidebar-hospital-sub{font-size:11px;color:rgba(185,28,28,0.6);margin-top:2px;}
+.sidebar-section{padding:0 12px;margin-bottom:4px;}
+.sidebar-label{font-size:9px;font-weight:700;letter-spacing:0.12em;color:rgba(185,28,28,0.45);text-transform:uppercase;padding:12px 8px 6px;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius-sm);cursor:pointer;transition:all 0.15s;color:var(--text-muted);font-size:13px;border:none;background:none;width:100%;text-align:left;}
+.nav-item:hover{background:var(--surface2);color:var(--text);}
+.nav-item.active{background:rgba(185,28,28,0.06);color:var(--hiv);font-weight:500;border-left:3px solid var(--hiv);padding-left:10px;}
+.nav-icon{font-size:15px;flex-shrink:0;width:20px;text-align:center;}
+.sidebar-divider{height:1px;background:var(--border);margin:8px 12px;}
+.sidebar-footer{margin-top:auto;padding:16px 20px 0;border-top:1px solid var(--border);}
+.sidebar-footer-text{font-size:11px;color:rgba(185,28,28,0.4);line-height:1.6;}
+.main{flex:1;padding:28px;overflow-x:hidden;background:var(--bg);}
+
+/* PAGE */
+.page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
+.page-title{font-family:"Syne",sans-serif;font-size:22px;font-weight:700;color:var(--text);letter-spacing:-0.01em;}
+.page-sub{font-size:13px;color:var(--text-muted);margin-top:3px;}
+
+/* KPI */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:14px;margin-bottom:24px;}
+.kpi{background:#ffffff;border:1px solid var(--border);border-radius:var(--radius);padding:18px 16px;position:relative;overflow:hidden;transition:transform 0.15s,box-shadow 0.15s,border-color 0.15s;box-shadow:var(--shadow);}
+.kpi:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg);border-color:var(--border2);}
+.kpi::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--red),var(--red2));}
+.kpi.purple::before{background:linear-gradient(90deg,var(--ind),var(--ind2));}
+.kpi.total::before{background:linear-gradient(90deg,var(--blue2),var(--blue3));}
+.kpi-icon{font-size:22px;margin-bottom:10px;display:block;}
+.kpi-label{font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px;}
+.kpi-value{font-family:"IBM Plex Mono",monospace;font-size:28px;font-weight:600;color:var(--red2);line-height:1;}
+.kpi.purple .kpi-value{color:var(--ind2);}
+.kpi.total .kpi-value{color:var(--blue3);}
+
+/* CARD */
+.card{background:#ffffff;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:20px;box-shadow:var(--shadow);}
+.card-header{background:var(--surface2);border-bottom:1px solid var(--border);padding:16px 22px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+.card-header.red-header{background:rgba(185,28,28,0.08);border-bottom-color:rgba(185,28,28,0.18);}
+.card-header.purple-header{background:rgba(109,40,217,0.07);border-bottom-color:rgba(124,58,237,0.18);}
+.card-title{font-family:"Syne",sans-serif;font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px;color:var(--text);}
+.card-subtitle{font-size:11px;color:rgba(185,28,28,0.6);margin-top:2px;}
+.card-subtitle.purple-sub{color:rgba(109,40,217,0.6);}
+
+/* DATE BAR */
+.date-bar{background:var(--surface2);border-bottom:1px solid var(--border);padding:14px 22px;display:flex;align-items:center;gap:18px;flex-wrap:wrap;}
+.date-bar label{font-size:12px;font-weight:600;color:var(--text-muted);}
+.date-bar input,.date-bar select{background:#ffffff;border:1px solid var(--border2);border-radius:var(--radius-sm);padding:7px 12px;font-family:"Inter",sans-serif;font-size:13px;color:var(--text);transition:border-color 0.15s;}
+.date-bar input:focus,.date-bar select:focus{outline:none;border-color:var(--red2);box-shadow:0 0 0 3px rgba(239,68,68,0.12);}
+
+/* HIV TABLE — KEEP red/rose HIV accents */
+.hiv-section{padding:20px 22px;border-bottom:1px solid var(--border);}
+.hiv-table-wrap{overflow-x:auto;}
+.hiv-table{width:100%;border-collapse:collapse;font-size:13px;}
+.hiv-table th{background:var(--surface2);color:var(--text-muted);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;padding:11px 14px;border-bottom:2px solid rgba(185,28,28,0.25);text-align:center;white-space:nowrap;}
+.hiv-table th.age-col{text-align:left;min-width:110px;}
+.hiv-table td{padding:8px 10px;border-bottom:1px solid var(--border);text-align:center;vertical-align:middle;}
+.hiv-table td.age-label{font-family:"Syne",sans-serif;font-size:12px;font-weight:600;color:var(--text);text-align:left;padding-left:14px;white-space:nowrap;}
+.hiv-table tr:hover td{background:rgba(239,68,68,0.04);}
+.hiv-table.purple-table tr:hover td{background:rgba(167,139,250,0.04);}
+.hiv-input{background:#ffffff;border:1px solid rgba(185,28,28,0.25);border-radius:6px;padding:7px 8px;font-family:"IBM Plex Mono",monospace;font-size:14px;color:var(--text);width:80px;text-align:center;transition:border-color 0.15s,box-shadow 0.15s;-moz-appearance:textfield;}
+.hiv-input::-webkit-outer-spin-button,.hiv-input::-webkit-inner-spin-button{-webkit-appearance:none;}
+.hiv-input:focus{outline:none;border-color:var(--red2);box-shadow:0 0 0 3px rgba(239,68,68,0.12);}
+.hiv-input.purple-inp{border-color:rgba(124,58,237,0.25);}
+.hiv-input.purple-inp:focus{border-color:var(--ind2);box-shadow:0 0 0 3px rgba(124,58,237,0.12);}
+.row-total{font-family:"IBM Plex Mono",monospace;font-size:14px;font-weight:700;color:var(--red2);background:rgba(239,68,68,0.07);border-radius:6px;padding:7px 10px;min-width:70px;display:inline-block;text-align:center;}
+.row-total.purple-tot{color:var(--ind2);background:rgba(124,58,237,0.07);}
+.hiv-table .total-row td{background:rgba(239,68,68,0.06);}
+.hiv-table.purple-table .total-row td{background:rgba(124,58,237,0.06);}
+.hiv-table .total-row .age-label{color:var(--red2);}
+.hiv-table.purple-table .total-row .age-label{color:var(--ind2);}
+.col-total{font-family:"IBM Plex Mono",monospace;font-size:15px;font-weight:700;color:var(--red2);}
+.col-total.purple-col{color:var(--ind2);}
+.grand-val{font-family:"IBM Plex Mono",monospace;font-size:20px;font-weight:800;color:var(--text);}
+
+/* GENDER HEADER */
+.gender-m{color:var(--blue3);}
+.gender-f{color:var(--rose2);}
+
+/* GRAND TOTAL BAR */
+.grand-bar{display:flex;align-items:center;justify-content:center;gap:32px;padding:18px 24px;background:rgba(239,68,68,0.04);border-top:1px solid rgba(185,28,28,0.12);flex-wrap:wrap;}
+.grand-bar.purple-bar{background:rgba(124,58,237,0.04);border-top-color:rgba(124,58,237,0.12);}
+.grand-item{text-align:center;}
+.grand-label{font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:5px;}
+.grand-value{font-family:"IBM Plex Mono",monospace;font-size:26px;font-weight:800;color:var(--red2);}
+.grand-value.purple-gv{color:var(--ind2);}
+.grand-value.white-gv{color:var(--text);}
+.grand-divider{width:1px;height:48px;background:var(--border2);}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:7px;padding:9px 16px;border-radius:var(--radius-sm);font-family:"Inter",sans-serif;font-size:13px;font-weight:500;cursor:pointer;border:none;transition:all 0.15s;text-decoration:none;white-space:nowrap;}
+.btn-primary{background:var(--hiv);color:white;box-shadow:0 2px 8px rgba(185,28,28,0.20);}
+.btn-primary:hover{background:var(--hiv2);}
+.btn-success{background:var(--green);color:white;}
+.btn-success:hover{background:var(--green2);}
+.btn-outline{background:transparent;border:1px solid var(--border2);color:var(--text-muted);}
+.btn-outline:hover{background:var(--surface2);color:var(--text);}
+.btn-navy{background:var(--surface2);color:var(--text);border:1px solid var(--border2);}
+.btn-navy:hover{background:#ffffff;border-color:var(--blue2);color:var(--blue2);}
+.btn-ghost{background:transparent;color:var(--text-muted);border:1px solid var(--border2);}
+.btn-ghost:hover{background:var(--surface2);color:var(--text);}
+.btn-purple{background:var(--ind);color:white;}
+.btn-purple:hover{background:var(--ind2);color:var(--text);}
+.btn-group{display:flex;gap:8px;flex-wrap:wrap;}
+
+/* SECTIONS */
+.section{display:none;}.section.active{display:block;}
+
+/* HISTORY */
+.history-list{padding:20px;display:flex;flex-direction:column;gap:10px;}
+.history-item{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-radius:var(--radius-sm);border:1px solid var(--border);background:#ffffff;transition:box-shadow 0.15s,transform 0.1s,border-color 0.15s;flex-wrap:wrap;gap:8px;}
+.history-item:hover{box-shadow:var(--shadow-lg);transform:translateY(-1px);border-color:var(--border2);}
+.history-date{font-family:"Syne",sans-serif;font-weight:600;color:var(--text);font-size:13px;}
+.history-stats{font-size:12px;color:var(--text-muted);margin-top:3px;}
+.history-actions{display:flex;gap:6px;flex-wrap:wrap;}
+.no-data{text-align:center;padding:44px 20px;color:var(--text-muted);font-size:.78rem;}
+.no-data span{font-size:1.8rem;display:block;margin-bottom:9px;}
+
+/* EXPORT */
+.export-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;padding:20px;}
+.export-card{border:1px solid var(--border);border-radius:var(--radius);padding:22px;background:#ffffff;text-align:center;transition:border-color 0.15s,box-shadow 0.15s;box-shadow:var(--shadow);}
+.export-card:hover{border-color:var(--border2);box-shadow:var(--shadow-lg);}
+.export-icon{font-size:32px;margin-bottom:10px;}
+.export-title{font-family:"Syne",sans-serif;font-size:14px;font-weight:600;color:var(--text);margin-bottom:6px;}
+.export-desc{font-size:12px;color:var(--text-muted);margin-bottom:14px;line-height:1.5;}
+.export-card input,.export-card select{background:var(--surface2);border:1px solid var(--border2);border-radius:6px;padding:6px 10px;font-size:12px;color:var(--text);margin-bottom:8px;width:100%;}
+.export-actions{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-top:10px;}
+
+/* TOAST */
+
+.toast-item{background:#ffffff;color:var(--text);padding:12px 20px;border-radius:var(--radius-sm);font-size:13px;box-shadow:var(--shadow-lg);border:1px solid var(--border);border-left:4px solid var(--red2);animation:slideIn 0.3s ease;max-width:340px;}
+.toast-item.success{border-left-color:var(--green);}
+.toast-item.error{border-left-color:var(--red2);}
+.toast-item.info{border-left-color:var(--blue3);}
+@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+@media(max-width:768px){.sidebar{display:none;}.main{padding:16px;}}
+/* TOAST STACK */
+#toast-stack{position:fixed;bottom:68px;right:18px;display:flex;flex-direction:column-reverse;
+  gap:8px;z-index:9999;pointer-events:none;max-width:320px;}
+.tk{display:flex;align-items:flex-start;gap:10px;padding:11px 14px 8px;border-radius:10px;
+  background:#fff;border:1px solid rgba(0,0,0,0.08);box-shadow:0 4px 20px rgba(0,0,0,0.12);
+  pointer-events:all;cursor:pointer;overflow:hidden;position:relative;
+  animation:tkIn .22s ease;min-width:220px;}
+@keyframes tkIn{from{opacity:0;transform:translateX(28px)}to{opacity:1;transform:translateX(0)}}
+.tk-icon{font-size:18px;line-height:1;flex-shrink:0;margin-top:1px;}
+.tk-body{flex:1;min-width:0;}
+.tk-title{font-family:inherit;font-size:12px;font-weight:700;line-height:1.2;}
+.tk-msg{font-family:inherit;font-size:11px;font-weight:400;color:#6B7280;margin-top:2px;line-height:1.3;}
+.tk-bar{position:absolute;bottom:0;left:0;height:3px;border-radius:0 0 10px 10px;
+  animation:tkBar var(--tk-dur,3s) linear forwards;}
+@keyframes tkBar{from{width:100%}to{width:0%}}
+.tk-ok{border-color:rgba(5,150,105,.25);}.tk-ok .tk-title{color:#059669;}.tk-ok .tk-bar{background:#059669;}
+.tk-err{border-color:rgba(220,38,38,.25);}.tk-err .tk-title{color:#DC2626;}.tk-err .tk-bar{background:#DC2626;}
+.tk-warn{border-color:rgba(217,119,6,.25);}.tk-warn .tk-title{color:#D97706;}.tk-warn .tk-bar{background:#D97706;}
+.tk-save{border-color:rgba(26,86,219,.25);}.tk-save .tk-title{color:#1a56db;}.tk-save .tk-bar{background:#1a56db;}
+.tk-del{border-color:rgba(124,58,237,.25);}.tk-del .tk-title{color:#7C3AED;}.tk-del .tk-bar{background:#7C3AED;}
+.tk-edit{border-color:rgba(6,182,212,.25);}.tk-edit .tk-title{color:#0891B2;}.tk-edit .tk-bar{background:#0891B2;}
+.tk-info{border-color:rgba(26,86,219,.18);}.tk-info .tk-title{color:#1a56db;}.tk-info .tk-bar{background:#1a56db;}
+tr.kb-focus{outline:2px solid #1a56db;outline-offset:-2px;background:rgba(26,86,219,0.06)!important;}
+</style>
+  <link rel="stylesheet" href="hprenda-theme.css">
+  <script src="hprenda-mail.js" defer></script>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="topbar-brand">
+    <div class="topbar-logo"><img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAAoACgDASIAAhEBAxEB/8QAGgAAAgMBAQAAAAAAAAAAAAAABAUCAwYBB//EACsQAAIBAwMCBQQDAAAAAAAAAAECAwAEERIhBRMxQVFhBhQiUnGBkdH/xAAYAQACAwAAAAAAAAAAAAAAAAABAgMEBf/EAB4RAAICAwADAAAAAAAAAAAAAAABAhExAxIhQVH/2gAMAwEAAiEDEQA/AOrqJobaFpp5UiiQZZ3OAB7muN1fW1vaSTJMkpQZ8NG3fHsOM/avH1GxF5avDIzBGB3YGe3vj61D1DSvpkMRt5xFJBkq4TJJPk+/FawDvQzL01bMrElyMEY+a2bVY7mdLa3jl8V3wvlpuAx45PaqHqbWYrIWq2wLzOVVTjb7Z456c1LXqx/WXm1NIphgB2nAcA+np7YFSwAzr2pf2eFxbW8kkrLhWeM4APkH3x71Q2F7dahMLeRnWcksxcbcjA5PHbH71cPf2rSs8kse9icl8HPvVSt3H9aYwTRvFG37GAyX2kHHt25qsqApA7H//2Q==" alt="HP"></div>
+    <div><div class="topbar-name">Hospital do Prenda</div><div class="topbar-sub">Serviço de Homo Terapia — VIH</div></div>
+  </div>
+  <div class="topbar-right">
+    <div class="sync-badge"><span class="sync-dot"></span><span id="sync-label">A ligar ao Firebase...</span></div>
+    <div class="topbar-time" id="clock">--:--:--</div>
+  </div>
+</div>
+
+<div class="layout">
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-logo-area">
+    <div class="sidebar-hospital-name">VIH / HIV</div>
+    <div class="sidebar-hospital-sub">Rastreio Serológico · Semanal</div>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-label">Navegação</div>
+    <button class="nav-item active" onclick="showSection('registo',this)"><span class="nav-icon">🔬</span> Registo</button>
+    <button class="nav-item" onclick="showSection('historico',this)"><span class="nav-icon">📅</span> Histórico</button>
+    <button class="nav-item" onclick="showSection('exportar',this)"><span class="nav-icon">📤</span> Exportar</button>
+  </div>
+  <div class="sidebar-divider"></div>
+  <div class="sidebar-section">
+    <div class="sidebar-label">Acção Rápida</div>
+    <button class="nav-item" onclick="saveData()"><span class="nav-icon">💾</span> Guardar dados</button>
+    <button class="nav-item" onclick="exportPDF()"><span class="nav-icon">📄</span> Gerar PDF</button>
+    <button class="nav-item" onclick="window.print()"><span class="nav-icon">🖨️</span> Imprimir</button>
+    <button class="nav-item" onclick="exportJSON()"><span class="nav-icon">💿</span> Backup JSON</button>
+  </div>
+  <div class="sidebar-footer"><div class="sidebar-footer-text">Hospital do Prenda<br>Luanda · Angola</div></div>
+</aside>
+
+<main class="main">
+
+<!-- ═══ REGISTO ═══ -->
+<div class="section active" id="sec-registo">
+  <div class="page-header">
+    <div>
+      <div class="page-title">🔬 Registo VIH — Indicadores</div>
+      <div class="page-sub">Resultados positivos e indeterminados por faixa etária e sexo · Registo semanal</div>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-success" onclick="saveData()">💾 Guardar</button>
+      <button class="btn btn-primary" onclick="exportPDF()">📄 PDF</button>
+      <button class="btn btn-navy" onclick="window.print()">🖨️ Imprimir</button>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpi-grid">
+    <div class="kpi"><span class="kpi-icon">🔴</span><div class="kpi-label">Total Positivos</div><div class="kpi-value" id="kpi-pos">0</div></div>
+    <div class="kpi"><span class="kpi-icon">👨</span><div class="kpi-label">Homens Positivos</div><div class="kpi-value" id="kpi-pos-m">0</div></div>
+    <div class="kpi"><span class="kpi-icon">👩</span><div class="kpi-label">Mulheres Positivas</div><div class="kpi-value" id="kpi-pos-f">0</div></div>
+    <div class="kpi purple"><span class="kpi-icon">🟡</span><div class="kpi-label">Total Indeterminados</div><div class="kpi-value" id="kpi-ind">0</div></div>
+    <div class="kpi purple"><span class="kpi-icon">👨</span><div class="kpi-label">Homens Indet.</div><div class="kpi-value" id="kpi-ind-m">0</div></div>
+    <div class="kpi purple"><span class="kpi-icon">👩</span><div class="kpi-label">Mulheres Indet.</div><div class="kpi-value" id="kpi-ind-f">0</div></div>
+    <div class="kpi total"><span class="kpi-icon">📊</span><div class="kpi-label">Total Geral</div><div class="kpi-value" id="kpi-total">0</div></div>
+    <div class="kpi" style="--accent:#0891b2;"><span class="kpi-icon">🧪</span><div class="kpi-label">Total Testados</div><div class="kpi-value" style="color:var(--cyan);" id="kpi-testados">0</div></div>
+  </div>
+
+  <!-- DATA -->
+  <div class="card">
+    <div class="card-header"><div class="card-title">📋 Semana do Registo</div></div>
+    <div class="date-bar">
+      <label>Semana:</label>
+      <input type="week" id="data-registo" onchange="onDateChange(this.value)">
+      <label style="margin-left:12px">Mês/Ano:</label>
+      <input type="month" id="mes-registo">
+      <label style="margin-left:20px;color:rgba(255,255,255,0.8);font-weight:700;">🧪 Total Testados:</label>
+      <input type="number" id="total-testados" min="0" placeholder="0" style="background:#ffffff;border:1px solid rgba(26,86,219,0.3);border-radius:var(--radius-sm);padding:7px 12px;font-family:'IBM Plex Mono',monospace;font-size:14px;color:var(--text);width:110px;text-align:center;-moz-appearance:textfield;" oninput="updateKPIs()" onchange="updateKPIs()">
+    </div>
+  </div>
+
+  <!-- ── 1º POSITIVOS ── -->
+  <div class="card">
+    <div class="card-header red-header">
+      <div>
+        <div class="card-title">🔴 1º Indicador — Utentes com Resultados Positivos</div>
+        <div class="card-subtitle">Nº total de utentes com resultado VIH positivo, por faixa etária e sexo</div>
+      </div>
+    </div>
+    <div class="hiv-section">
+      <div class="hiv-table-wrap">
+        <table class="hiv-table" id="tbl-pos">
+          <thead>
+            <tr>
+              <th class="age-col">Faixa Etária</th>
+              <th><span class="gender-m">♂ Homens</span></th>
+              <th><span class="gender-f">♀ Mulheres</span></th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-pos">
+            <!-- rows injected by JS -->
+          </tbody>
+          <tfoot>
+            <tr class="total-row">
+              <td class="age-label">TOTAL</td>
+              <td><span class="col-total" id="pos-col-m">0</span></td>
+              <td><span class="col-total" id="pos-col-f">0</span></td>
+              <td><span class="col-total" id="pos-col-t">0</span></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+    <div class="grand-bar">
+      <div class="grand-item"><div class="grand-label">Total Homens</div><div class="grand-value" id="grand-pos-m">0</div></div>
+      <div class="grand-divider"></div>
+      <div class="grand-item"><div class="grand-label">Total Mulheres</div><div class="grand-value" id="grand-pos-f">0</div></div>
+      <div class="grand-divider"></div>
+      <div class="grand-item"><div class="grand-label">Total Geral Positivos</div><div class="grand-value white-gv" id="grand-pos-t">0</div></div>
+    </div>
+  </div>
+
+  <!-- ── 2º INDETERMINADOS ── -->
+  <div class="card">
+    <div class="card-header purple-header">
+      <div>
+        <div class="card-title">🟡 2º Indicador — Utentes com Resultados Indeterminados</div>
+        <div class="card-subtitle purple-sub">Nº total de utentes com resultado VIH indeterminado, por faixa etária e sexo</div>
+      </div>
+    </div>
+    <div class="hiv-section">
+      <div class="hiv-table-wrap">
+        <table class="hiv-table purple-table" id="tbl-ind">
+          <thead>
+            <tr>
+              <th class="age-col">Faixa Etária</th>
+              <th><span class="gender-m">♂ Homens</span></th>
+              <th><span class="gender-f">♀ Mulheres</span></th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-ind">
+            <!-- rows injected by JS -->
+          </tbody>
+          <tfoot>
+            <tr class="total-row">
+              <td class="age-label">TOTAL</td>
+              <td><span class="col-total purple-col" id="ind-col-m">0</span></td>
+              <td><span class="col-total purple-col" id="ind-col-f">0</span></td>
+              <td><span class="col-total purple-col" id="ind-col-t">0</span></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+    <div class="grand-bar purple-bar">
+      <div class="grand-item"><div class="grand-label">Total Homens</div><div class="grand-value purple-gv" id="grand-ind-m">0</div></div>
+      <div class="grand-divider"></div>
+      <div class="grand-item"><div class="grand-label">Total Mulheres</div><div class="grand-value purple-gv" id="grand-ind-f">0</div></div>
+      <div class="grand-divider"></div>
+      <div class="grand-item"><div class="grand-label">Total Geral Indet.</div><div class="grand-value white-gv" id="grand-ind-t">0</div></div>
+    </div>
+  </div>
+
+  <!-- TOTAL GERAL GLOBAL -->
+  <div class="card">
+    <div class="card-header" style="background:rgba(26,86,219,0.07);border-bottom-color:rgba(26,86,219,0.15);">
+      <div class="card-title" style="font-size:15px;">📊 Total Geral — Positivos + Indeterminados</div>
+    </div>
+    <div class="grand-bar" style="background:rgba(26,86,219,0.04);border-top-color:rgba(26,86,219,0.12);">
+      <div class="grand-item"><div class="grand-label">🧪 Total Testados</div><div class="grand-value" style="color:var(--cyan);" id="sum-testados">0</div></div>
+      <div class="grand-divider"></div>
+      <div class="grand-item"><div class="grand-label">Total Positivos</div><div class="grand-value" id="sum-pos">0</div></div>
+      <div class="grand-divider"></div>
+      <div class="grand-item"><div class="grand-label">Total Indeterminados</div><div class="grand-value purple-gv" id="sum-ind">0</div></div>
+      <div class="grand-divider"></div>
+      <div class="grand-item"><div class="grand-label" style="font-size:12px;color:var(--blue3);">TOTAL GERAL GLOBAL</div><div class="grand-value white-gv" style="font-size:32px;" id="sum-total">0</div></div>
+    </div>
+  </div>
+
+</div><!-- /sec-registo -->
+
+<!-- ═══ HISTÓRICO ═══ -->
+<div class="section" id="sec-historico">
+  <div class="page-header">
+    <div><div class="page-title">📅 Histórico — VIH</div><div class="page-sub">Registos guardados por data</div></div>
+  </div>
+  <div class="card">
+    <div class="card-header"><div class="card-title">📋 Registos Guardados</div></div>
+    <div class="history-list" id="history-list">
+      <div class="no-data"><span>📂</span>Nenhum registo guardado ainda.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ EXPORTAR ═══ -->
+<div class="section" id="sec-exportar">
+  <div class="page-header">
+    <div><div class="page-title">📤 Exportar</div><div class="page-sub">Gerar PDF ou fazer backup dos dados</div></div>
+  </div>
+  <div class="export-grid">
+    <div class="export-card">
+      <div class="export-icon">📄</div>
+      <div class="export-title">PDF do Registo Actual</div>
+      <div class="export-desc">Gera um PDF com os dados de positivos e indeterminados do registo activo.</div>
+      <div class="export-actions"><button class="btn btn-primary" onclick="exportPDF()">📄 Gerar PDF</button></div>
+    </div>
+    <div class="export-card">
+      <div class="export-icon">💿</div>
+      <div class="export-title">Backup JSON</div>
+      <div class="export-desc">Exporta todos os registos em formato JSON para arquivo ou transferência.</div>
+      <div class="export-actions"><button class="btn btn-navy" onclick="exportJSON()">💿 Exportar JSON</button></div>
+    </div>
+    <div class="export-card">
+      <div class="export-icon">📥</div>
+      <div class="export-title">Importar JSON</div>
+      <div class="export-desc">Restaura registos a partir de um ficheiro de backup JSON.</div>
+      <div class="export-actions">
+        <button class="btn btn-outline" onclick="document.getElementById('import-file').click()">📥 Importar</button>
+        <input type="file" id="import-file" accept=".json" style="display:none" onchange="handleImport(this)">
+      </div>
+    </div>
+    <div class="export-card">
+      <div class="export-icon">🖨️</div>
+      <div class="export-title">Imprimir Página</div>
+      <div class="export-desc">Imprime a vista actual directamente na impressora.</div>
+      <div class="export-actions"><button class="btn btn-ghost" onclick="window.print()">🖨️ Imprimir</button></div>
+    </div>
+  </div>
+</div>
+
+</main>
+</div><!-- /layout -->
+
+<div id="toast-stack"></div>
+
+<script>
+// Safe fallback if external scripts not loaded
+if(!window._fbReady) window._fbReady = false;
+if(!window._fb) window._fb = { ref:()=>{}, set:()=>Promise.resolve(), get:()=>Promise.resolve({exists:()=>false,val:()=>null}), onValue:()=>()=>{} };
+
+// ── Safe localStorage helpers ──
+function safeGet(key) { try { return localStorage.getItem(key); } catch(e) { return null; } }
+function safeSet(key, val) { try { localStorage.setItem(key, val); return true; } catch(e) { console.warn('Storage full:', e); return false; } }
+
+// ── Storage health check ──
+function getStorageUsage() {
+  let total = 0;
+  try { for(let k in localStorage) { if(localStorage.hasOwnProperty(k)) total += localStorage[k].length * 2; } } catch(e){}
+  return (total / 1024).toFixed(1) + ' KB';
+}
+
+// ─── CONSTANTS ───
+const AGE_GROUPS = [
+  "14 – 19 anos",
+  "20 – 24 anos",
+  "25 – 29 anos",
+  "30 – 34 anos",
+  "35 – 44 anos",
+  "45 – 49 anos",
+  "50 – 54 anos",
+  "55 – 64 anos",
+  "≥ 65 anos"
+];
+const SK_PREFIX = "hiv_vih_";
+const DATES_KEY = "hiv_vih_dates";
+const FB_PATH   = "hiv_vih";
+
+// ─── STATE ───
+let currentDate = todayKey();
+
+// ─── UTILS ───
+function todayKey(){
+  const d = new Date();
+  const year = d.getFullYear();
+  // ISO week number
+  const tmp = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dayNum = tmp.getUTCDay() || 7;
+  tmp.setUTCDate(tmp.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(tmp.getUTCFullYear(),0,1));
+  const weekNum = Math.ceil((((tmp - yearStart) / 86400000) + 1)/7);
+  return `${tmp.getUTCFullYear()}-W${String(weekNum).padStart(2,'0')}`;
+}
+function sk(d){ return SK_PREFIX + d; }
+function getSavedDates(){
+  try{ return JSON.parse(safeGet(DATES_KEY)||"[]"); }catch{ return []; }
+}
+function addSavedDate(d){
+  const arr = getSavedDates();
+  if(!arr.includes(d)){ arr.push(d); arr.sort().reverse(); safeSet(DATES_KEY, JSON.stringify(arr)); }
+}
+function fbRef(path){ return window._fb.ref(window._fb.db, path); }
+
+// ─── CLOCK ───
+function tickClock(){
+  document.getElementById("clock").textContent =
+    new Date().toLocaleTimeString("pt-PT",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
+}
+setInterval(tickClock, 1000); tickClock();
+
+// ─── BUILD TABLES ───
+function buildTables(){
+  buildTableBody("tbody-pos","pos");
+  buildTableBody("tbody-ind","ind");
+}
+function buildTableBody(tbodyId, prefix){
+  const tbody = document.getElementById(tbodyId);
+  const isPurple = prefix === "ind";
+  tbody.innerHTML = AGE_GROUPS.map((label, i) => `
+    <tr>
+      <td class="age-label">${label}</td>
+      <td><input type="number" class="hiv-input${isPurple?' purple-inp':''}" id="${prefix}-m-${i}" min="0" placeholder="0"
+           oninput="recalc('${prefix}')"></td>
+      <td><input type="number" class="hiv-input${isPurple?' purple-inp':''}" id="${prefix}-f-${i}" min="0" placeholder="0"
+           oninput="recalc('${prefix}')"></td>
+      <td><span class="row-total${isPurple?' purple-tot':''}" id="${prefix}-t-${i}">0</span></td>
+    </tr>
+  `).join("");
+}
+
+// ─── RECALC ───
+function v(id){ return parseInt(document.getElementById(id)?.value,10)||0; }
+function setT(id, val){ const el=document.getElementById(id); if(el) el.textContent=val; }
+
+function recalc(prefix){
+  let totM=0, totF=0;
+  AGE_GROUPS.forEach((_,i)=>{
+    const m=v(`${prefix}-m-${i}`), f=v(`${prefix}-f-${i}`), t=m+f;
+    setT(`${prefix}-t-${i}`, t);
+    totM+=m; totF+=f;
+  });
+  const totT = totM+totF;
+  setT(`${prefix}-col-m`, totM);
+  setT(`${prefix}-col-f`, totF);
+  setT(`${prefix}-col-t`, totT);
+  setT(`grand-${prefix}-m`, totM);
+  setT(`grand-${prefix}-f`, totF);
+  setT(`grand-${prefix}-t`, totT);
+  updateKPIs();
+}
+
+function recalcAll(){ recalc("pos"); recalc("ind"); }
+
+function updateKPIs(){
+  const posM = parseInt(document.getElementById("pos-col-m")?.textContent,10)||0;
+  const posF = parseInt(document.getElementById("pos-col-f")?.textContent,10)||0;
+  const posT = posM+posF;
+  const indM = parseInt(document.getElementById("ind-col-m")?.textContent,10)||0;
+  const indF = parseInt(document.getElementById("ind-col-f")?.textContent,10)||0;
+  const indT = indM+indF;
+  const total = posT+indT;
+  const testados = parseInt(document.getElementById("total-testados")?.value,10)||0;
+
+  setT("kpi-pos", posT);
+  setT("kpi-pos-m", posM);
+  setT("kpi-pos-f", posF);
+  setT("kpi-ind", indT);
+  setT("kpi-ind-m", indM);
+  setT("kpi-ind-f", indF);
+  setT("kpi-total", total);
+  setT("kpi-testados", testados);
+  setT("sum-pos", posT);
+  setT("sum-ind", indT);
+  setT("sum-total", total);
+  setT("sum-testados", testados);
+}
+
+// ─── DATA IO ───
+function getData(){
+  const obj = { date: currentDate, testados: parseInt(document.getElementById("total-testados")?.value,10)||0 };
+  ["pos","ind"].forEach(p=>{
+    obj[p] = { m:[], f:[] };
+    AGE_GROUPS.forEach((_,i)=>{
+      obj[p].m.push(v(`${p}-m-${i}`));
+      obj[p].f.push(v(`${p}-f-${i}`));
+    });
+  });
+  return obj;
+}
+
+function loadData(obj){
+  if(!obj) return;
+  const testEl = document.getElementById("total-testados");
+  if(testEl) testEl.value = obj.testados || "";
+  ["pos","ind"].forEach(p=>{
+    if(!obj[p]) return;
+    AGE_GROUPS.forEach((_,i)=>{
+      const em = document.getElementById(`${p}-m-${i}`);
+      const ef = document.getElementById(`${p}-f-${i}`);
+      if(em) em.value = obj[p].m?.[i]||"";
+      if(ef) ef.value = obj[p].f?.[i]||"";
+    });
+  });
+  recalcAll();
+}
+
+function clearForm(){
+  const testEl = document.getElementById("total-testados");
+  if(testEl) testEl.value = "";
+  ["pos","ind"].forEach(p=>{
+    AGE_GROUPS.forEach((_,i)=>{
+      const em=document.getElementById(`${p}-m-${i}`); if(em) em.value="";
+      const ef=document.getElementById(`${p}-f-${i}`); if(ef) ef.value="";
+      setT(`${p}-t-${i}`,0);
+    });
+    ["-col-m","-col-f","-col-t"].forEach(s=>setT(p+s,0));
+    [`grand-${p}-m`,`grand-${p}-f`,`grand-${p}-t`].forEach(id=>setT(id,0));
+  });
+  updateKPIs();
+}
+
+function onDateChange(d){
+  currentDate = d;
+  // Convert week to approximate month for the month field
+  if(d && d.includes('-W')){
+    const [yr, wk] = d.split('-W');
+    // First day of week
+    const jan4 = new Date(+yr, 0, 4);
+    const dayOfWeek = jan4.getDay()||7;
+    const weekStart = new Date(jan4.getTime() - (dayOfWeek-1)*86400000 + (+wk-1)*7*86400000);
+    document.getElementById("mes-registo").value = `${weekStart.getFullYear()}-${String(weekStart.getMonth()+1).padStart(2,'0')}`;
+  }
+  const raw = safeGet(sk(d));
+  if(raw){ loadData(JSON.parse(raw)); toast("Dados carregados para "+d,"info"); }
+  else { clearForm(); }
+}
+
+function saveData(){
+  const data = getData();
+  safeSet(sk(currentDate), JSON.stringify(data));
+  addSavedDate(currentDate);
+  renderHistory();
+  if(window._fbReady){
+    try{
+      window._fb.set(fbRef(`${FB_PATH}/${currentDate}`), data);
+      window._fb.set(fbRef(`${FB_PATH}_dates`), getSavedDates());
+      window._fb.set(fbRef(`${FB_PATH}_sync`), { ts: Date.now(), date: currentDate });
+    }catch(e){}
+  }
+  toast("Dados guardados com sucesso ✓","success");
+}
+
+// ─── HISTORY ───
+function renderHistory(){
+  const dates = getSavedDates();
+  const container = document.getElementById("history-list");
+  if(!dates.length){ container.innerHTML='<div class="no-data"><span>📂</span>Nenhum registo guardado ainda.</div>'; return; }
+  container.innerHTML = dates.map(d=>{
+    const raw = safeGet(sk(d));
+    let posT=0, indT=0, testados=0;
+    if(raw){
+      const obj=JSON.parse(raw);
+      testados = obj.testados||0;
+      if(obj.pos){ obj.pos.m?.forEach(n=>posT+=n||0); obj.pos.f?.forEach(n=>posT+=n||0); }
+      if(obj.ind){ obj.ind.m?.forEach(n=>indT+=n||0); obj.ind.f?.forEach(n=>indT+=n||0); }
+    }
+    return `<div class="history-item">
+      <div><div class="history-date">📅 ${d}</div>
+      <div class="history-stats">🧪 Testados: ${testados} &nbsp;|&nbsp; Positivos: ${posT} &nbsp;|&nbsp; Indeterminados: ${indT} &nbsp;|&nbsp; Total: ${posT+indT}</div></div>
+      <div class="history-actions">
+        <button class="btn btn-navy btn-sm" onclick="loadDay('${d}')">📂 Carregar</button>
+        <button class="btn btn-primary btn-sm" onclick="exportPDFForDate('${d}')">📄 PDF</button>
+        <button class="btn btn-outline btn-sm" onclick="deleteDay('${d}')">🗑️</button>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function loadDay(d){
+  currentDate=d;
+  document.getElementById("data-registo").value=d;
+  document.getElementById("mes-registo").value=d.slice(0,7);
+  const raw=safeGet(sk(d));
+  if(raw){ loadData(JSON.parse(raw)); toast("Registo de "+d+" carregado","info"); }
+  showSection("registo", document.querySelector('.nav-item'));
+}
+
+function deleteDay(d){
+  if(!confirm("Eliminar registo de "+d+"?")) return;
+  localStorage.removeItem(sk(d));
+  const arr=getSavedDates().filter(x=>x!==d);
+  safeSet(DATES_KEY,JSON.stringify(arr));
+  renderHistory();
+  toast("Registo eliminado","error");
+}
+
+// ─── PDF ───
+function buildPDFData(date){
+  const raw=safeGet(sk(date));
+  if(!raw) return null;
+  return JSON.parse(raw);
+}
+
+function exportPDF(){ exportPDFForDate(currentDate); }
+
+function exportPDFForDate(date){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation:"portrait", unit:"mm", format:"a4" });
+  const red=[185,28,28], purple=[109,40,217], navy=[15,30,60];
+  const pageW=doc.internal.pageSize.width, pageH=doc.internal.pageSize.height;
+  const genDate=new Date().toLocaleString("pt-PT");
+
+  // ── Header banner ──
+  doc.setFillColor(...navy); doc.rect(0,0,pageW,40,"F");
+  // Logo rectangle
+  doc.setFillColor(...red); doc.roundedRect(12,8,22,22,3,3,"F");
+  doc.setTextColor(255,255,255); doc.setFont("helvetica","bold"); doc.setFontSize(10);
+  doc.text("VIH",23,22,{align:"center"});
+  // Title
+  doc.setFont("helvetica","bold"); doc.setFontSize(14);
+  doc.text("Hospital do Prenda — Serviço de Homo Terapia",40,17);
+  doc.setFont("helvetica","normal"); doc.setFontSize(9); doc.setTextColor(200,215,255);
+  doc.text("Indicadores VIH / HIV · Rastreio Serológico · Luanda, Angola",40,25);
+  doc.setFontSize(8); doc.setTextColor(160,185,230);
+  doc.text("Semana: "+date+"    |    Gerado em: "+genDate,40,32);
+
+  const raw = safeGet(sk(date));
+  const obj = raw ? JSON.parse(raw) : null;
+  const testados = obj?.testados || 0;
+
+  const buildRows = (data) => AGE_GROUPS.map((label,i)=>{
+    const m = data?.m?.[i]||0, f = data?.f?.[i]||0;
+    return [label, m, f, m+f];
+  });
+
+  // Positivos
+  doc.setTextColor(...red); doc.setFont("helvetica","bold"); doc.setFontSize(11);
+  doc.text("1º Indicador — Resultados Positivos", 15, 50);
+
+  const posRows = buildRows(obj?.pos);
+  const posTotM = posRows.reduce((a,r)=>a+r[1],0);
+  const posTotF = posRows.reduce((a,r)=>a+r[2],0);
+  posRows.push(["TOTAL", posTotM, posTotF, posTotM+posTotF]);
+
+  doc.autoTable({
+    startY: 54,
+    head:[["Faixa Etária","Homens","Mulheres","Total"]],
+    body: posRows,
+    styles:{ fontSize:10, halign:"center" },
+    columnStyles:{ 0:{ halign:"left", fontStyle:"bold" } },
+    headStyles:{ fillColor:red, textColor:[255,255,255] },
+    alternateRowStyles:{ fillColor:[255,245,245] },
+    didParseCell: (data)=>{
+      if(data.row.index===posRows.length-1 && data.section==="body"){
+        data.cell.styles.fillColor=[240,220,220];
+        data.cell.styles.fontStyle="bold";
+        data.cell.styles.textColor=red;
+      }
+    }
+  });
+
+  const afterPos = doc.lastAutoTable.finalY + 8;
+
+  // Indeterminados
+  doc.setTextColor(...purple); doc.setFont("helvetica","bold"); doc.setFontSize(11);
+  doc.text("2º Indicador — Resultados Indeterminados", 15, afterPos);
+
+  const indRows = buildRows(obj?.ind);
+  const indTotM = indRows.reduce((a,r)=>a+r[1],0);
+  const indTotF = indRows.reduce((a,r)=>a+r[2],0);
+  indRows.push(["TOTAL", indTotM, indTotF, indTotM+indTotF]);
+
+  doc.autoTable({
+    startY: afterPos+4,
+    head:[["Faixa Etária","Homens","Mulheres","Total"]],
+    body: indRows,
+    styles:{ fontSize:10, halign:"center" },
+    columnStyles:{ 0:{ halign:"left", fontStyle:"bold" } },
+    headStyles:{ fillColor:purple, textColor:[255,255,255] },
+    alternateRowStyles:{ fillColor:[245,245,255] },
+    didParseCell: (data)=>{
+      if(data.row.index===indRows.length-1 && data.section==="body"){
+        data.cell.styles.fillColor=[230,220,250];
+        data.cell.styles.fontStyle="bold";
+        data.cell.styles.textColor=purple;
+      }
+    }
+  });
+
+  const afterInd = doc.lastAutoTable.finalY + 10;
+  const posTotal = posTotM+posTotF, indTotal = indTotM+indTotF;
+  doc.autoTable({
+    startY: afterInd,
+    head:[["Resumo","Homens","Mulheres","Total"]],
+    body:[
+      ["🧪 Total Testados", "", "", testados],
+      ["Positivos", posTotM, posTotF, posTotal],
+      ["Indeterminados", indTotM, indTotF, indTotal],
+      ["TOTAL GERAL", posTotM+indTotM, posTotF+indTotF, posTotal+indTotal],
+    ],
+    styles:{ fontSize:11, halign:"center" },
+    columnStyles:{ 0:{ halign:"left", fontStyle:"bold" } },
+    headStyles:{ fillColor:navy, textColor:[255,255,255] },
+    didParseCell: (data)=>{
+      if(data.row.index===0 && data.section==="body"){
+        data.cell.styles.fillColor=[220,245,255];
+        data.cell.styles.textColor=[0,100,140];
+        data.cell.styles.fontStyle="bold";
+      }
+      if(data.row.index===3 && data.section==="body"){
+        data.cell.styles.fillColor=[220,230,255];
+        data.cell.styles.fontStyle="bold";
+        data.cell.styles.fontSize=12;
+      }
+    }
+  });
+
+  // ── Page numbers ──
+  const totalPages=doc.internal.getNumberOfPages();
+  for(let i=1;i<=totalPages;i++){
+    doc.setPage(i);
+    doc.setFontSize(8); doc.setTextColor(140,140,160);
+    doc.text("Hospital do Prenda · Luanda · Angola",15,pageH-8);
+    doc.text(`Pág. ${i} / ${totalPages}`,pageW-15,pageH-8,{align:"right"});
+    doc.setDrawColor(200,210,230); doc.setLineWidth(0.3); doc.line(15,pageH-11,pageW-15,pageH-11);
+  }
+
+  doc.save(`hiv_vih_semana_${date.replace('-','_')}.pdf`);
+  toast("PDF gerado ✓","success");
+}
+
+// ─── JSON ───
+function exportJSON(){
+  const dates=getSavedDates(), all={};
+  dates.forEach(d=>{ const r=safeGet(sk(d)); if(r) all[d]=JSON.parse(r); });
+  const blob=new Blob([JSON.stringify({exported:new Date().toISOString(),dates,data:all},null,2)],{type:"application/json"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
+  a.download="hiv_vih_backup_"+new Date().toISOString().slice(0,10)+".json"; a.click();
+  toast("Backup exportado","success");
+}
+function handleImport(input){
+  const file=input.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const json=JSON.parse(e.target.result); const data=json.data||json; let count=0;
+      Object.entries(data).forEach(([date,val])=>{ if(/^\d{4}-\d{2}-\d{2}$/.test(date)){ safeSet(sk(date),JSON.stringify(val)); addSavedDate(date); count++; } });
+      renderHistory(); toast(count+" registos importados ✓","success");
+    }catch(err){ toast("Erro ao importar JSON","error"); }
+  };
+  reader.readAsText(file); input.value="";
+}
+
+// ─── NAVIGATION ───
+function showSection(name, btn){
+  document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
+  document.getElementById("sec-"+name).classList.add("active");
+  document.querySelectorAll(".nav-item").forEach(n=>n.classList.remove("active"));
+  if(btn) btn.classList.add("active");
+}
+
+// ─── TOAST ───
+,3200);
+}
+
+// ─── FIREBASE ───
+async function initFirebase(){
+  if(!window._fbReady) return;
+  const sl=document.getElementById("sync-label");
+  try{
+    const s=await window._fb.get(fbRef(FB_PATH+"_dates"));
+    if(s.exists()){ const fd=s.val(); const ld=getSavedDates(); const merged=[...new Set([...ld,...fd])].sort().reverse(); safeSet(DATES_KEY,JSON.stringify(merged)); }
+  }catch(e){}
+  try{
+    const s=await window._fb.get(fbRef(FB_PATH));
+    if(s.exists()){ const all=s.val(); Object.entries(all).forEach(([date,val])=>{ safeSet(sk(date),JSON.stringify(val)); }); }
+  }catch(e){}
+  const todayRaw=safeGet(sk(currentDate));
+  if(todayRaw){ loadData(JSON.parse(todayRaw)); }
+  renderHistory();
+  window._fb.onValue(fbRef(FB_PATH+"_sync"),async(snap)=>{
+    if(!snap.exists()) return;
+    const sig=snap.val(); if(!sig) return;
+    if(sl) sl.textContent="Sincronizado às "+new Date(sig.ts).toLocaleTimeString("pt-PT",{hour:"2-digit",minute:"2-digit"});
+    if(sig.date){ try{ const ds=await window._fb.get(fbRef(FB_PATH+"/"+sig.date)); if(ds.exists()){ safeSet(sk(sig.date),JSON.stringify(ds.val())); addSavedDate(sig.date); } }catch(e){} }
+    renderHistory();
+    if(sig.date && currentDate===sig.date){ loadData(JSON.parse(safeGet(sk(sig.date))||"{}")); }
+    toast("Dados actualizados em tempo real","info");
+  });
+  if(sl) sl.textContent="Firebase activo";
+}
+
+// ─── INIT ───
+buildTables();
+const today = todayKey();
+document.getElementById("data-registo").value=today;
+// Set month from current date
+{ const d=new Date(); document.getElementById("mes-registo").value=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }
+currentDate=today;
+
+function tryInitFirebase(){
+  if(window._fbReady){ initFirebase(); }
+  else { window.addEventListener("firebaseReady",initFirebase,{once:true}); let att=0; const poll=setInterval(()=>{ att++; if(window._fbReady){ clearInterval(poll); initFirebase(); } if(att>30) clearInterval(poll); },100); }
+}
+if(document.readyState==="loading"){ // ── Multi-toast notification system ──────────────────────
+const _TK={
+  ok:   {icon:'✅',title:'Concluído',   cls:'tk-ok',  dur:3000},
+  save: {icon:'💾',title:'Guardado',    cls:'tk-save',dur:3000},
+  del:  {icon:'🗑️',title:'Eliminado',   cls:'tk-del', dur:3000},
+  edit: {icon:'✏️',title:'Actualizado', cls:'tk-edit',dur:3000},
+  err:  {icon:'❌',title:'Erro',        cls:'tk-err', dur:5000},
+  warn: {icon:'⚠️',title:'Atenção',     cls:'tk-warn',dur:4000},
+  info: {icon:'ℹ️',title:'Info',        cls:'tk-info',dur:3000},
+  pdf:  {icon:'📄',title:'PDF Gerado',  cls:'tk-ok',  dur:3000},
+  sync: {icon:'☁️',title:'Sincronizado',cls:'tk-save',dur:3500},
+};
+function toast(msg,type){
+  if(type===undefined)type='info';
+  const cfg=_TK[type]||_TK.info;
+  let stack=document.getElementById('toast-stack');
+  if(!stack){stack=document.createElement('div');stack.id='toast-stack';document.body.appendChild(stack);}
+  const existing=stack.querySelectorAll('.tk');
+  if(existing.length>=4)existing[existing.length-1].remove();
+  const el=document.createElement('div');
+  el.className='tk '+cfg.cls;
+  el.style.setProperty('--tk-dur',cfg.dur+'ms');
+  el.innerHTML='<span class="tk-icon">'+cfg.icon+'</span><div class="tk-body"><div class="tk-title">'+cfg.title+'</div><div class="tk-msg">'+msg+'</div></div><div class="tk-bar"></div>';
+  el.addEventListener('click',function(){_dismissToast(el);});
+  stack.prepend(el);
+  setTimeout(function(){_dismissToast(el);},cfg.dur+200);
+}
+function showToast(msg,type){toast(msg,type||'info');}
+function _dismissToast(el){
+  if(!el.parentNode)return;
+  el.style.transition='opacity .2s,transform .2s';
+  el.style.opacity='0';el.style.transform='translateX(28px)';
+  setTimeout(function(){el.remove();},220);
+}
+
+// ── Keyboard Navigation ──────────────────────────────────
+function initKeyboardNav(){
+  document.querySelectorAll('input,textarea,select').forEach(function(el){
+    el.style.userSelect='text';el.style.webkitUserSelect='text';
+  });
+  new MutationObserver(function(muts){
+    muts.forEach(function(m){m.addedNodes.forEach(function(n){
+      if(n.nodeType!==1)return;
+      if(n.querySelectorAll)n.querySelectorAll('input,textarea,select').forEach(function(el){
+        el.style.userSelect='text';el.style.webkitUserSelect='text';
+      });
+    });});
+  }).observe(document.body,{childList:true,subtree:true});
+  function applyTabRows(root){
+    (root||document).querySelectorAll('table tbody tr').forEach(function(tr){
+      if(!tr.dataset.kbInit){tr.setAttribute('tabindex','0');tr.dataset.kbInit='1';}
+    });
+  }
+  applyTabRows();
+  new MutationObserver(function(){applyTabRows();}).observe(document.body,{childList:true,subtree:true});
+  document.addEventListener('keydown',function(e){
+    var tag=document.activeElement&&document.activeElement.tagName;
+    var inField=(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT');
+    if((e.ctrlKey||e.metaKey)&&e.key==='s'){
+      e.preventDefault();
+      var modal=document.querySelector('.modal[style*="flex"],.modal[style*="block"]');
+      if(modal){var btn=modal.querySelector('button[onclick*="save"],button[onclick*="Save"],button[onclick*="guardar"],button[onclick*="Guardar"]');if(btn){btn.click();return;}}
+      var sb=document.querySelector('button[onclick*="saveAll"],button[onclick*="savePats"],button[onclick*="guardar"]');
+      if(sb)sb.click();
+      return;
+    }
+    if(e.key==='Escape'){
+      var modals=[].slice.call(document.querySelectorAll('.modal')).filter(function(m){return m.style.display==='flex'||m.style.display==='block';});
+      if(modals.length){e.preventDefault();var last=modals[modals.length-1];var cls=last.querySelector('button[onclick*="close"],button[onclick*="Close"],button[onclick*="fechar"]');if(cls)cls.click();else last.style.display='none';}
+      return;
+    }
+    if(!inField&&(e.key==='ArrowUp'||e.key==='ArrowDown')){
+      var tr=document.activeElement;
+      if(tr&&tr.tagName==='TR'){
+        e.preventDefault();
+        var rows=[].slice.call(tr.closest('tbody').querySelectorAll('tr[tabindex]'));
+        var idx=rows.indexOf(tr);
+        var next=e.key==='ArrowDown'?rows[idx+1]:rows[idx-1];
+        if(next){next.focus();rows.forEach(function(r){r.classList.remove('kb-focus');});next.classList.add('kb-focus');}
+      }
+      return;
+    }
+    if(!inField&&e.key==='Enter'){
+      var tr=document.activeElement;
+      if(tr&&tr.tagName==='TR'){e.preventDefault();tr.dispatchEvent(new MouseEvent('dblclick',{bubbles:true}));tr.click();}
+      return;
+    }
+    if(!inField&&(e.key==='Delete'||e.key==='Backspace')){
+      var tr=document.activeElement;
+      if(tr&&tr.tagName==='TR'){e.preventDefault();var btn=tr.querySelector('button[onclick*="delet"],button[onclick*="remov"],button[title*="Elimin"],button[title*="Apagar"]');if(btn)btn.click();}
+      return;
+    }
+    if((e.ctrlKey||e.metaKey)&&e.key==='c'&&!inField){
+      var tr=document.activeElement;
+      if(tr&&tr.tagName==='TR'){
+        e.preventDefault();
+        var txt=[].slice.call(tr.querySelectorAll('td')).map(function(td){return td.textContent.trim();}).filter(Boolean).join('\t');
+        if(navigator.clipboard)navigator.clipboard.writeText(txt).then(function(){toast('Linha copiada para a área de transferência','info');});
+      }
+      return;
+    }
+  });
+}
+
+document.addEventListener("DOMContentLoaded",tryInitFirebase); }
+else { tryInitFirebase(); }
+</script>
+</body>
+</html>

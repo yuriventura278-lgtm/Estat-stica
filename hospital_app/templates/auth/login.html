@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Login — Hospital do Prenda</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Inter',sans-serif;background:linear-gradient(135deg,#1a56db 0%,#1447c0 60%,#0f3a9e 100%);
+  min-height:100vh;display:flex;align-items:center;justify-content:center;}
+
+.login-card{background:#fff;border-radius:16px;padding:40px;width:100%;max-width:380px;
+  box-shadow:0 24px 64px rgba(0,0,0,0.25);}
+
+.login-logo{width:56px;height:56px;background:linear-gradient(135deg,#1a56db,#1447c0);
+  border-radius:14px;display:flex;align-items:center;justify-content:center;
+  color:#fff;font-size:24px;font-weight:800;margin:0 auto 20px;}
+
+.login-title{font-size:20px;font-weight:700;color:#1A1A2E;text-align:center;margin-bottom:4px;}
+.login-sub{font-size:13px;color:#6B7280;text-align:center;margin-bottom:28px;}
+
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:16px;}
+.form-group label{font-size:12px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:.5px;}
+.form-group input{padding:11px 14px;border:1px solid rgba(0,0,0,0.12);border-radius:9px;
+  font-family:'Inter',sans-serif;font-size:14px;color:#1A1A2E;
+  transition:border .18s,box-shadow .18s;}
+.form-group input:focus{outline:none;border-color:#1a56db;box-shadow:0 0 0 3px rgba(26,86,219,0.12);}
+
+.btn-login{width:100%;padding:13px;background:linear-gradient(135deg,#1a56db,#1447c0);
+  color:#fff;border:none;border-radius:10px;font-family:'Inter',sans-serif;
+  font-size:14px;font-weight:700;cursor:pointer;transition:all .18s;margin-top:4px;}
+.btn-login:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(26,86,219,0.35);}
+.btn-login:active{transform:translateY(0);}
+
+.alerta{background:rgba(220,38,38,0.07);border:1px solid rgba(220,38,38,0.25);
+  border-radius:8px;padding:10px 14px;color:#DC2626;font-size:13px;
+  margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+
+.footer-text{font-size:11px;color:#9CA3AF;text-align:center;margin-top:24px;}
+</style>
+</head>
+<body>
+
+<div class="login-card">
+  <div class="login-logo">H</div>
+  <h1 class="login-title">Hospital do Prenda</h1>
+  <p class="login-sub">Sistema de Gestão Hospitalar · Luanda</p>
+
+  {% if erro %}
+  <div class="alerta">❌ {{ erro }}</div>
+  {% endif %}
+
+  {% if aviso %}
+  <div class="alerta" style="background:rgba(217,119,6,.07);border-color:rgba(217,119,6,.25);color:#D97706;">
+    ⚠️ {{ aviso }}
+  </div>
+  {% endif %}
+
+  <form method="POST" action="/login">
+    <input type="hidden" name="next" value="{{ next }}">
+
+    <div class="form-group">
+      <label>Nome de utilizador</label>
+      <input type="text" name="username" placeholder="ex: drsilva" autocomplete="username"
+        value="{{ username_prev or '' }}" required autofocus>
+    </div>
+
+    <div class="form-group">
+      <label>Senha</label>
+      <input type="password" name="senha" placeholder="••••••••" autocomplete="current-password" required>
+    </div>
+
+    <button type="submit" class="btn-login">Entrar no Sistema</button>
+  </form>
+
+  <p class="footer-text">Hospital do Prenda · Luanda, Angola · 2026</p>
+</div>
+
+</body>
+</html>
