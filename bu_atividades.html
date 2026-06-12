@@ -1176,18 +1176,18 @@ function initApp(){
 }
 
 /* SPLASH → APP (5 seconds) */
-window.addEventListener('DOMContentLoaded',function(){
-  const fg=document.getElementById('spl-fg');
-  const pct=document.getElementById('spl-pct');
-  const circ=314;let p=0;
-  const dur=5000,step=50;
-  const iv=setInterval(function(){
+(function(){
+  var fg=document.getElementById('spl-fg');
+  var pct=document.getElementById('spl-pct');
+  var circ=314,p=0;
+  var dur=5000,step=50;
+  var iv=setInterval(function(){
     p+=100*step/dur;
     if(p>=100){p=100;clearInterval(iv);setTimeout(function(){document.getElementById('splash').style.display='none';initApp();},300);}
     if(fg)fg.style.strokeDashoffset=circ*(1-p/100);
     if(pct)pct.textContent=Math.round(p)+'%';
   },step);
-});
+})();
 
 </script>
 </body>
