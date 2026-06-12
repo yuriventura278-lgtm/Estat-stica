@@ -1,0 +1,1416 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Banco de Ortopedia — Hospital do Prenda</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#0D1B3E;--navy-mid:#1A3A7A;
+  --blue:#1A56DB;--blue-mid:#2563EB;--blue-lt:#DBEAFE;--blue-xlt:#EFF6FF;
+  --teal:#0891B2;--green:#059669;--red:#DC2626;--amber:#D97706;--purple:#7C3AED;
+  --surface:#F4F7FF;--card:#FFFFFF;--border:#E2E8F0;--border-md:#CBD5E1;
+  --text:#0F172A;--text-md:#334155;--text-sm:#64748B;
+  --r-sm:8px;--r:14px;--r-lg:20px;
+}
+body{font-family:'Segoe UI',Arial,sans-serif;background:var(--surface);color:var(--text);min-height:100vh;padding-bottom:80px}
+/* ── Header ── */
+.app-header{background:linear-gradient(135deg,var(--navy) 0%,var(--navy-mid) 60%,#1e4db7 100%);color:#fff;padding:20px 24px 16px;display:flex;align-items:center;gap:16px;box-shadow:0 4px 20px rgba(13,27,62,.4)}
+.logo-wrap{width:56px;height:56px;border-radius:12px;overflow:hidden;background:#fff;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.logo-wrap img{width:56px;height:56px;object-fit:cover}
+.header-info{flex:1}
+.header-info h1{font-size:1.15rem;font-weight:700;letter-spacing:.3px}
+.header-info p{font-size:.78rem;opacity:.75;margin-top:2px}
+.progress-ring-wrap{position:relative;width:52px;height:52px;flex-shrink:0}
+.progress-ring-wrap svg{transform:rotate(-90deg)}
+.progress-ring-wrap .ring-bg{fill:none;stroke:rgba(255,255,255,.15);stroke-width:4}
+.progress-ring-wrap .ring-fg{fill:none;stroke:#60A5FA;stroke-width:4;stroke-linecap:round;stroke-dasharray:138.2;stroke-dashoffset:138.2;transition:stroke-dashoffset .5s ease}
+.ring-label{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:700;color:#fff}
+/* ── Layout ── */
+.container{max-width:780px;margin:0 auto;padding:16px}
+.section{background:var(--card);border-radius:var(--r);border:1px solid var(--border);padding:20px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+.section-title{font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--blue);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.section-title svg{flex-shrink:0}
+/* ── Cards & Grids ── */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+@media(max-width:520px){.grid-2,.grid-3,.grid-4{grid-template-columns:1fr 1fr}}
+/* ── Labels & Inputs ── */
+label{font-size:.8rem;font-weight:600;color:var(--text-md);display:block;margin-bottom:4px}
+input[type=text],input[type=number],input[type=time],input[type=date],select,textarea{
+  width:100%;padding:9px 12px;border:1.5px solid var(--border-md);border-radius:var(--r-sm);
+  font-size:.88rem;color:var(--text);background:#fff;transition:border-color .2s;outline:none;font-family:inherit
+}
+input:focus,select:focus,textarea:focus{border-color:var(--blue)}
+textarea{resize:vertical;min-height:72px}
+input[type=number]{-moz-appearance:textfield}
+input[type=number]::-webkit-inner-spin-button{opacity:1}
+/* ── Counter chips ── */
+.counter-box{background:var(--blue-xlt);border:1.5px solid var(--blue-lt);border-radius:var(--r);padding:14px;text-align:center}
+.counter-box .c-label{font-size:.72rem;font-weight:600;color:var(--blue);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.counter-box .c-val{font-size:2rem;font-weight:800;color:var(--navy);line-height:1}
+.counter-box .c-sub{font-size:.7rem;color:var(--text-sm);margin-top:2px}
+/* ── Step counter ── */
+.stepper{display:flex;align-items:center;gap:0}
+.stepper button{width:32px;height:32px;border:1.5px solid var(--border-md);background:#fff;border-radius:var(--r-sm);font-size:1.1rem;font-weight:700;color:var(--text-md);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.stepper button:hover{background:var(--blue-lt);border-color:var(--blue);color:var(--blue)}
+.stepper input{width:52px;text-align:center;border-left:0;border-right:0;border-radius:0;font-weight:700}
+/* ── Tags/Chips ── */
+.tag{display:inline-flex;align-items:center;gap:5px;background:var(--blue-lt);color:var(--navy-mid);border-radius:20px;padding:4px 10px;font-size:.78rem;font-weight:600;margin:3px}
+.tag button{background:none;border:none;cursor:pointer;color:var(--blue-mid);font-size:.9rem;line-height:1;padding:0;display:flex}
+.tags-wrap{display:flex;flex-wrap:wrap;gap:2px;min-height:28px;padding:4px 0}
+/* ── Buttons ── */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:10px 18px;border-radius:var(--r-sm);font-size:.88rem;font-weight:600;cursor:pointer;border:none;transition:all .18s;font-family:inherit}
+.btn-primary{background:var(--blue);color:#fff}
+.btn-primary:hover{background:var(--blue-mid)}
+.btn-outline{background:#fff;color:var(--blue);border:1.5px solid var(--blue)}
+.btn-outline:hover{background:var(--blue-xlt)}
+.btn-green{background:var(--green);color:#fff}
+.btn-green:hover{background:#047857}
+.btn-red{background:var(--red);color:#fff}
+.btn-red:hover{background:#b91c1c}
+.btn-amber{background:var(--amber);color:#fff}
+.btn-amber:hover{background:#b45309}
+.btn-navy{background:var(--navy);color:#fff}
+.btn-navy:hover{background:var(--navy-mid)}
+.btn-sm{padding:6px 12px;font-size:.78rem}
+.btn-add{display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:var(--r-sm);background:var(--blue-xlt);color:var(--blue);border:1.5px dashed var(--blue-lt);font-size:.82rem;font-weight:600;cursor:pointer;transition:all .18s;margin-top:10px;width:100%;justify-content:center}
+.btn-add:hover{background:var(--blue-lt);border-color:var(--blue)}
+/* ── Record Cards ── */
+.record-card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:10px;position:relative}
+.record-card .rc-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.record-card .rc-num{font-size:.7rem;font-weight:700;color:var(--blue);background:var(--blue-lt);padding:2px 8px;border-radius:20px}
+.record-card .rc-remove{background:none;border:none;cursor:pointer;color:var(--text-sm);font-size:1rem;padding:4px;border-radius:6px;transition:all .15s}
+.record-card .rc-remove:hover{background:#fee2e2;color:var(--red)}
+/* ── Gender toggle ── */
+.gender-toggle{display:flex;gap:6px}
+.gender-toggle label{cursor:pointer;margin:0}
+.gender-toggle input[type=radio]{display:none}
+.gender-btn{padding:7px 14px;border-radius:var(--r-sm);border:1.5px solid var(--border-md);background:#fff;font-size:.82rem;font-weight:600;color:var(--text-md);cursor:pointer;transition:all .15s}
+.gender-toggle input[type=radio]:checked+.gender-btn.m{background:#DBEAFE;border-color:var(--blue);color:var(--blue)}
+.gender-toggle input[type=radio]:checked+.gender-btn.f{background:#FCE7F3;border-color:#db2777;color:#db2777}
+/* ── Sinistralidade ── */
+.sinis-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
+.sinis-item{background:var(--blue-xlt);border:1.5px solid var(--blue-lt);border-radius:var(--r-sm);padding:10px 12px}
+.sinis-item label{font-size:.73rem;font-weight:700;color:var(--navy);margin-bottom:5px;text-transform:uppercase;letter-spacing:.3px}
+.sinis-item input{background:#fff}
+/* ── Classificação badges ── */
+.classif-options{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.classif-options input[type=radio]{display:none}
+.classif-label{padding:8px 18px;border-radius:20px;font-size:.82rem;font-weight:700;border:2px solid var(--border-md);cursor:pointer;transition:all .18s;color:var(--text-md)}
+#cl-leve:checked~.classif-options [for=cl-leve],
+.classif-options input[type=radio]:checked+.classif-label{border-color:currentColor}
+[data-cl=leve]{color:#059669}[data-cl=leve].active{background:#d1fae5;border-color:#059669;color:#059669}
+[data-cl=normal]{color:var(--blue)}[data-cl=normal].active{background:var(--blue-lt);border-color:var(--blue);color:var(--blue)}
+[data-cl=agitado]{color:var(--amber)}[data-cl=agitado].active{background:#fef3c7;border-color:var(--amber);color:var(--amber)}
+[data-cl=pesado]{color:#ea580c}[data-cl=pesado].active{background:#ffedd5;border-color:#ea580c;color:#ea580c}
+[data-cl=critico]{color:var(--red)}[data-cl=critico].active{background:#fee2e2;border-color:var(--red);color:var(--red)}
+/* ── CID search ── */
+.cid-search-wrap{position:relative}
+.cid-dropdown{position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid var(--border-md);border-top:0;border-radius:0 0 var(--r-sm) var(--r-sm);max-height:220px;overflow-y:auto;z-index:50;box-shadow:0 8px 20px rgba(0,0,0,.12)}
+.cid-dropdown div{padding:8px 12px;font-size:.83rem;cursor:pointer;border-bottom:1px solid var(--border)}
+.cid-dropdown div:hover{background:var(--blue-xlt)}
+.cid-dropdown div span.cid-code{font-size:.72rem;color:var(--text-sm);margin-right:6px;font-weight:600}
+/* ── Fixed action bar ── */
+.action-bar{position:fixed;bottom:0;left:0;right:0;background:rgba(255,255,255,.97);backdrop-filter:blur(10px);border-top:1px solid var(--border);padding:12px 16px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;z-index:100}
+/* ── Modal ── */
+.modal-backdrop{display:none;position:fixed;inset:0;background:rgba(13,27,62,.55);backdrop-filter:blur(4px);z-index:200;align-items:flex-end;justify-content:center}
+.modal-backdrop.open{display:flex}
+.modal{background:#fff;border-radius:var(--r-lg) var(--r-lg) 0 0;width:100%;max-width:680px;max-height:85vh;overflow-y:auto;padding:24px;animation:slideUp .3s ease}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.modal-title{font-size:1rem;font-weight:700;color:var(--navy);margin-bottom:16px}
+.modal-body{font-size:.85rem;line-height:1.7;color:var(--text-md);white-space:pre-wrap;background:var(--surface);border-radius:var(--r-sm);padding:14px;margin-bottom:16px;max-height:40vh;overflow-y:auto}
+.modal-footer{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+/* ── Summary rows ── */
+.sum-row{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px dashed var(--border);font-size:.83rem}
+.sum-row:last-child{border-bottom:none}
+.sum-key{color:var(--text-md);font-weight:600}
+.sum-val{color:var(--navy);font-weight:700}
+.sum-section{margin-bottom:12px}
+.sum-section-title{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--blue);margin-bottom:6px;margin-top:10px}
+/* ── PDF template (hidden) ── */
+#pdf-template{position:fixed;left:-9999px;top:0;width:794px;background:#fff;font-family:Arial,sans-serif;font-size:11px;color:#1a1a2e;padding:30px 36px;line-height:1.5}
+.pdf-header{display:flex;align-items:center;gap:16px;border-bottom:3px solid #0D1B3E;padding-bottom:12px;margin-bottom:16px}
+.pdf-logo{width:60px;height:60px;object-fit:cover;border-radius:8px}
+.pdf-title h1{font-size:14px;font-weight:700;color:#0D1B3E;margin-bottom:2px}
+.pdf-title p{font-size:10px;color:#64748B}
+.pdf-section{margin-bottom:14px}
+.pdf-section-title{background:#0D1B3E;color:#fff;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;padding:4px 10px;border-radius:4px;margin-bottom:8px}
+.pdf-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.pdf-cell{background:#F4F7FF;border-radius:6px;padding:6px 8px}
+.pdf-cell .l{font-size:8px;color:#64748B;font-weight:600;text-transform:uppercase;margin-bottom:2px}
+.pdf-cell .v{font-size:12px;font-weight:700;color:#0D1B3E}
+.pdf-row{display:flex;gap:6px;margin-bottom:4px;font-size:10px}
+.pdf-row .k{font-weight:700;min-width:180px;color:#334155}
+.pdf-row .vv{color:#0D1B3E}
+.pdf-table{width:100%;border-collapse:collapse;font-size:9.5px}
+.pdf-table th{background:#0D1B3E;color:#fff;padding:5px 8px;text-align:left;font-size:8.5px}
+.pdf-table td{padding:5px 8px;border-bottom:1px solid #E2E8F0}
+.pdf-table tr:nth-child(even) td{background:#F4F7FF}
+.pdf-badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:9px;font-weight:700}
+/* ── Misc ── */
+.divider{border:none;border-top:1px solid var(--border);margin:14px 0}
+.info-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:.72rem;font-weight:700}
+.badge-blue{background:var(--blue-lt);color:var(--navy-mid)}
+.total-badge{font-size:1.1rem;font-weight:800;color:var(--navy);background:var(--blue-lt);padding:4px 14px;border-radius:20px;display:inline-block}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════ HEADER ═══════════════════════ -->
+<div class="app-header">
+  <div class="logo-wrap">
+    <img id="header-logo" src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wCEAAYGBgYHBgcICAcKCwoLCg8ODAwODxYQERAREBYiFRkVFRkVIh4kHhweJB42KiYmKjY+NDI0PkxERExfWl98fKcBBgYGBgcGBwgIBwoLCgsKDw4MDA4PFhAREBEQFiIVGRUVGRUiHiQeHB4kHjYqJiYqNj40MjQ+TERETF9aX3x8p//CABEIAUMBQwMBIgACEQEDEQH/xAAwAAEBAAMBAQAAAAAAAAAAAAAAAQQFBgMCAQEBAQEBAAAAAAAAAAAAAAAAAQMCBP/aAAwDAQACEAMQAAAC09Pb4ZVQAWopCgVIoCgQACKWAiok+oqUQSxRBECqtgClgFCFUKkNjLrm3cd6ht1altSaltxqGR4d8xSSUsWCVLJRFkRYoCgstgFFirJKULU3+h9OOukvLfWenTzmvg6hy/3XTOb8ozMM2xgEogIslilkokqWKBQWyUsUFEKsAdTy/UY7c7sc33471Or2eT3nq9xt/DLfJ4vtMPnrmsbtuQ382Os2ySiLJYsIslixUsAlWWxZUUFLCrAFWybrS7LPTW5uwc9a95fHXHWZOs2fj9w+Z1qdBsNb7PDFmuUWSpRBLFhJSxZLFAFstiyoKBZSpKVOp5fqcN9FmfWRz1j5GNrOuez+eey8d9x8ffJTrrOQzdVv5pK3wgIslSwCWSlkoglWWxZShFLFAWxRHv4brjvDbP1x25z59PP0+Zt9T0+WvjqsnaY7co9Pj1+SAk+osBFksCwRAsEtFlsJSgWUWPqUBG11e3z0zPTw9fN6dF4e/h7PE6rldlnrs7zCX6+bNsEsVKIJZLFAksliyWKAq2VAqlRZbFlRZRlYvQ8d6+ZGbjtzkzcP0+abvS9Plrj+eLt8tuWfXz6vHJZQSwLJZKlEEslkoUBbKgVbKlS2VKiiOi53YZ67f65n5479/GX0ed1HL+2emzz+W9eO/j5s2wgqCWBZKISUJZLFAAtlQKtlSpUqWxZQWzZYmz1+O2Ml2wb3RdBjtZ8+OPo00s9niAglkpZLISxQlksUAC2VFlpZUWVFlsAp91uNf5zLTyqaZXd6PM402zQfWfflPv43xSwEBFSyVLBLJUsUCWWKLKCiypSpbKEu309566/H8NT5vVMY9fjddyPS4b/GJ7++euowM/A9PlDrlAglgVLJYCSpYFWUWWxZUWWlhLYstgoTbYObjZbYiNcbtNVvM9dPuUz71ePZvghZAokqWASwipZKABbCUWVKVLYsFFlycbos9Pv08sjzerlGdg+zxOo5brsdub2/jn896HDycbfzwdciSgQSoCEqCwKsSWxVsqLFlBUtiwXNwtrx1qvTJwrMrGTqXLw/WXI+eh0uO2tG/nIUgCVLASUQEUJZQqWxYLZUWLKCoLuNNt+O/HA6jz475tfnfBvdJ02WuHsNTnZbc2y8T0+UhAVAEUSAWCUAlAKlsqC2EosqCnScd827Fnpx17BXHOxHHOxHHM/A1xIsAQUQElsJUAIJVWLKCpbFgt+aiwXMwqZ7Ac9Z7AGewBnsAevkdckAhYLYCEogIVEpKVKLFlBUJUtLBUJUoShKEoQtQCFRAKICSgEAW0SUWKAAVQgAAAAAAEChCAEQKgBb/8QAAv/aAAwDAQACAAMAAAAhixQY1SDSADDDgNzWZOBDMhQhEHUJNywNx0BYBCRjlBkpEFjDIVnX5PhOLJHqReASa1gHROnAfAWrEZGnjmVMt/CHRWhYg9jBoFmRqDZAxUgDyUDEeiVMEwYJmVCARAp8AjiVjDxt1f5L0pgorBAVFaUBgCmfLCdHCTKWBDnzVDUQJrKFLwBArVCoWbiWBVDUoMLjEKsAfDpioRFAWBVDUAKPqRQLHg9Bq4/1AUBVDAADrCUNGIv+SHsGdTAB/VARKcCIGS3M9CbroCr7AiorAkFgRlCcbyb1GVAk2AQHBLJgRgEA5cwpCByBaa8nmiDyBEzfUe+zKPizGnF+kJmiDDCaFM1E4LAZEngqAAWJejBDWzox55NhYlle5zIlSJgLjJCCCCiO3aQaglObKhyDJif7777OOFPqAmjP8cBBA8AAAgeAAA8gcDgf8//EAAL/2gAMAwEAAgADAAAAEPLbtOrGozPf/X/P/ZOOj/8Aw7z/AO7R/wDvPNQPnNGvPfP2zf3d/OJMktNbO9DdtvKf+jbfOP8AUac2c6PcfNhb63Ls2bj+3zf/AL96d48eVt93/vJsO/bhweApu3/+8vt659/o/wDFunuEvW/qJmvl/fbfbK8q/wCb9Xfek8lbqeqrzL/rjzuRWJ287h1/38SrR1b2rz0Lh7GqfmlxYD37mz+j2rzyt9pLpfKv5DmcV03/AM9h4or+V/8AAIt6zZvgeM/Hfa4fxHk/2FPTY9f/AGP3b3r1hXSj7xaLgwpE3mqjn/wr22rVx4/5qjMqt/aTi/v8H59gvwXmsOIqXoeT31SIuHJtvivzT7E2PFj+/wD60b7E8V48iOx8uP3+226f9R+Aeza+8cPjutxzzzRjH8LCHdwo6uM98tt5555+i+j09G4/8/8A4n/vffX/AP333572P9/z/8QAMBEAAQQCAQQABAYBBQEAAAAAAQACAxEEEDEFEiFBExVRUxQgMmFxkTMjMDRCclT/2gAIAQIBAT8AJXGgK1SJRVE1siwgNEWqRC7dFuuNgWvAVID6qaaKJoMjqFr5lh/cXzLE+6F8xw/uhfMcP7oTHte0OabB4VBEcUiAiL07fOgL0OddqzMeGZjWyOoXa+T4gFue5DpGI7y1ziEej4gHl7gh0jEdw9xUULYo2sHAC7SuF26IvRFaagEUBoClyus2MZn/ALCny8x2O9jsemlvkqHIZj9Njeea8BT9TdkYzo3tHd48hYOWMZ0jiLJFALp/UTklzH13jitEWiNBEWqtdp0OFzoeEOVwupNxzCPjOIAd4pTdQ6dNGY3PIBFcFCHEOI0EgxAclZDYWzOETiWoLpsWGIQ6Ly7272uURSItFHjRFaHKq9c6ApcrrX+KEkeA/wArIyOmmB4Y1ncW+KbXlQ4rsjpLWA0RZCl6dNDjmWTx+yw8N2UXta4Ahti10nAkhc98tg8BqIrRFKhohUDsXe27zpoYYC6WPvH0X4iBo7j00V/Ch7exha2gQuszOZCwBrSHOogpsuVhESfBiaD4NJptrXfUaPhDTvyjhAbHvXVG9+KR8Iv8jwOU9oDP9P4/d9Dwsfv+BF3/AKu0WurY0uRHEI23T/Kb0RhrvmeR9EG0Gj6D8jthUhpuihxrqWTJiwB7Ksuryn5vUo2d7o4+3+FBJ8aCN9V3NBXWJpYWw/DkLbdRKknyoA17c1rzf6Qmkua0/snaIop2ibXvTeUU1e0BoFdVhlyMcMjbZ7rTeixuA7ppP4UEbY2NYOGigup4ZyRCLADXWbWT0jHMYMBDXg8kpopjR+yd6070ncInRIrTUU38l0vSx5pXdVnYXktDfAVhdbcRiCj/ANwoogXMtmT5KAqv4TteyiUeNHnR01Feghxpz2t/UaUUUcWdLP8AGae4VS5ql1KOCWJrJZQzzYNodPAYJPxzw3634TXDtaWuDgRyFzqvKPJXrT9g3oG01DnWVisyWBjyQLvwoMCJ+fLAXHtaoo2xxtYOGigusMEs2Iz0SQnyvggnw5PRtpWD/wAPH/8AA0TSdwFdJ3pXQXOmoc6avaKtE0sZ+A3Nc5khMjrGs5+Gx0T57sElnKyMnpWS4GQm6rghQtY2Fgb+kAUidO8o8aJ9IjxsoO0DvqOT8DGcR+p3gLzHHE8RSB7XWXEeFjyiaFkg9hdYLBLiF/6Q7ys7J6dJjlsTW9/iqbSxgRiwg89gvRNomkXImkT7V3oG007tA3rNMLYTLJGHdvAKiczJgaS2g5oNKNjI2gMaGj6BTthc0uka0hovyFi5OHPMIxjtaTwSAmn0ib2T7XO7H1XOgUd9y6lZw5AAsbqjIYY2GJ9gVwg4miuqySGNkLAS55pSY+bEyKT4QHw/Y5UMgfGx49hO9aJpE2iaRKPOrtA6vhUu7WXlsxow5zSQSh1nH+0V88g+25fPIPtOR65AR/icseX4kTXhtAi9X4V2uAuUfOu4IGjoGtArnT445R2yNBH7r8JifYZ/S/CYn2Gf0vwmJ9hn9L8Jh/8Azs/pNAa0BooD0vJRRRK7tE0vH0RCBJNa7l3a7lYXheEKKFFWF3DVi6Tjru1X+0fSb+V3OncaGv/EAC4RAAEEAgEDAgYBBAMAAAAAAAEAAgMRBBAFEiExE1MUFSAyQVGRIjRhcUJSc//aAAgBAwEBPwAlE7tWiVav6LVjQKB1eydE7JVqKGWZ1RtLivl2Z7RXy7M9or5fmey5fLsz2intcxxa4UQrQOgUDoHRKOiUTq1iZMsDy+NoJpDm8w9gxqdzmWOxa0JvN5jjQa0p3NZrfMYH+wpZXSSOe7yTe7VoFAoFXolEonROuEAOQ+/+hWLjYDclhGVbursFNivyeUkjb46u5WPxIxspkjDbVyGCcr02ggAHuVyfG/CBjmWWlWgUDoIFDRTkSir0SuPfktmIgbbi0hR8byMcgkEQsG/IXq5bcwuAPqE+AsR07oGmYAOTiQ00LK5OXMMxEwIH4H4QKtWdBWgr0dE1olFcJZlmDTTjGaWNjcsMiMvc7p6u/dTZYxuYe+gRYBUPKxT5bYYhYI+5Z2eMP0y5ttcaK5jkYckMZGAQO5dsFDQP0HRRRRKwYZ5shrIn9Lv2vhcguLByX9QHi1L1B7g51uB7lcJEyTIe5znN6GXYT48PNJjGRK5wBIBTx0uc39HQKGgh9BR8bdri39OWw+oGee5UT7fcxxuj9jysro+Il6Pt6jS4bLixpZXPPlnZfO3t6uiCNpP5ARcXOJQQ0EPKCCtFFHRRRXG40eTkiN5NUT2TMLi5pPSZLL1LIj9KaSO76SQuFghmkmMsfWGtsBQwYuQXsdgPiFfcVIA17gP2hsIaGyijo64vJixsoSSGhRTudc0n08eMH9qWR0j3PPlxsrjM74MzENJLm0Fjc1kh5E9uYRVUnm3uP+foCGm7KKKKKKKyIIhxONIGAPLjZVLgmtdm04A/0lTyhgfTsY0EfudoIFBDQ0dFFOR0GOd4FqWWWTBix/RcOg3acCDS4x88U5kiiLyAjyT3SGP4GMu/Vd09rmvdYo34QQQQQ03R2UUdYuVJiy9bKJ/ysvkJosCCZrW9T/PZSPMj3PPkm1wrzFDmSD/i0FMhbk5OPmQ/6eP8rP8A72f/ANDoBBBBBN0UdFFFEKlkxZxwY2vYPSaLBVLj48yRk7IACHAByx8bmMVjhEBSlLnSPc/7iSSgNBDQCGzs743G9fKYD9o7lU2SaZhnjMb29IaCsiB0Mz4z+CuFa8xZbWEhxaKXH4vIRZIdKXdHe+6zOk5Uxb46zoDYCAQGiEQjutYQldMI43lpf2sKVr4J3NDu7T5T3vkdb3ElQPna4Nic4FxrsVl42djw+p8U5w8EAoqlWgEAggNlEI76VxpDcyIk/lZPFySzSvEsdEk+UW0SFxTIxK6WQgNYLUORhSvmj9Vx9X8O8BSxhkjmg3RQGgEAgEENEaIVIjVLExH5Ly1hAIC+R5HuhHgZ/cahwU/uNXyKf3GqeF0MrmOIJBVaAQCA0Aq0RohUiFSZJJG62OIK+Ny/ff8Ayvjcv33/AMr43L99/wDK+Ny/ff8AynFznFziSSqVIBAKkAgFSIVKtVqlS6V0rpXSqVIKtAIBBV9BR+o/V+tjX//EAD4QAAECAwIKCAQFBAMBAAAAAAIBAwAEEQUSEBMVITFQUVNxkRQgIjRBUnKhMjNhgSNAY5KxQ2JwgkJgc9H/2gAIAQEAAT8C/wAFM2a+82JioUWMjzXmb5rGR5rzN81jI815m+axkea8zfNYyPNeZvmsZHmvM3zWMjzXmb5rGR5rzN81h9g2HLhKlaeGoJS0JdqXbAlWqfSMrSm1eUZXldq8oytKbS5RlaU2lyjK0rtXlGVpTavKMryu1eUZWlNpcon3wffvhopqAWXiSotkqcMAgZrQRVeEEBgtCFU44RbcL4QVeCRiH90fKNC6hszuQ/eOjTG5PlFmMuhM1Jsk7K6Ui1u8p6EhBVVRE0w/KvMUvpm2+EWN8pz1YJjvL3/osOyj7TaGY5l1BZfcx4rGVpfynEvPtPncES0eMWt3pPQkWXKf1yT0/wD2CESSipVIl5UJe/c0KtcDUk024bmklWtYcbFwCAtCxMMkw6oL9uH5+Tn2GZdAK9XPgkXwYevFWl2J58H3kMNF2kSs47L/AFHyxLzLT41Bft1Ju0xDstZ12+EGZmV4iqv5+Vs5x8b966nhGRv1vaMjfre0Py5sOXS+0Ntm4V0BqsSdnowt8lqeFxsTFRLQsTdnONdoO0PumoJclCz0JPAFWOnTe+WJGcmDmREzqi1i1/ja4LFlONq2ooiISafrgRwSqiLo04BMSrdKtFosLSJs2zfJW0on8/X8/KIjkiI10jSMjnvU5RK2arLyGrlaRa6pjW0/thl0mnBMfCJm0jcS632U2+MWP8tz1YDecZmnSBadtYmLSV1m4g0Vfi1A1MPM/AdIyjObz2SMozm89kgyIyUiWqrhlBngbq0A0LPni9au7bh6Tm0vuEHjVaahsyWaMSMxrnolYKbkBJRxehfLDbkg8K9kPulIeFBdNE0IubDLlckRLY3WMru7sYlJjpLN5RpnpDiIjhonmXUFnzgMoQHo2xj7MJc9z9sA1IvItwQXhEy0jT5gnguGUu9DbvaLmeL1m/pe0LOSbTfZIeAwS3iVduoLNmWmxIDWmetYJmzSJSUxz/3Q0UhLoVwxz6c9YmHMa8Z7VwjaFJfE4v8A40rXUbMo88N4ETTSMmzWxOcLZ00ifCnOFSi0ws2a040BqZZ0rGSWPOcOWSN38M1r9dQ2T3cvXB2q6JElwdMSU6UwpooUpE+iJNOYW0JZAUHTi80Yi0/7/wB0SiPAx+Muf67IcWpkqeZdQWT8g/XCnZ9Vriq8ISZkm0W6QJwiZdxr5ntwtOYuRA9jdYyuu594YeGaYVVH6KkEl0iTYuoJWe6OCjcrnrpg1vEq7V6uPeu3cYtKUpgB51tKAapCrVdQyEs0/jL/AIUiYBG3zFNCL1LMbAmCvCi9uFmbPRVTs/thZqzvp+3UVkf1v9Yne9O8epZXyC9cE7Zd5aiNfTDzlmq0dxErTNm1FZH9b/WJzvTvHqWa80DJIZona8Yu2aq1q3zi5Zn6fPUItuEmYVX7QITI/CJp9lhWn1WqgfKFRUWipTD0Cb3XukG2bZXTSiw2y46qoA1hwDbJRNKLqCRnGWGrp1rWJeYbfFSCuZYctCXbMgWtU+kTTguvmY6FwvPIy0hroqkWlL41rGDpH+Isn5rnpi0u9n9tQ2R8lz1xO96d49S0e5l9osyZvDiSXOmjhDEtiZt2nwEOaLS72f21DZ82yw2SGukomXBcfcJNCr1Jm0EeYVvFqkNmTZoY6UjLA7pecTL2OeI6UrqFmyzcbE1cpXwpE3JlLXe1VF8eolkCqIuNXlGRx3q8oOyMy3Xc/CFRUVUXSmoJVnHPgHh48ItGZVgAEdKr/EPiM3J1TZVOPUnDMJJSFaLRI6ZNb0ost913GoZVpSkT/fHeOoLKZutK4uktHCHHrMdKpkir94lnpNfw2SThFoMYqYWmgs6YXmcfLYutKokZGXfe0Scn0a/26qsThoc06SaK6g6fM4u5VKUpowNuG2aGK50h+aefRL6pmw9Pm97/ABGUJzerySCnZohVFdWi6hspsDccQhRez4xaACE0aCiIlEzdVltXXQBPFY6NJCoCrQVXRmi0pdGnUUUoJahsf5rnpi0++HwTq2Qx8Ty8EicSbObQwaKgfDE4z0iVXN2qVTjqGyTEHXLxInZ8Ydas5075kCr6o6LZe0P3wdLy024BSqom2DfZlJWgEKqiUTjGWJjyBElaOOUkduivhE62ATBXFSi5/wDpMjKS5yrZE0irHQZTcjHQZTcjHQZTdDHQZTcjHQZTdDHQZTcjHQZTdDHQZTcjFpNg1MXQGiXU1A3PTTQoIOURPokZTnt77JGU57e+yRlOe3vskZTnt77JGU57e+yRlOe3vskZTnt77JGU57e+yQ6848V4yqv+Nf/EACsQAAIBAQUGBwEBAAAAAAAAAAERACEQMUFR8CAwQGFx8VCBkaGxwdHhYP/aAAgBAQABPyH/ABC4pRRRWqLwEdVcMl/E1B9TUH1NQfU1B9TRH1NAfU0R9TUH1HramSu/PAr5YvzbmSoA2JValKIqF4AB52AiPaxxzkDjgnIFaBJR31J3rCCQEIjbXFe8+c7niqm+IJr2ZgmGRQEP3lhgNLKEQWAX0R5xJz1B18Ao1tZ24fsXxNVAmrZmfEsHY5LwQ4aEjdxwsVh+zB4CC4YEZXHVSzzcfRHTcGZsxDgUj0ECrrC6Bzy+p5rhXjrsNOd4H7CAo2J2lwo2HMJcjJmnvmnvhl1izEDzD4QU6cuFommBERqzwDL0wJ5Sv9AitvYEcnZru9WLDQ8k0mBsp8YRgRhCAEk0gNvJ48utin8QtpMPdUQAzpCmqgn5mE4qXqMouJIKw0/KG6FNlXyNcY7q+Hhy8AfOE3i8e80fymj+UKBvBNr0uMf2d4/sOA0SYadd6eEE8MKVAYxWrQaMIpxKhAChf2aCvpFYUeGTegOa8x4wBFlLtwA99o7R3Q2Rsu8BlgA4TBBjeT/ED+bIiHLhSh0NbSAyZy5TREGVILv5QpO8mfPdncjbGzXXVFdG6RMyRwupQY0UpdBS0nPP8yh3p2xvj5ALw2efHdIIQgiLxaOxI8GM7kPyODkuH2hBBIIu8A9y+BAVpEMcIJMQgsRB5g+otZq40Uqpq/3M/YmprmMDdwkHr4B778CZ2lWF8z4wgb/SAEhAqdBbSBrToJyevSJ0hkmsHmKNybDvjtkC161GClF0wrrs+vsYRQsByWgYQhJZN54kbg6s4aKvcw5wNgkkmvHIQsAwKOoiB+/84obi/qx2T9y+BMQhWqBCr72/cm08NreezZeO5RLAQnCab5KjXfZ4NoHZgjGlWyBGojzKFxRZGltAaHrDIkOBjscBmoHzEtW8X+AFt9TQOUMCKhSuTUYe1QT5BR2AAYAPQlQIhsT6xqOc9j8NrHaNh4PUctk9LzmEh8/8R8G8chdRNNy3h3I3hTjYEHhMQMDYHggqryhTERixAxJglDy2Hsng3HsDcLd5Cz8lKuxfUBYYnpB0QOaIiOYtfFuw+cH0oUVCnoIS+p6MMPrYK7AkjqJ3KNnG8c4CDye4Fh4UWDbXfB6EpzZNQMu5lH9yhX3VvVUb7qzkdesCOBcFdMlBHkF4AaSK7jBYh1dQAmYEFaBgAHQZfiaI+pi5xQD43R4cHPS48ZdVQAhds/zCsYcxSwqhBvQrhcCPAddzmo5bNzNdY2YR6IaqgAFimHGPZLAE4ixhEQbzT9zQP2AA7gJY0sKNVQFaCsCQlBd8dlP7KJoHged8c4p0XftHxN8AbVAWT1naJ2CdqnYJ2qdgnap2CJqcIWOPjcCogz5E0fzmj+c0fzmj+c0fzmj+c0fzmj+cuDtNAfHip3L8Vcdjtdjj4cQcSdx//8QAKRABAAICAgEEAQMFAQAAAAAAAQARECAhMUEwUWFxgZGhscHR4fDxQP/aAAgBAQABPxCEBvamU4O9KlHoOhHFOH0KNwxTrXqVKzRoTNZogN4D0axWKh6AFMp0rNbV6S4rIMqJCq2oPwU8L0KJFiRgkYLCLUQF2tPsGjisvpry4Dc8gUie2w/yeP8Al8U7/Wz/ALWL/wB9P+/j/l8W7/URCi59FZHr0adad1wG1TqKAd08Jw0hwSoG1Co7aIITSxrrq6ZXxKho5UkA/if6H/SPOQiJSJ2JlN1RInoEpi4DasVBa/73jE3jaVE7IZmmcoHarQEErTK5be1z9BwdKEcaqEO1vLlPqu7+qnWhKdXFOxAMkNBzUqL6f8uMvJzNXAUfSxzOkOUiL7dMFCuqYzvTUrvVUOOTp4/OseGk5Fz/AAFuoqVlzToxNTuVtTkMm9YXnOZjGJ28Pbak8PkmmxMG3ptP8/EHWU9s/sMrUSOdfb/dTuRU1rmsVqcU7BDJ16K0/kTxspO+0zrjWqPXvzqcSPB7r0EeEZ3Yv7DPYMdpY/JEfPrRf2B2ZrCa0Y84TQ70DTvS/jFY354CxvMRDgADsYccW+F17PibohGEir8lOOvFhcqpXswiQBbfYj260PRHdPnAZTNYetEyDeDrYxwk7wEM1EU7O1LiwfKgT42ctDBhCoPiFEa4njzL4Yr+Vx+4e0/ZI7IWk0uxvwIJT1BYfa/nRHNbPWHQh6B3ijHnUNIj70GfEg+LA0Irda4Jf54ErhknEHH/ACLURJWKwkSsVqcODBDvNGxl/nyKICYxnUxXcNhK/IoTknjRYPHJAR6YREAHpk/6kIGAvtIDZDSo4fBg+k7bkOtBoNCxFvKNUiEVpdUy35WA7oHG+4KSWHPad0AzwAV/hObnwTAiAaRa/BHYAfsV7hucI3gx2wYNBoVVXLTsCoRi+mgrOCNFFgIt47ntADnv7+pSrwCeI6OjsdRgwYCGr+L1w8gOPrOL8DcTGpEKROxyyCMDURftikNzAoor9BEaCkR7Ejh0WsOzkwdYNTBpiUhDleiqBygKojDc0P5QrnhjXdbx0x979GFYiTIqrqDWX8gD6J2cmpoYCGKyYF1XXsxV7vAB/CFUghe6AM9lfNavln/YwWNlysEn9icPeLw+iOTUhgbHZvWeUU6Z8tkrq145zVWPxDjVYMUKqBbLJwtO1e3D3o5cOjk0NRkwLD1fmkRRpyh0NKhs2QQjgt2RTgukB0xyxzUYx0cmhqNSfs8rjn+QOZnvSAIPjm3KIeY95Y6HY4GGDBkwak7fWL07qOQrqTWjWqS5nEezDhcPWLfaOVyckMGDJvyL6qRf2E+UG5ivojZX7VrBQ2rNR56ZeB0GiSVHUWrzydRgFMFA/Ii0Tjadi+yXstx3cGTvJByMNBft6upCD5aPmWAw8usLEWDpQp4cHLPoShRJgnemdzq/Uj/d+2O5i7DghgzeDA6GP3b+MGfdT9//ABy8vXL9+x9wyv8ASqkf2v8AHHLh7w4cmMcGCGgh6BarSXhSI+t9SrNEnTVl7jOWSx/R+GFYP6aF2AiW8Ki4WPoDh0GEINZMLqGEAom2g9eSNRGQHGPGVlKKh6w/x2Wp0nGpMZyy7s7DC5IaOjqOo3gxeqvD3Xt2T8xLljCVo/v/AMl3o86ptFlCWTB1rucoRRRb+qixbLHRjHUcHpD1Mn0TOF5v6D6JYAoJdfLJIp+kHsRnhjKS3ceFyCNvnlTxhLrirHvVbD36TGLHQag7XqNS0e+ACVrhxeurbvspIKVasULhahyIBITg82FAXX2Da4uxjh1NRvLoPPIBkftALNQRWOggy4sud+Ai+3k/BOZswKeczhXjCu2AzeL0Y6MY6GLwej+2x/vPbBwsuIHYX/Vx0UpVwqtYODM/QLZuXtebixcMfGt4H0RCpRBGzAG7AfB11DS/zpTcqKtOXGG9CKqh4Fr0QZPxLd5Qfywmq5wJxqeu1nED9MDzOIvoHRwl4bdhl+pZHW8vebixi4uLh9ESzer56rWnDCpOmtO041qk20PywvQY4Y6uq3oYuXm4OOc+PfjffollllllhhnXefBT4BF5y5uLi8rUXNmRi5HNsvI+leLxcuXlwOhl4t0D6F4tly5cuXLly9L0vVbjHQhodehbLwpLlJcvC8LS8rHdw6n/AKxx5NDhz//Z" alt="Logo HP">
+  </div>
+  <div class="header-info">
+    <h1>Banco de Urgência — Ortopedia</h1>
+    <p>Hospital do Prenda · Luanda, Angola</p>
+  </div>
+  <div class="progress-ring-wrap" title="Preenchimento do formulário">
+    <svg width="52" height="52" viewBox="0 0 52 52">
+      <circle class="ring-bg" cx="26" cy="26" r="22"/>
+      <circle class="ring-fg" id="ring-fg" cx="26" cy="26" r="22"/>
+    </svg>
+    <div class="ring-label"><span id="ring-pct">0%</span></div>
+  </div>
+</div>
+
+<div class="container">
+
+<!-- ═══════════════════════ 1. DATA E TURNO ═══════════════════════ -->
+<div class="section">
+  <div class="section-title">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+    Data e Turno
+  </div>
+  <div class="grid-2">
+    <div>
+      <label for="f-data">Data do Turno</label>
+      <input type="date" id="f-data">
+    </div>
+    <div>
+      <label for="f-turno">Turno</label>
+      <select id="f-turno">
+        <option value="">— Seleccionar —</option>
+        <option>Manhã (07h–13h)</option>
+        <option>Tarde (13h–19h)</option>
+        <option>Noite (19h–07h)</option>
+        <option>Completo (24h)</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ 2. EQUIPA DE SERVIÇO ═══════════════════════ -->
+<div class="section">
+  <div class="section-title">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><circle cx="19" cy="7" r="2"/><path d="M23 21v-1a3 3 0 0 0-3-3h-1"/></svg>
+    Equipa de Serviço
+  </div>
+  <div style="margin-bottom:14px">
+    <label>Especialistas de Serviço</label>
+    <div class="tags-wrap" id="serv-esp-tags"></div>
+    <div style="display:flex;gap:8px;margin-top:6px">
+      <input type="text" id="serv-esp-inp" placeholder="Nome do especialista" style="flex:1">
+      <button class="btn btn-outline btn-sm" onclick="teamAdd('serv','esp')">+ Adicionar</button>
+    </div>
+  </div>
+  <div style="margin-bottom:14px">
+    <label>Internos de Serviço</label>
+    <div class="tags-wrap" id="serv-int-tags"></div>
+    <div style="display:flex;gap:8px;margin-top:6px">
+      <input type="text" id="serv-int-inp" placeholder="Nome do interno" style="flex:1">
+      <button class="btn btn-outline btn-sm" onclick="teamAdd('serv','int')">+ Adicionar</button>
+    </div>
+  </div>
+  <div>
+    <label>Estagiários de Serviço</label>
+    <div class="tags-wrap" id="serv-est-tags"></div>
+    <div style="display:flex;gap:8px;margin-top:6px">
+      <input type="text" id="serv-est-inp" placeholder="Nome do estagiário" style="flex:1">
+      <button class="btn btn-outline btn-sm" onclick="teamAdd('serv','est')">+ Adicionar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ PACIENTES OBSERVADOS ═══════════════════════ -->
+<div class="section">
+  <div class="section-title">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
+    Pacientes Observados
+  </div>
+  <div class="grid-2" style="margin-bottom:14px">
+    <div class="counter-box">
+      <div class="c-label">Total Observados</div>
+      <div class="c-val" id="obs-total">0</div>
+      <div class="c-sub">Calculado automaticamente</div>
+    </div>
+    <div>
+      <label>Por Género</label>
+      <div class="grid-2" style="gap:8px;margin-top:6px">
+        <div>
+          <label style="font-size:.72rem">Masculino</label>
+          <div class="stepper">
+            <button onclick="step('obs-masc',-1)">−</button>
+            <input type="number" id="obs-masc" value="0" min="0" oninput="calcObs()">
+            <button onclick="step('obs-masc',1)">+</button>
+          </div>
+        </div>
+        <div>
+          <label style="font-size:.72rem">Feminino</label>
+          <div class="stepper">
+            <button onclick="step('obs-fem',-1)">−</button>
+            <input type="number" id="obs-fem" value="0" min="0" oninput="calcObs()">
+            <button onclick="step('obs-fem',1)">+</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <label style="margin-bottom:8px;display:block">Por Faixa Etária</label>
+  <div class="grid-4">
+    <div><label style="font-size:.72rem">0–14 anos</label><div class="stepper"><button onclick="step('obs-0',−1)">−</button><input type="number" id="obs-0" value="0" min="0" oninput="calcObs()"><button onclick="step('obs-0',1)">+</button></div></div>
+    <div><label style="font-size:.72rem">15–30 anos</label><div class="stepper"><button onclick="step('obs-15',−1)">−</button><input type="number" id="obs-15" value="0" min="0" oninput="calcObs()"><button onclick="step('obs-15',1)">+</button></div></div>
+    <div><label style="font-size:.72rem">31–60 anos</label><div class="stepper"><button onclick="step('obs-31',−1)">−</button><input type="number" id="obs-31" value="0" min="0" oninput="calcObs()"><button onclick="step('obs-31',1)">+</button></div></div>
+    <div><label style="font-size:.72rem">&gt;60 anos</label><div class="stepper"><button onclick="step('obs-60',−1)">−</button><input type="number" id="obs-60" value="0" min="0" oninput="calcObs()"><button onclick="step('obs-60',1)">+</button></div></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ DIAGNÓSTICOS CID ═══════════════════════ -->
+<div class="section">
+  <div class="section-title">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12h6M9 16h6M14 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8z"/><polyline points="14 3 14 8 19 8"/></svg>
+    Diagnósticos CID
+  </div>
+  <div class="cid-search-wrap">
+    <input type="text" id="cid-search" placeholder="Pesquisar diagnóstico (ex: fractura, luxação...)" autocomplete="off" oninput="cidSearch(this.value)">
+    <div class="cid-dropdown" id="cid-dropdown" style="display:none"></div>
+  </div>
+  <div class="tags-wrap" id="cid-tags" style="margin-top:10px"></div>
+</div>
+
+<!-- ═══════════════════════ RESULTADOS DO SERVIÇO ═══════════════════════ -->
+<div class="section">
+  <div class="section-title">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    Resultados do Serviço
+  </div>
+  <div class="grid-4" style="margin-bottom:16px">
+    <div class="counter-box">
+      <div class="c-label">Ficando</div>
+      <div class="stepper" style="justify-content:center;margin-top:4px">
+        <button onclick="step('res-ficando',-1)">−</button>
+        <input type="number" id="res-ficando" value="0" min="0" style="width:44px;text-align:center;font-size:1.2rem;font-weight:800;border-left:0;border-right:0;border-radius:0">
+        <button onclick="step('res-ficando',1)">+</button>
+      </div>
+    </div>
+    <div class="counter-box">
+      <div class="c-label">Verificação</div>
+      <div class="stepper" style="justify-content:center;margin-top:4px">
+        <button onclick="step('res-verif',-1)">−</button>
+        <input type="number" id="res-verif" value="0" min="0" style="width:44px;text-align:center;font-size:1.2rem;font-weight:800;border-left:0;border-right:0;border-radius:0">
+        <button onclick="step('res-verif',1)">+</button>
+      </div>
+    </div>
+    <div class="counter-box" style="border-color:#fee2e2;background:#fff5f5">
+      <div class="c-label" style="color:var(--red)">Óbitos</div>
+      <div class="c-val" id="obitos-total" style="color:var(--red)">0</div>
+      <div class="c-sub">Auto-calculado</div>
+    </div>
+    <div class="counter-box" style="border-color:#d1fae5;background:#f0fdf4">
+      <div class="c-label" style="color:var(--green)">Altas</div>
+      <div class="stepper" style="justify-content:center;margin-top:4px">
+        <button onclick="step('res-altas',-1)">−</button>
+        <input type="number" id="res-altas" value="0" min="0" style="width:44px;text-align:center;font-size:1.2rem;font-weight:800;border-left:0;border-right:0;border-radius:0">
+        <button onclick="step('res-altas',1)">+</button>
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+    <label style="margin:0;font-size:.85rem;font-weight:700;color:var(--red)">Registo Individual de Óbitos</label>
+    <span class="badge badge-blue" id="obitos-badge">0 óbitos</span>
+  </div>
+  <div id="obitos-list"></div>
+  <button class="btn-add" onclick="obitoAdd()">
+    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+    Adicionar Óbito
+  </button>
+</div>
+
+<!-- ═══════════════════════ TRANSFERÊNCIAS RECEBIDAS ═══════════════════════ -->
+<div class="section">
+  <div class="section-title">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>
+    Transferências Recebidas
+    <span class="badge badge-blue" id="trec-badge" style="margin-left:auto">0</span>
+  </div>
+  <div id="trec-list"></div>
+  <button class="btn-add" onclick="trecAdd()">
+    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+    Adicionar Transferência Recebida
+  </button>
+</div>
+
+<!-- ═══════════════════════ TRANSFERÊNCIAS EFETUADAS ═══════════════════════ -->
+<div class="section">
+  <div class="section-title">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 19V5M19 12l-7-7-7 7"/></svg>
+    Transferências Efetuadas
+    <span class="badge badge-blue" id="tefe-badge" style="margin-left:auto">0</span>
+  </div>
+  <div id="tefe-list"></div>
+  <button class="btn-add" onclick="tefeAdd()">
+    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+    Adicionar Transferência Efetuada
+  </button>
+</div>
+
+<!-- ═══════════════════════ SINISTRALIDADE ═══════════════════════ -->
+<div class="section">
+  <div class="section-title">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    Sinistralidade
+  </div>
+  <div class="sinis-grid" id="sinis-grid"></div>
+  <div style="margin-top:10px;display:flex;align-items:center;gap:10px">
+    <span style="font-size:.82rem;font-weight:600;color:var(--text-md)">Total Sinistros:</span>
+    <span class="total-badge" id="sinis-total">0</span>
+  </div>
+</div>
+
+<!-- ═══════════════════════ ACTOS E PROCEDIMENTOS ═══════════════════════ -->
+<div class="section">
+  <div class="section-title">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2v-4M9 21H5a2 2 0 0 1-2-2v-4m0 0h18"/></svg>
+    Actos e Procedimentos
+  </div>
+  <div class="grid-3" style="margin-bottom:12px">
+    <div class="sinis-item">
+      <label>Suturas</label>
+      <input type="number" id="proc-sutura" value="0" min="0" oninput="saveLS()">
+    </div>
+    <div class="sinis-item">
+      <label>Curativos</label>
+      <input type="number" id="proc-curativo" value="0" min="0" oninput="saveLS()">
+    </div>
+    <div class="sinis-item">
+      <label>Gessos</label>
+      <input type="number" id="proc-gesso" value="0" min="0" oninput="saveLS()">
+    </div>
+  </div>
+  <div>
+    <label>Outros Procedimentos</label>
+    <textarea id="proc-outros" placeholder="Descreva outros actos ou procedimentos realizados no turno..." oninput="saveLS()"></textarea>
+  </div>
+</div>
+
+<!-- ═══════════════════════ INTERNAMENTO ═══════════════════════ -->
+<div class="section">
+  <div class="section-title">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6M9 13h4"/></svg>
+    Internamento
+  </div>
+  <div class="grid-3" style="margin-bottom:12px">
+    <div class="counter-box">
+      <div class="c-label">Internados</div>
+      <div class="stepper" style="justify-content:center;margin-top:4px">
+        <button onclick="step('int-total',-1)">−</button>
+        <input type="number" id="int-total" value="0" min="0" style="width:44px;text-align:center;font-size:1.2rem;font-weight:800;border-left:0;border-right:0;border-radius:0" oninput="saveLS()">
+        <button onclick="step('int-total',1)">+</button>
+      </div>
+    </div>
+    <div class="counter-box" style="border-color:#fee2e2;background:#fff5f5">
+      <div class="c-label" style="color:var(--red)">Óbitos no Int.</div>
+      <div class="stepper" style="justify-content:center;margin-top:4px">
+        <button onclick="step('int-obito',-1)">−</button>
+        <input type="number" id="int-obito" value="0" min="0" style="width:44px;text-align:center;font-size:1.2rem;font-weight:800;border-left:0;border-right:0;border-radius:0" oninput="saveLS()">
+        <button onclick="step('int-obito',1)">+</button>
+      </div>
+    </div>
+    <div class="counter-box" style="border-color:#d1fae5;background:#f0fdf4">
+      <div class="c-label" style="color:var(--green)">Altas no Int.</div>
+      <div class="stepper" style="justify-content:center;margin-top:4px">
+        <button onclick="step('int-alta',-1)">−</button>
+        <input type="number" id="int-alta" value="0" min="0" style="width:44px;text-align:center;font-size:1.2rem;font-weight:800;border-left:0;border-right:0;border-radius:0" oninput="saveLS()">
+        <button onclick="step('int-alta',1)">+</button>
+      </div>
+    </div>
+  </div>
+  <div>
+    <label>Observações do Internamento</label>
+    <textarea id="int-descricao" placeholder="Pacientes internados, diagnósticos, evoluções clínicas relevantes..." oninput="saveLS()"></textarea>
+  </div>
+</div>
+
+<!-- ═══════════════════════ CLASSIFICAÇÃO DO BANCO ═══════════════════════ -->
+<div class="section">
+  <div class="section-title">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+    Classificação do Banco
+  </div>
+  <div class="classif-options">
+    <label class="classif-label" data-cl="leve" onclick="setClassif('LEVE')">LEVE</label>
+    <label class="classif-label" data-cl="normal" onclick="setClassif('NORMAL')">NORMAL</label>
+    <label class="classif-label" data-cl="agitado" onclick="setClassif('AGITADO')">AGITADO</label>
+    <label class="classif-label" data-cl="pesado" onclick="setClassif('PESADO')">PESADO</label>
+    <label class="classif-label" data-cl="critico" onclick="setClassif('CRÍTICO')">CRÍTICO</label>
+  </div>
+  <input type="hidden" id="classif-val" value="">
+</div>
+
+<!-- ═══════════════════════ OBSERVAÇÃO DO TURNO ═══════════════════════ -->
+<div class="section">
+  <div class="section-title">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    Observação do Turno
+  </div>
+  <textarea id="obs-turno" rows="4" placeholder="Registe observações relevantes sobre o turno, ocorrências especiais, situações críticas..." oninput="saveLS()"></textarea>
+</div>
+
+<!-- ═══════════════════════ EQUIPA QUE ENTRA ═══════════════════════ -->
+<div class="section">
+  <div class="section-title">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    Equipa que Entra
+  </div>
+  <div style="margin-bottom:14px">
+    <label>Especialistas que Entram</label>
+    <div class="tags-wrap" id="entr-esp-tags"></div>
+    <div style="display:flex;gap:8px;margin-top:6px">
+      <input type="text" id="entr-esp-inp" placeholder="Nome do especialista" style="flex:1">
+      <button class="btn btn-outline btn-sm" onclick="teamAdd('entr','esp')">+ Adicionar</button>
+    </div>
+  </div>
+  <div style="margin-bottom:14px">
+    <label>Internos que Entram</label>
+    <div class="tags-wrap" id="entr-int-tags"></div>
+    <div style="display:flex;gap:8px;margin-top:6px">
+      <input type="text" id="entr-int-inp" placeholder="Nome do interno" style="flex:1">
+      <button class="btn btn-outline btn-sm" onclick="teamAdd('entr','int')">+ Adicionar</button>
+    </div>
+  </div>
+  <div>
+    <label>Estagiários que Entram</label>
+    <div class="tags-wrap" id="entr-est-tags"></div>
+    <div style="display:flex;gap:8px;margin-top:6px">
+      <input type="text" id="entr-est-inp" placeholder="Nome do estagiário" style="flex:1">
+      <button class="btn btn-outline btn-sm" onclick="teamAdd('entr','est')">+ Adicionar</button>
+    </div>
+  </div>
+</div>
+
+
+</div><!-- end .container -->
+
+<!-- ═══════════════════════ ACTION BAR ═══════════════════════ -->
+<div class="action-bar">
+  <button class="btn btn-navy" onclick="abrirResumo()">
+    <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+    Ver Resumo
+  </button>
+  <button class="btn btn-primary" onclick="gerarPDFSave()">
+    <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    Guardar PDF
+  </button>
+  <button class="btn btn-green" onclick="gerarPDFeWhatsApp()">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>
+    WhatsApp
+  </button>
+  <button class="btn btn-amber" onclick="enviarEmail()">
+    <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+    E-mail
+  </button>
+</div>
+
+<!-- ═══════════════════════ MODAL ═══════════════════════ -->
+<div class="modal-backdrop" id="modal-backdrop" onclick="fecharModal(event)">
+  <div class="modal">
+    <div class="modal-title">Resumo do Turno — Banco de Ortopedia</div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-primary btn-sm" onclick="gerarPDFSave()">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        PDF
+      </button>
+      <button class="btn btn-green btn-sm" onclick="gerarPDFeWhatsApp()">WhatsApp</button>
+      <button class="btn btn-amber btn-sm" onclick="enviarEmail()">E-mail</button>
+      <button class="btn btn-outline btn-sm" onclick="copiarTexto()">Copiar</button>
+      <button class="btn btn-outline btn-sm" onclick="document.getElementById('modal-backdrop').classList.remove('open')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ PDF TEMPLATE ═══════════════════════ -->
+<div id="pdf-template">
+  <div class="pdf-header">
+    <img class="pdf-logo" id="pdf-logo" src="data:image/jpeg;base64,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" alt="HP">
+    <div class="pdf-title">
+      <h1>MOVIMENTO DO BANCO DE ORTOPEDIA</h1>
+      <p id="pdf-subtitle">Hospital do Prenda · Luanda, Angola</p>
+    </div>
+  </div>
+  <div id="pdf-content"></div>
+</div>
+
+<script>
+// ═══════════════════════ CONSTANTS ═══════════════════════
+const CAUSAS_OBITO=[
+  'Politraumatismo','Traumatismo cranioencefálico grave','Embolia pulmonar',
+  'Falência multiorgânica','Sepsis','Hemorragia grave / Choque hemorrágico',
+  'Tromboembolismo venoso','Coagulopatia (CID)','Pneumonia','Paragem cardiorrespiratória',
+  'Ferida por arma de fogo','Ferida por arma branca','Trauma raquimedular',
+  'Fratura do colo do fémur','Lesão vascular grave','Queimadura grave',
+  'Complicação anestésica','Outra causa'
+];
+
+const PROVENIENCIAS=[
+  'Hospital dos Cajueiros','Hospital Municipal do Sambizanga','CETEP',
+  'Hospital Municipal da Samba','Hospital Neves Bendinha','Pedalé',
+  'Josina Machel','Dispensário','Clínica Multiperfil','Clínica Girassol',
+  'Clínica Sagrada Esperança','Clínica do Exército','Hospital Municipal Capalanga',
+  'Hospital Psiquiátrico','Hospital Pediátrico David Bernardino',
+  'Bispo Emílio','Hospital Azancot','Centro de Saúde','Outra Unidade'
+];
+
+const SINISTROS_TIPOS=[
+  {key:'agressao',label:'Agressão Física'},
+  {key:'ac_trabalho',label:'Acidente de Trabalho'},
+  {key:'ac_domestico',label:'Acidente Doméstico'},
+  {key:'desportivo',label:'Desportivo'},
+  {key:'pessoal',label:'Pessoal'},
+  {key:'atropelamento',label:'Atropelamento'},
+  {key:'queimadura',label:'Queimadura'},
+  {key:'arma_fogo',label:'Ferimento p/ Arma de Fogo'},
+  {key:'arma_branca',label:'Ferimento p/ Arma Branca'},
+  {key:'quedas',label:'Quedas'},
+  {key:'acidentes',label:'Outros Acidentes'}
+];
+
+const CID_DB=[
+  // Fracturas
+  {c:'S42.0',d:'Fractura da clavícula'},{c:'S42.2',d:'Fractura do úmero proximal'},
+  {c:'S42.3',d:'Fractura da diáfise do úmero'},{c:'S42.4',d:'Fractura do úmero distal'},
+  {c:'S52.0',d:'Fractura da cabeça do rádio'},{c:'S52.1',d:'Fractura do colo do rádio'},
+  {c:'S52.2',d:'Fractura do cúbito proximal'},{c:'S52.3',d:'Fractura da diáfise do rádio'},
+  {c:'S52.5',d:'Fractura do rádio distal'},{c:'S52.6',d:'Fractura rádio e cúbito distal'},
+  {c:'S62.0',d:'Fractura do escafóide'},{c:'S62.2',d:'Fractura do 1.º metacarpo'},
+  {c:'S62.3',d:'Fractura de outros metacarpos'},{c:'S62.6',d:'Fractura das falanges da mão'},
+  {c:'S72.0',d:'Fractura do colo do fémur'},{c:'S72.1',d:'Fractura pertrocantérica'},
+  {c:'S72.2',d:'Fractura subtrocantérica'},{c:'S72.3',d:'Fractura da diáfise do fémur'},
+  {c:'S72.4',d:'Fractura do fémur distal'},{c:'S82.0',d:'Fractura da rótula'},
+  {c:'S82.1',d:'Fractura da tíbia proximal'},{c:'S82.2',d:'Fractura da diáfise da tíbia'},
+  {c:'S82.3',d:'Fractura da tíbia distal'},{c:'S82.5',d:'Fractura do maléolo medial'},
+  {c:'S82.6',d:'Fractura do maléolo lateral'},{c:'S82.8',d:'Fractura bimaleolar'},
+  {c:'S82.9',d:'Fractura da perna NE'},{c:'S92.0',d:'Fractura do calcâneo'},
+  {c:'S92.1',d:'Fractura do astrágalo'},{c:'S92.3',d:'Fractura do metatarso'},
+  {c:'S92.5',d:'Fractura das falanges do pé'},{c:'S22.0',d:'Fractura vertebral torácica'},
+  {c:'S32.0',d:'Fractura vertebral lombar'},{c:'S12.0',d:'Fractura vertebral cervical'},
+  {c:'S32.1',d:'Fractura do sacro'},{c:'S32.3',d:'Fractura do ílio'},
+  {c:'S32.4',d:'Fractura do acetábulo'},{c:'S32.5',d:'Fractura do púbis'},
+  {c:'S32.8',d:'Fractura da bacia NE'},{c:'S49.9',d:'Fractura do ombro NE'},
+  // Luxações
+  {c:'S43.0',d:'Luxação glenoumeral'},{c:'S43.1',d:'Luxação acromioclavicular'},
+  {c:'S43.2',d:'Luxação esternoclavicular'},{c:'S53.0',d:'Luxação da cabeça do rádio'},
+  {c:'S53.1',d:'Luxação do cotovelo'},{c:'S63.0',d:'Luxação do punho'},
+  {c:'S63.1',d:'Luxação dos dedos da mão'},{c:'S73.0',d:'Luxação da anca'},
+  {c:'S83.0',d:'Luxação da rótula'},{c:'S83.1',d:'Luxação do joelho'},
+  {c:'S93.0',d:'Luxação do tornozelo'},{c:'S93.1',d:'Luxação dos dedos do pé'},
+  // Entorses e distensões
+  {c:'S43.4',d:'Entorse do ombro'},{c:'S53.4',d:'Entorse do cotovelo'},
+  {c:'S63.5',d:'Entorse do punho'},{c:'S63.6',d:'Entorse dos dedos'},
+  {c:'S73.1',d:'Entorse da anca'},{c:'S83.2',d:'Entorse do joelho'},
+  {c:'S83.4',d:'Ruptura do ligamento colateral'},{c:'S83.5',d:'Ruptura do LCA'},
+  {c:'S83.6',d:'Ruptura do LCP'},{c:'S93.4',d:'Entorse do tornozelo'},
+  {c:'S93.3',d:'Luxação do tendão do pé'},
+  // Lesões de tendão e músculo
+  {c:'S46.0',d:'Ruptura do tendão do manguito rotador'},{c:'S56.0',d:'Ruptura do tendão flexor do punho'},
+  {c:'S66.0',d:'Ruptura do tendão flexor do polegar'},{c:'S76.0',d:'Ruptura tendão do glúteo'},
+  {c:'S86.0',d:'Ruptura do tendão de Aquiles'},{c:'S86.1',d:'Ruptura de outro tendão do pé'},
+  {c:'M75.1',d:'Síndrome do manguito rotador'},{c:'M65.0',d:'Tendovaginite purulenta'},
+  {c:'M65.3',d:'Dedo em gatilho'},{c:'M65.4',d:'Tendinite de De Quervain'},
+  // Trauma
+  {c:'S00.0',d:'Traumatismo superficial do crânio'},{c:'S09.9',d:'Traumatismo da cabeça NE'},
+  {c:'S14.0',d:'Lesão medular cervical'},{c:'S24.0',d:'Lesão medular torácica'},
+  {c:'S34.0',d:'Lesão medular lombar'},{c:'S39.9',d:'Traumatismo do abdómen NE'},
+  {c:'T06.0',d:'Politraumatismo'},{c:'T07',d:'Traumatismos múltiplos NE'},
+  // Feridas
+  {c:'S01.0',d:'Ferida aberta do crânio'},{c:'S11.0',d:'Ferida aberta do pescoço'},
+  {c:'S21.0',d:'Ferida aberta do tórax'},{c:'S31.0',d:'Ferida aberta do abdómen'},
+  {c:'S41.0',d:'Ferida aberta do ombro'},{c:'S51.0',d:'Ferida aberta do cotovelo'},
+  {c:'S61.0',d:'Ferida aberta do punho/mão'},{c:'S71.0',d:'Ferida aberta da anca'},
+  {c:'S81.0',d:'Ferida aberta do joelho'},{c:'S91.0',d:'Ferida aberta do tornozelo/pé'},
+  // Infecções osteoarticulares
+  {c:'M86.0',d:'Osteomielite aguda'},{c:'M86.1',d:'Osteomielite aguda hematogénica'},
+  {c:'M86.6',d:'Osteomielite crónica'},{c:'M00.0',d:'Artrite estafilocócica'},
+  {c:'M00.9',d:'Artrite séptica NE'},{c:'M01.0',d:'Artrite tuberculosa'},
+  {c:'M72.6',d:'Fascite necrotizante'},{c:'L03.0',d:'Celulite do dedo'},
+  {c:'L03.1',d:'Celulite do membro'},{c:'L02.0',d:'Abcesso cutâneo'},
+  // Patologia degenerativa
+  {c:'M16.0',d:'Coxartrose primária'},{c:'M17.0',d:'Gonartrose primária'},
+  {c:'M18.0',d:'Artrose da trapeziometacárpica'},{c:'M19.0',d:'Artrose NE'},
+  {c:'M47.8',d:'Espondilose NE'},{c:'M48.0',d:'Estenose do canal vertebral'},
+  {c:'M51.1',d:'Hérnia discal lombar com radiculopatia'},{c:'M54.4',d:'Lombociatalgia'},
+  {c:'M54.3',d:'Ciática'},{c:'M54.5',d:'Lombalgia'},
+  // Outras
+  {c:'M79.3',d:'Panniculite'},{c:'M79.6',d:'Dor no membro'},
+  {c:'M89.0',d:'Algodistrofia'},{c:'M84.4',d:'Fractura patológica'},
+  {c:'M84.5',d:'Fractura por insuficiência'},{c:'C40',d:'Tumor ósseo maligno'},
+  {c:'D16',d:'Tumor ósseo benigno'},{c:'M85.0',d:'Fibrodisplasia óssea'},
+  {c:'Q66.0',d:'Pé equinovaro congénito'},{c:'Q65.0',d:'Luxação congénita da anca'},
+  {c:'M91.1',d:'Doença de Legg-Calvé-Perthes'},{c:'M92.5',d:'Osteocondrose do pé'},
+  {c:'M80.0',d:'Osteoporose com fractura'},{c:'E83.3',d:'Raquitismo'},
+  {c:'T84.0',d:'Complicação de prótese articular'},{c:'T84.1',d:'Complicação de implante'},
+  {c:'T79.0',d:'Embolia gasosa traumática'},{c:'T79.4',d:'Choque traumático'},
+  {c:'T79.5',d:'Anúria traumática'},{c:'T79.6',d:'Isquemia muscular traumática'},
+  {c:'T80.0',d:'Embolia após perfusão'},{c:'S08.0',d:'Amputação traumática do membro'},
+  {c:'S58.0',d:'Amputação traumática do antebraço'},{c:'S68.0',d:'Amputação dos dedos da mão'},
+  {c:'S78.0',d:'Amputação traumática da coxa'},{c:'S88.0',d:'Amputação traumática da perna'},
+  {c:'S98.0',d:'Amputação traumática do tornozelo/pé'},
+  {c:'T30.0',d:'Queimadura de grau NE'},{c:'T31.0',d:'Queimadura <10% SCQ'},
+  {c:'T31.1',d:'Queimadura 10–19% SCQ'},{c:'T31.2',d:'Queimadura 20–29% SCQ'},
+  // Sinistralidade
+  {c:'X93',d:'Ferimento por arma de fogo'},{c:'X99',d:'Ferimento por arma branca'},
+  {c:'W19',d:'Queda NE'},{c:'W11',d:'Queda em escada'},
+  {c:'V09.0',d:'Atropelamento por veículo a motor'},{c:'V49.9',d:'Acidente de viação NE'},
+  {c:'X58',d:'Exposição a forças mecânicas'},{c:'Y04',d:'Agressão física'},
+  {c:'W75',d:'Sufocação acidental'},{c:'X40',d:'Envenenamento acidental'},
+];
+
+// ═══════════════════════ STATE ═══════════════════════
+let obitosList=[];
+let transfRecList=[];
+let transfEfetList=[];
+const teamServ={esp:[],int:[],est:[]};
+const teamEntr={esp:[],int:[],est:[]};
+let cidTags=[];
+let classifVal='';
+
+// ═══════════════════════ INIT ═══════════════════════
+window.addEventListener('DOMContentLoaded',()=>{
+  // Set today
+  const d=document.getElementById('f-data');
+  if(!d.value)d.value=new Date().toISOString().slice(0,10);
+  // Build sinistralidade grid
+  buildSinisGrid();
+  // Load saved
+  loadLS();
+  // Attach listeners
+  document.querySelectorAll('input,select,textarea').forEach(el=>{
+    el.addEventListener('change',saveLS);
+  });
+  calcObs();
+  updateProgress();
+});
+
+// ═══════════════════════ TEAM ═══════════════════════
+function teamAdd(group,role){
+  const inp=document.getElementById(`${group}-${role}-inp`);
+  const val=inp.value.trim();
+  if(!val)return;
+  const list=group==='serv'?teamServ:teamEntr;
+  list[role].push(val);
+  inp.value='';
+  teamRender(group,role);
+  saveLS();
+  updateProgress();
+}
+function teamRemove(group,role,i){
+  const list=group==='serv'?teamServ:teamEntr;
+  list[role].splice(i,1);
+  teamRender(group,role);
+  saveLS();
+}
+function teamRender(group,role){
+  const list=group==='serv'?teamServ:teamEntr;
+  const wrap=document.getElementById(`${group}-${role}-tags`);
+  wrap.innerHTML=list[role].map((n,i)=>`<span class="tag">${n}<button onclick="teamRemove('${group}','${role}',${i})">×</button></span>`).join('');
+}
+document.querySelectorAll('[id$="-inp"]').forEach(inp=>{
+  inp.addEventListener('keydown',e=>{
+    if(e.key!=='Enter')return;
+    const id=inp.id; // e.g. serv-esp-inp
+    const parts=id.split('-'); // [serv,esp,inp]
+    if(parts.length===3&&parts[2]==='inp')teamAdd(parts[0],parts[1]);
+  });
+});
+
+// ═══════════════════════ CID ═══════════════════════
+function cidSearch(q){
+  const dd=document.getElementById('cid-dropdown');
+  if(!q||q.length<2){dd.style.display='none';return;}
+  const ql=q.toLowerCase();
+  const res=CID_DB.filter(x=>x.d.toLowerCase().includes(ql)||x.c.toLowerCase().includes(ql)).slice(0,12);
+  if(!res.length){dd.style.display='none';return;}
+  dd.innerHTML=res.map(x=>`<div onclick="cidAdd('${x.c}','${x.d.replace(/'/g,"\\'")}')"><span class="cid-code">${x.c}</span>${x.d}</div>`).join('');
+  dd.style.display='block';
+}
+function cidAdd(code,desc){
+  if(cidTags.find(t=>t.c===code))return;
+  cidTags.push({c:code,d:desc});
+  cidRender();
+  document.getElementById('cid-search').value='';
+  document.getElementById('cid-dropdown').style.display='none';
+  saveLS();
+}
+function cidRemove(code){
+  cidTags=cidTags.filter(t=>t.c!==code);
+  cidRender();
+  saveLS();
+}
+function cidRender(){
+  const wrap=document.getElementById('cid-tags');
+  wrap.innerHTML=cidTags.map(t=>`<span class="tag"><span style="font-size:.7rem;opacity:.7">${t.c}</span>&nbsp;${t.d}<button onclick="cidRemove('${t.c}')">×</button></span>`).join('');
+}
+document.addEventListener('click',e=>{
+  if(!e.target.closest('.cid-search-wrap'))document.getElementById('cid-dropdown').style.display='none';
+});
+
+// ═══════════════════════ ÓBITOS ═══════════════════════
+function obitoAdd(){
+  obitosList.push({hora:'',nome:'',idade:'',genero:'M',causa:''});
+  obitoRender();
+  saveLS();
+}
+function obitoRemove(i){
+  obitosList.splice(i,1);
+  obitoRender();
+  saveLS();
+}
+function obitoRender(){
+  const wrap=document.getElementById('obitos-list');
+  wrap.innerHTML=obitosList.map((o,i)=>`
+  <div class="record-card">
+    <div class="rc-header">
+      <span class="rc-num">Óbito #${i+1}</span>
+      <button class="rc-remove" onclick="obitoRemove(${i})" title="Remover">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+      </button>
+    </div>
+    <div class="grid-2" style="gap:10px;margin-bottom:10px">
+      <div>
+        <label>Hora do Óbito</label>
+        <input type="time" value="${o.hora}" onchange="obitoUpdate(${i},'hora',this.value)">
+      </div>
+      <div>
+        <label>Idade</label>
+        <input type="number" placeholder="Anos" value="${o.idade}" min="0" max="120" onchange="obitoUpdate(${i},'idade',this.value)">
+      </div>
+    </div>
+    <div style="margin-bottom:10px">
+      <label>Nome do Paciente</label>
+      <input type="text" placeholder="Nome completo" value="${o.nome}" onchange="obitoUpdate(${i},'nome',this.value)">
+    </div>
+    <div class="grid-2" style="gap:10px">
+      <div>
+        <label>Género</label>
+        <div class="gender-toggle">
+          <label><input type="radio" name="genero-${i}" value="M" ${o.genero==='M'?'checked':''} onchange="obitoUpdate(${i},'genero','M')"><span class="gender-btn m">Masculino</span></label>
+          <label><input type="radio" name="genero-${i}" value="F" ${o.genero==='F'?'checked':''} onchange="obitoUpdate(${i},'genero','F')"><span class="gender-btn f">Feminino</span></label>
+        </div>
+      </div>
+      <div>
+        <label>Causa / Diagnóstico</label>
+        <select onchange="obitoUpdate(${i},'causa',this.value)">
+          <option value="">— Seleccionar causa —</option>
+          ${CAUSAS_OBITO.map(c=>`<option ${o.causa===c?'selected':''}>${c}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+  </div>`).join('');
+  const total=obitosList.length;
+  document.getElementById('obitos-total').textContent=total;
+  document.getElementById('obitos-badge').textContent=total+' óbito'+(total!==1?'s':'');
+  updateProgress();
+}
+function obitoUpdate(i,field,val){
+  obitosList[i][field]=val;
+  saveLS();
+}
+
+// ═══════════════════════ TRANSFERÊNCIAS ═══════════════════════
+function provSelect(val){
+  return`<select onchange="this.nextElementSibling.value=this.value;trecUpdate();tefeUpdate()">
+    <option value="">— Seleccionar unidade —</option>
+    ${PROVENIENCIAS.map(p=>`<option ${p===val?'selected':''}>${p}</option>`).join('')}
+  </select>`;
+}
+
+function trecAdd(){
+  transfRecList.push({unidade:'',especialidade:'Ortopedia',diagnostico:'',nome:''});
+  trecRender();
+  saveLS();
+}
+function trecRemove(i){transfRecList.splice(i,1);trecRender();saveLS();}
+function trecRender(){
+  const wrap=document.getElementById('trec-list');
+  wrap.innerHTML=transfRecList.map((t,i)=>`
+  <div class="record-card">
+    <div class="rc-header">
+      <span class="rc-num">Transferência #${i+1}</span>
+      <button class="rc-remove" onclick="trecRemove(${i})">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
+      </button>
+    </div>
+    <div class="grid-2" style="gap:10px;margin-bottom:10px">
+      <div>
+        <label>Unidade de Origem</label>
+        <select id="trec-un-${i}" onchange="trecUpd(${i},'unidade',this.value)">
+          <option value="">— Seleccionar —</option>
+          ${PROVENIENCIAS.map(p=>`<option ${t.unidade===p?'selected':''}>${p}</option>`).join('')}
+        </select>
+      </div>
+      <div>
+        <label>Especialidade</label>
+        <input type="text" value="${t.especialidade}" readonly style="background:var(--blue-xlt);font-weight:600">
+      </div>
+    </div>
+    <div class="grid-2" style="gap:10px">
+      <div>
+        <label>Diagnóstico</label>
+        <input type="text" placeholder="Diagnóstico de transferência" value="${t.diagnostico}" onchange="trecUpd(${i},'diagnostico',this.value)">
+      </div>
+      <div>
+        <label>Nome do Paciente</label>
+        <input type="text" placeholder="Nome completo" value="${t.nome}" onchange="trecUpd(${i},'nome',this.value)">
+      </div>
+    </div>
+  </div>`).join('');
+  document.getElementById('trec-badge').textContent=transfRecList.length;
+}
+function trecUpd(i,f,v){transfRecList[i][f]=v;saveLS();}
+
+function tefeAdd(){
+  transfEfetList.push({unidade:'',especialidade:'Ortopedia',diagnostico:'',nome:''});
+  tefeRender();
+  saveLS();
+}
+function tefeRemove(i){transfEfetList.splice(i,1);tefeRender();saveLS();}
+function tefeRender(){
+  const wrap=document.getElementById('tefe-list');
+  wrap.innerHTML=transfEfetList.map((t,i)=>`
+  <div class="record-card">
+    <div class="rc-header">
+      <span class="rc-num">Transferência #${i+1}</span>
+      <button class="rc-remove" onclick="tefeRemove(${i})">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
+      </button>
+    </div>
+    <div class="grid-2" style="gap:10px;margin-bottom:10px">
+      <div>
+        <label>Unidade de Destino</label>
+        <select id="tefe-un-${i}" onchange="tefeUpd(${i},'unidade',this.value)">
+          <option value="">— Seleccionar —</option>
+          ${PROVENIENCIAS.map(p=>`<option ${t.unidade===p?'selected':''}>${p}</option>`).join('')}
+        </select>
+      </div>
+      <div>
+        <label>Especialidade</label>
+        <input type="text" value="${t.especialidade}" readonly style="background:var(--blue-xlt);font-weight:600">
+      </div>
+    </div>
+    <div class="grid-2" style="gap:10px">
+      <div>
+        <label>Diagnóstico</label>
+        <input type="text" placeholder="Diagnóstico de transferência" value="${t.diagnostico}" onchange="tefeUpd(${i},'diagnostico',this.value)">
+      </div>
+      <div>
+        <label>Nome do Paciente</label>
+        <input type="text" placeholder="Nome completo" value="${t.nome}" onchange="tefeUpd(${i},'nome',this.value)">
+      </div>
+    </div>
+  </div>`).join('');
+  document.getElementById('tefe-badge').textContent=transfEfetList.length;
+}
+function tefeUpd(i,f,v){transfEfetList[i][f]=v;saveLS();}
+
+// ═══════════════════════ SINISTRALIDADE ═══════════════════════
+function buildSinisGrid(){
+  const grid=document.getElementById('sinis-grid');
+  grid.innerHTML=SINISTROS_TIPOS.map(s=>`
+  <div class="sinis-item">
+    <label>${s.label}</label>
+    <input type="number" id="sinis-${s.key}" value="0" min="0" oninput="calcSinis();saveLS()">
+  </div>`).join('');
+}
+function calcSinis(){
+  const total=SINISTROS_TIPOS.reduce((sum,s)=>{
+    const v=parseInt(document.getElementById('sinis-'+s.key)?.value)||0;
+    return sum+v;
+  },0);
+  document.getElementById('sinis-total').textContent=total;
+}
+
+// ═══════════════════════ CLASSIFICAÇÃO ═══════════════════════
+function setClassif(val){
+  classifVal=val;
+  document.getElementById('classif-val').value=val;
+  document.querySelectorAll('.classif-label').forEach(el=>{
+    el.classList.toggle('active',el.textContent.trim()===val);
+  });
+  saveLS();
+}
+
+// ═══════════════════════ STEPPER ═══════════════════════
+function step(id,delta){
+  const el=document.getElementById(id);
+  if(!el)return;
+  const v=Math.max(0,(parseInt(el.value)||0)+delta);
+  el.value=v;
+  el.dispatchEvent(new Event('input'));
+  if(id==='obs-masc'||id==='obs-fem'||id.startsWith('obs-'))calcObs();
+  saveLS();
+  updateProgress();
+}
+
+// ═══════════════════════ CALC OBS ═══════════════════════
+function calcObs(){
+  const m=parseInt(document.getElementById('obs-masc').value)||0;
+  const f=parseInt(document.getElementById('obs-fem').value)||0;
+  document.getElementById('obs-total').textContent=m+f;
+  updateProgress();
+  saveLS();
+}
+
+// ═══════════════════════ PROGRESS ═══════════════════════
+function updateProgress(){
+  const checks=[
+    !!document.getElementById('f-data').value,
+    !!document.getElementById('f-turno').value,
+    teamServ.esp.length>0||teamServ.int.length>0,
+    teamEntr.esp.length>0||teamEntr.int.length>0,
+    (parseInt(document.getElementById('obs-masc').value)||0)+(parseInt(document.getElementById('obs-fem').value)||0)>0,
+    cidTags.length>0,
+    parseInt(document.getElementById('res-ficando').value)>0||parseInt(document.getElementById('res-verif').value)>0||obitosList.length>0,
+    parseInt(document.getElementById('int-total').value)>0,
+    !!classifVal,
+    !!document.getElementById('obs-turno').value.trim()
+  ];
+  const pct=Math.round(checks.filter(Boolean).length/checks.length*100);
+  document.getElementById('ring-pct').textContent=pct+'%';
+  const circ=138.2;
+  document.getElementById('ring-fg').style.strokeDashoffset=circ*(1-pct/100);
+}
+
+// ═══════════════════════ LOCAL STORAGE ═══════════════════════
+const LS_KEY='banco_ortopedia_v5';
+function saveLS(){
+  const data={
+    data:document.getElementById('f-data').value,
+    turno:document.getElementById('f-turno').value,
+    teamServ:JSON.parse(JSON.stringify(teamServ)),
+    teamEntr:JSON.parse(JSON.stringify(teamEntr)),
+    obsM:document.getElementById('obs-masc').value,
+    obsF:document.getElementById('obs-fem').value,
+    obs0:document.getElementById('obs-0').value,
+    obs15:document.getElementById('obs-15').value,
+    obs31:document.getElementById('obs-31').value,
+    obs60:document.getElementById('obs-60').value,
+    cidTags:JSON.parse(JSON.stringify(cidTags)),
+    resFicando:document.getElementById('res-ficando').value,
+    resVerif:document.getElementById('res-verif').value,
+    resAltas:document.getElementById('res-altas').value,
+    obitosList:JSON.parse(JSON.stringify(obitosList)),
+    transfRecList:JSON.parse(JSON.stringify(transfRecList)),
+    transfEfetList:JSON.parse(JSON.stringify(transfEfetList)),
+    sinis:SINISTROS_TIPOS.reduce((o,s)=>{o[s.key]=document.getElementById('sinis-'+s.key)?.value||'0';return o;},{}),
+    procSutura:document.getElementById('proc-sutura').value,
+    procCurativo:document.getElementById('proc-curativo').value,
+    procGesso:document.getElementById('proc-gesso').value,
+    procOutros:document.getElementById('proc-outros').value,
+    intTotal:document.getElementById('int-total').value,
+    intObito:document.getElementById('int-obito').value,
+    intAlta:document.getElementById('int-alta').value,
+    intDesc:document.getElementById('int-descricao').value,
+    classif:classifVal,
+    obsTurno:document.getElementById('obs-turno').value,
+  };
+  try{localStorage.setItem(LS_KEY,JSON.stringify(data));}catch(e){}
+  updateProgress();
+}
+
+function loadLS(){
+  let data;
+  try{const s=localStorage.getItem(LS_KEY);if(s)data=JSON.parse(s);}catch(e){}
+  if(!data)return;
+  if(data.data)document.getElementById('f-data').value=data.data;
+  if(data.turno)document.getElementById('f-turno').value=data.turno;
+  // Team serv
+  if(data.teamServ){
+    Object.assign(teamServ,data.teamServ);
+    ['esp','int','est'].forEach(r=>teamRender('serv',r));
+  }
+  // Team entr
+  if(data.teamEntr){
+    Object.assign(teamEntr,data.teamEntr);
+    ['esp','int','est'].forEach(r=>teamRender('entr',r));
+  }
+  if(data.obsM)document.getElementById('obs-masc').value=data.obsM;
+  if(data.obsF)document.getElementById('obs-fem').value=data.obsF;
+  if(data.obs0)document.getElementById('obs-0').value=data.obs0;
+  if(data.obs15)document.getElementById('obs-15').value=data.obs15;
+  if(data.obs31)document.getElementById('obs-31').value=data.obs31;
+  if(data.obs60)document.getElementById('obs-60').value=data.obs60;
+  if(data.cidTags){cidTags=data.cidTags;cidRender();}
+  if(data.resFicando)document.getElementById('res-ficando').value=data.resFicando;
+  if(data.resVerif)document.getElementById('res-verif').value=data.resVerif;
+  if(data.resAltas)document.getElementById('res-altas').value=data.resAltas;
+  if(data.obitosList){obitosList=data.obitosList;obitoRender();}
+  if(data.transfRecList){transfRecList=data.transfRecList;trecRender();}
+  if(data.transfEfetList){transfEfetList=data.transfEfetList;tefeRender();}
+  if(data.sinis){
+    SINISTROS_TIPOS.forEach(s=>{
+      const el=document.getElementById('sinis-'+s.key);
+      if(el&&data.sinis[s.key])el.value=data.sinis[s.key];
+    });
+    calcSinis();
+  }
+  if(data.procSutura)document.getElementById('proc-sutura').value=data.procSutura;
+  if(data.procCurativo)document.getElementById('proc-curativo').value=data.procCurativo;
+  if(data.procGesso)document.getElementById('proc-gesso').value=data.procGesso;
+  if(data.procOutros)document.getElementById('proc-outros').value=data.procOutros;
+  if(data.intTotal)document.getElementById('int-total').value=data.intTotal;
+  if(data.intObito)document.getElementById('int-obito').value=data.intObito;
+  if(data.intAlta)document.getElementById('int-alta').value=data.intAlta;
+  if(data.intDesc)document.getElementById('int-descricao').value=data.intDesc;
+  if(data.classif)setClassif(data.classif);
+  if(data.obsTurno)document.getElementById('obs-turno').value=data.obsTurno;
+  calcObs();
+}
+
+// ═══════════════════════ RESUMO TEXT ═══════════════════════
+function buildResumoText(){
+  const dt=document.getElementById('f-data').value||'--';
+  const turno=document.getElementById('f-turno').value||'--';
+  const obsM=document.getElementById('obs-masc').value||0;
+  const obsF=document.getElementById('obs-fem').value||0;
+  const obsT=parseInt(obsM)+parseInt(obsF);
+  const ficando=document.getElementById('res-ficando').value||0;
+  const verif=document.getElementById('res-verif').value||0;
+  const altas=document.getElementById('res-altas').value||0;
+  const intTotal=document.getElementById('int-total').value||0;
+  const intOb=document.getElementById('int-obito').value||0;
+  const intAlt=document.getElementById('int-alta').value||0;
+  const classif=classifVal||'--';
+  const obs=document.getElementById('obs-turno').value||'';
+
+  const sinisLines=SINISTROS_TIPOS.map(s=>{
+    const v=parseInt(document.getElementById('sinis-'+s.key)?.value)||0;
+    return v>0?`   ${s.label}: ${v}`:'';
+  }).filter(Boolean).join('\n');
+  const sinisTotal=SINISTROS_TIPOS.reduce((t,s)=>t+(parseInt(document.getElementById('sinis-'+s.key)?.value)||0),0);
+
+  const procS=document.getElementById('proc-sutura').value||0;
+  const procC=document.getElementById('proc-curativo').value||0;
+  const procG=document.getElementById('proc-gesso').value||0;
+  const procO=document.getElementById('proc-outros').value||'';
+
+  let txt=`MOVIMENTO DO BANCO DE ORTOPEDIA\nHospital do Prenda — Luanda, Angola\n`;
+  txt+=`Data: ${dt} | Turno: ${turno}\n`;
+  txt+=`Classificação do Banco: ${classif}\n`;
+  txt+=`${'═'.repeat(44)}\n`;
+
+  txt+=`\n📋 EQUIPA DE SERVIÇO\n`;
+  if(teamServ.esp.length)txt+=`   Especialistas: ${teamServ.esp.join(', ')}\n`;
+  if(teamServ.int.length)txt+=`   Internos: ${teamServ.int.join(', ')}\n`;
+  if(teamServ.est.length)txt+=`   Estagiários: ${teamServ.est.join(', ')}\n`;
+
+  txt+=`\n📋 EQUIPA QUE ENTRA\n`;
+  if(teamEntr.esp.length)txt+=`   Especialistas: ${teamEntr.esp.join(', ')}\n`;
+  if(teamEntr.int.length)txt+=`   Internos: ${teamEntr.int.join(', ')}\n`;
+  if(teamEntr.est.length)txt+=`   Estagiários: ${teamEntr.est.join(', ')}\n`;
+
+  txt+=`\n👥 PACIENTES OBSERVADOS\n`;
+  txt+=`   Total: ${obsT} (M: ${obsM}, F: ${obsF})\n`;
+  txt+=`   0–14: ${document.getElementById('obs-0').value||0} | 15–30: ${document.getElementById('obs-15').value||0} | 31–60: ${document.getElementById('obs-31').value||0} | >60: ${document.getElementById('obs-60').value||0}\n`;
+
+  if(cidTags.length){
+    txt+=`\n🩺 DIAGNÓSTICOS\n`;
+    cidTags.forEach(t=>txt+=`   ${t.c} — ${t.d}\n`);
+  }
+
+  txt+=`\n📊 RESULTADOS DO SERVIÇO\n`;
+  txt+=`   Ficando: ${ficando} | Verificação: ${verif} | Altas: ${altas} | Óbitos: ${obitosList.length}\n`;
+
+  if(obitosList.length){
+    txt+=`\n💀 ÓBITOS (${obitosList.length})\n`;
+    obitosList.forEach((o,i)=>txt+=`   #${i+1}: ${o.hora||'--'} | ${o.nome||'--'} | ${o.idade||'--'}a | ${o.genero} | ${o.causa||'--'}\n`);
+  }
+
+  if(transfRecList.length){
+    txt+=`\n⬇️ TRANSFERÊNCIAS RECEBIDAS (${transfRecList.length})\n`;
+    transfRecList.forEach((t,i)=>txt+=`   #${i+1}: ${t.unidade||'--'} → ${t.nome||'--'} | ${t.diagnostico||'--'}\n`);
+  }
+  if(transfEfetList.length){
+    txt+=`\n⬆️ TRANSFERÊNCIAS EFETUADAS (${transfEfetList.length})\n`;
+    transfEfetList.forEach((t,i)=>txt+=`   #${i+1}: → ${t.unidade||'--'} | ${t.nome||'--'} | ${t.diagnostico||'--'}\n`);
+  }
+
+  if(sinisTotal>0){
+    txt+=`\n⚠️ SINISTRALIDADE (Total: ${sinisTotal})\n`;
+    txt+=sinisLines+'\n';
+  }
+
+  txt+=`\n🔧 ACTOS E PROCEDIMENTOS\n`;
+  txt+=`   Suturas: ${procS} | Curativos: ${procC} | Gessos: ${procG}\n`;
+  if(procO)txt+=`   Outros: ${procO}\n`;
+
+  txt+=`\n🏥 INTERNAMENTO\n`;
+  txt+=`   Internados: ${intTotal} | Óbitos: ${intOb} | Altas: ${intAlt}\n`;
+  if(document.getElementById('int-descricao').value)txt+=`   ${document.getElementById('int-descricao').value}\n`;
+
+  if(obs){txt+=`\n📝 OBSERVAÇÃO DO TURNO\n   ${obs}\n`;}
+
+  return txt;
+}
+
+// ═══════════════════════ MODAL ═══════════════════════
+function abrirResumo(){
+  document.getElementById('modal-body').textContent=buildResumoText();
+  document.getElementById('modal-backdrop').classList.add('open');
+}
+function fecharModal(e){
+  if(e.target===document.getElementById('modal-backdrop'))
+    document.getElementById('modal-backdrop').classList.remove('open');
+}
+function copiarTexto(){
+  navigator.clipboard.writeText(buildResumoText()).then(()=>alert('Texto copiado!'));
+}
+
+// ═══════════════════════ PDF ═══════════════════════
+function buildPDFContent(){
+  const dt=document.getElementById('f-data').value||'';
+  const turno=document.getElementById('f-turno').value||'';
+  const obsM=document.getElementById('obs-masc').value||0;
+  const obsF=document.getElementById('obs-fem').value||0;
+  const obsT=parseInt(obsM)+parseInt(obsF);
+  const classif=classifVal||'—';
+  const ficando=document.getElementById('res-ficando').value||0;
+  const verif=document.getElementById('res-verif').value||0;
+  const altas=document.getElementById('res-altas').value||0;
+  const intTotal=document.getElementById('int-total').value||0;
+  const intOb=document.getElementById('int-obito').value||0;
+  const intAlt=document.getElementById('int-alta').value||0;
+  const sinisTotal=SINISTROS_TIPOS.reduce((t,s)=>t+(parseInt(document.getElementById('sinis-'+s.key)?.value)||0),0);
+
+  const clColors={LEVE:'#059669',NORMAL:'#1A56DB',AGITADO:'#D97706',PESADO:'#ea580c',CRÍTICO:'#DC2626'};
+  const clColor=clColors[classif]||'#64748B';
+
+  const formatDate=d=>{
+    if(!d)return'—';
+    const [y,m,day]=d.split('-');
+    return`${day}/${m}/${y}`;
+  };
+
+  let html=`
+  <div style="text-align:center;margin-bottom:8px">
+    <span style="font-size:10px;color:#64748B">Data: ${formatDate(dt)} | Turno: ${turno}</span>
+    &nbsp;&nbsp;
+    <span style="display:inline-block;padding:2px 12px;border-radius:12px;background:${clColor}20;color:${clColor};font-weight:700;font-size:10px;border:1px solid ${clColor}">
+      BANCO ${classif}
+    </span>
+  </div>
+
+  <!-- EQUIPAS -->
+  <div class="pdf-section">
+    <div class="pdf-section-title">Equipa de Serviço</div>
+    ${teamServ.esp.length?`<div class="pdf-row"><span class="k">Especialistas:</span><span class="vv">${teamServ.esp.join(', ')}</span></div>`:''}
+    ${teamServ.int.length?`<div class="pdf-row"><span class="k">Internos:</span><span class="vv">${teamServ.int.join(', ')}</span></div>`:''}
+    ${teamServ.est.length?`<div class="pdf-row"><span class="k">Estagiários:</span><span class="vv">${teamServ.est.join(', ')}</span></div>`:''}
+  </div>
+  <div class="pdf-section">
+    <div class="pdf-section-title">Equipa que Entra</div>
+    ${teamEntr.esp.length?`<div class="pdf-row"><span class="k">Especialistas:</span><span class="vv">${teamEntr.esp.join(', ')}</span></div>`:''}
+    ${teamEntr.int.length?`<div class="pdf-row"><span class="k">Internos:</span><span class="vv">${teamEntr.int.join(', ')}</span></div>`:''}
+    ${teamEntr.est.length?`<div class="pdf-row"><span class="k">Estagiários:</span><span class="vv">${teamEntr.est.join(', ')}</span></div>`:''}
+  </div>
+
+  <!-- PACIENTES -->
+  <div class="pdf-section">
+    <div class="pdf-section-title">Pacientes Observados</div>
+    <div class="pdf-grid">
+      <div class="pdf-cell"><div class="l">Total</div><div class="v">${obsT}</div></div>
+      <div class="pdf-cell"><div class="l">Masculino</div><div class="v">${obsM}</div></div>
+      <div class="pdf-cell"><div class="l">Feminino</div><div class="v">${obsF}</div></div>
+      <div class="pdf-cell"><div class="l">0–14 anos</div><div class="v">${document.getElementById('obs-0').value||0}</div></div>
+      <div class="pdf-cell"><div class="l">15–30 anos</div><div class="v">${document.getElementById('obs-15').value||0}</div></div>
+      <div class="pdf-cell"><div class="l">31–60 anos</div><div class="v">${document.getElementById('obs-31').value||0}</div></div>
+      <div class="pdf-cell"><div class="l">&gt;60 anos</div><div class="v">${document.getElementById('obs-60').value||0}</div></div>
+    </div>
+  </div>
+
+  <!-- DIAGNÓSTICOS -->
+  ${cidTags.length?`
+  <div class="pdf-section">
+    <div class="pdf-section-title">Diagnósticos CID</div>
+    <div style="display:flex;flex-wrap:wrap;gap:4px">
+      ${cidTags.map(t=>`<span style="background:#EFF6FF;border:1px solid #DBEAFE;border-radius:12px;padding:2px 8px;font-size:9px;color:#1A3A7A"><b>${t.c}</b> ${t.d}</span>`).join('')}
+    </div>
+  </div>`:''}
+
+  <!-- RESULTADOS -->
+  <div class="pdf-section">
+    <div class="pdf-section-title">Resultados do Serviço</div>
+    <div class="pdf-grid">
+      <div class="pdf-cell"><div class="l">Ficando</div><div class="v">${ficando}</div></div>
+      <div class="pdf-cell"><div class="l">Verificação</div><div class="v">${verif}</div></div>
+      <div class="pdf-cell"><div class="l">Altas</div><div class="v" style="color:#059669">${altas}</div></div>
+      <div class="pdf-cell"><div class="l">Óbitos</div><div class="v" style="color:#DC2626">${obitosList.length}</div></div>
+    </div>
+  </div>
+
+  <!-- ÓBITOS -->
+  ${obitosList.length?`
+  <div class="pdf-section">
+    <div class="pdf-section-title">Registo de Óbitos (${obitosList.length})</div>
+    <table class="pdf-table">
+      <thead><tr><th>#</th><th>Hora</th><th>Nome</th><th>Idade</th><th>Género</th><th>Causa</th></tr></thead>
+      <tbody>
+        ${obitosList.map((o,i)=>`<tr><td>${i+1}</td><td>${o.hora||'—'}</td><td>${o.nome||'—'}</td><td>${o.idade||'—'}</td><td>${o.genero}</td><td>${o.causa||'—'}</td></tr>`).join('')}
+      </tbody>
+    </table>
+  </div>`:''}
+
+  <!-- TRANSFERÊNCIAS -->
+  ${transfRecList.length?`
+  <div class="pdf-section">
+    <div class="pdf-section-title">Transferências Recebidas (${transfRecList.length})</div>
+    <table class="pdf-table">
+      <thead><tr><th>#</th><th>Unidade de Origem</th><th>Esp.</th><th>Nome</th><th>Diagnóstico</th></tr></thead>
+      <tbody>
+        ${transfRecList.map((t,i)=>`<tr><td>${i+1}</td><td>${t.unidade||'—'}</td><td>${t.especialidade}</td><td>${t.nome||'—'}</td><td>${t.diagnostico||'—'}</td></tr>`).join('')}
+      </tbody>
+    </table>
+  </div>`:''}
+
+  ${transfEfetList.length?`
+  <div class="pdf-section">
+    <div class="pdf-section-title">Transferências Efetuadas (${transfEfetList.length})</div>
+    <table class="pdf-table">
+      <thead><tr><th>#</th><th>Unidade de Destino</th><th>Esp.</th><th>Nome</th><th>Diagnóstico</th></tr></thead>
+      <tbody>
+        ${transfEfetList.map((t,i)=>`<tr><td>${i+1}</td><td>${t.unidade||'—'}</td><td>${t.especialidade}</td><td>${t.nome||'—'}</td><td>${t.diagnostico||'—'}</td></tr>`).join('')}
+      </tbody>
+    </table>
+  </div>`:''}
+
+  <!-- SINISTRALIDADE -->
+  ${sinisTotal>0?`
+  <div class="pdf-section">
+    <div class="pdf-section-title">Sinistralidade (Total: ${sinisTotal})</div>
+    <div style="display:flex;flex-wrap:wrap;gap:4px">
+      ${SINISTROS_TIPOS.map(s=>{
+        const v=parseInt(document.getElementById('sinis-'+s.key)?.value)||0;
+        if(!v)return'';
+        return`<div class="pdf-cell" style="min-width:120px"><div class="l">${s.label}</div><div class="v">${v}</div></div>`;
+      }).join('')}
+    </div>
+  </div>`:''}
+
+  <!-- ACTOS -->
+  <div class="pdf-section">
+    <div class="pdf-section-title">Actos e Procedimentos</div>
+    <div class="pdf-grid">
+      <div class="pdf-cell"><div class="l">Suturas</div><div class="v">${document.getElementById('proc-sutura').value||0}</div></div>
+      <div class="pdf-cell"><div class="l">Curativos</div><div class="v">${document.getElementById('proc-curativo').value||0}</div></div>
+      <div class="pdf-cell"><div class="l">Gessos</div><div class="v">${document.getElementById('proc-gesso').value||0}</div></div>
+    </div>
+    ${document.getElementById('proc-outros').value?`<div class="pdf-row" style="margin-top:6px"><span class="k">Outros:</span><span class="vv">${document.getElementById('proc-outros').value}</span></div>`:''}
+  </div>
+
+  <!-- INTERNAMENTO -->
+  <div class="pdf-section">
+    <div class="pdf-section-title">Internamento</div>
+    <div class="pdf-grid">
+      <div class="pdf-cell"><div class="l">Internados</div><div class="v">${intTotal}</div></div>
+      <div class="pdf-cell"><div class="l">Óbitos</div><div class="v" style="color:#DC2626">${intOb}</div></div>
+      <div class="pdf-cell"><div class="l">Altas</div><div class="v" style="color:#059669">${intAlt}</div></div>
+    </div>
+    ${document.getElementById('int-descricao').value?`<div class="pdf-row" style="margin-top:6px"><span class="vv">${document.getElementById('int-descricao').value}</span></div>`:''}
+  </div>
+
+  <!-- OBSERVAÇÃO -->
+  ${document.getElementById('obs-turno').value?`
+  <div class="pdf-section">
+    <div class="pdf-section-title">Observação do Turno</div>
+    <div style="font-size:10px;line-height:1.6;color:#334155;padding:6px;background:#F4F7FF;border-radius:6px">${document.getElementById('obs-turno').value}</div>
+  </div>`:''}
+
+  <div style="margin-top:16px;text-align:center;font-size:8px;color:#94A3B8;border-top:1px solid #E2E8F0;padding-top:8px">
+    Documento gerado automaticamente — Hospital do Prenda · Banco de Ortopedia · ${new Date().toLocaleString('pt-AO')}
+  </div>`;
+
+  return html;
+}
+
+function getPDFFilename(){
+  const dt=document.getElementById('f-data').value||new Date().toISOString().slice(0,10);
+  const [y,m,d]=dt.split('-');
+  return`MOVIMENTO DO BANCO DE ORTOPEDIA DO DIA ${d}-${m}-${y}.pdf`;
+}
+
+async function gerarPDF(){
+  const content=document.getElementById('pdf-content');
+  content.innerHTML=buildPDFContent();
+  const subtitle=document.getElementById('pdf-subtitle');
+  const dt=document.getElementById('f-data').value||'';
+  const turno=document.getElementById('f-turno').value||'';
+  subtitle.textContent=`Hospital do Prenda · Luanda · ${dt} · ${turno}`;
+  await new Promise(r=>setTimeout(r,120));
+  const tpl=document.getElementById('pdf-template');
+  const canvas=await html2canvas(tpl,{scale:2,useCORS:true,allowTaint:true,backgroundColor:'#ffffff'});
+  const {jsPDF}=window.jspdf;
+  const pdf=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const pw=pdf.internal.pageSize.getWidth();
+  const ph=pdf.internal.pageSize.getHeight();
+  const imgW=pw;
+  const imgH=(canvas.height/canvas.width)*pw;
+  let y=0;
+  while(y<imgH){
+    if(y>0)pdf.addPage();
+    pdf.addImage(canvas.toDataURL('image/jpeg',0.92),'JPEG',0,-(y),imgW,imgH);
+    y+=ph;
+  }
+  return{pdf,filename:getPDFFilename()};
+}
+
+async function gerarPDFSave(){
+  try{
+    const btn=event?.currentTarget;
+    if(btn){btn.disabled=true;btn.textContent='A gerar...';}
+    const {pdf,filename}=await gerarPDF();
+    pdf.save(filename);
+    if(btn){btn.disabled=false;btn.innerHTML='<svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Guardar PDF';}
+  }catch(e){alert('Erro ao gerar PDF: '+e.message);}
+}
+
+async function gerarPDFeWhatsApp(){
+  try{
+    const {pdf,filename}=await gerarPDF();
+    pdf.save(filename);
+    await new Promise(r=>setTimeout(r,800));
+    const txt=encodeURIComponent(buildResumoText());
+    window.open('https://wa.me/?text='+txt,'_blank');
+  }catch(e){alert('Erro: '+e.message);}
+}
+
+async function enviarEmail(){
+  const resumo=buildResumoText();
+  const subject=encodeURIComponent('Movimento do Banco de Ortopedia — '+( document.getElementById('f-data').value||new Date().toISOString().slice(0,10)));
+  const body=encodeURIComponent(resumo);
+  try{
+    const {pdf,filename}=await gerarPDF();
+    pdf.save(filename);
+    await new Promise(r=>setTimeout(r,600));
+  }catch(e){}
+  window.location.href=`mailto:estatisticahp@gmail.com?subject=${subject}&body=${body}`;
+}
+</script>
+</body>
+</html>
