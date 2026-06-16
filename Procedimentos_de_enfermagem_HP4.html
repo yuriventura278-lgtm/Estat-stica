@@ -2098,12 +2098,10 @@ function buildReportPDF(dates, titleLine1, titleLine2, specLabel, filename, filt
   // ── SECÇÃO 3: Total de cada procedimento — todos os serviços ──
   if(cy > PH-40){ doc.addPage(); cy = drawPageHeader(); }
   const allProcRows = [];
-  CATEGORIES.forEach(function(c){
-    c.procs.forEach(function(p){
-      const k = c.id+'||'+p;
-      const t = (procDMap[k]||0) + (procNMap[k]||0);
-      if(t>0) allProcRows.push([p, t]);
-    });
+  ORDERED_PROCS.forEach(function(op){
+    const k = op.catId+'||'+op.proc;
+    const t = (procDMap[k]||0) + (procNMap[k]||0);
+    if(t>0) allProcRows.push([op.proc, t]);
   });
   if(allProcRows.length>0){
     allProcRows.push(['TOTAL GERAL', grandTotal]);
@@ -2172,12 +2170,10 @@ function buildReportPDF(dates, titleLine1, titleLine2, specLabel, filename, filt
     var g = aggProcByGroup(groupIds);
     if(g.total === 0) return;
     var rows = [];
-    CATEGORIES.forEach(function(c){
-      c.procs.forEach(function(p){
-        var k = c.id+'||'+p;
-        var t = (g.procD[k]||0)+(g.procN[k]||0);
-        if(t>0) rows.push([p, g.procD[k]||0, g.procN[k]||0, t]);
-      });
+    ORDERED_PROCS.forEach(function(op){
+      var k = op.catId+'||'+op.proc;
+      var t = (g.procD[k]||0)+(g.procN[k]||0);
+      if(t>0) rows.push([op.proc, g.procD[k]||0, g.procN[k]||0, t]);
     });
     if(rows.length===0) return;
     rows.push(['TOTAL', rows.reduce(function(s,r){return s+r[1];},0),
@@ -2241,14 +2237,12 @@ function buildReportPDF(dates, titleLine1, titleLine2, specLabel, filename, filt
   filtSpecs.forEach(function(sp){
     const spProcRows = [];
     var spTot = 0;
-    CATEGORIES.forEach(function(c){
-      c.procs.forEach(function(proc){
-        const pk = c.id+'||'+proc;
-        const v = specDataMap[sp.id]?.[pk];
-        const t = ((v&&v.d)||0) + ((v&&v.n)||0);
-        spProcRows.push([proc, t]);
-        spTot += t;
-      });
+    ORDERED_PROCS.forEach(function(op){
+      const pk = op.catId+'||'+op.proc;
+      const v = specDataMap[sp.id]?.[pk];
+      const t = ((v&&v.d)||0) + ((v&&v.n)||0);
+      spProcRows.push([op.proc, t]);
+      spTot += t;
     });
 
     doc.addPage();
@@ -2369,7 +2363,7 @@ function exportDiarioPDF() {
   }
   if(cy>PH-40){doc.addPage();cy=14;}
   const pRows=[];
-  CATEGORIES.forEach(c=>c.procs.forEach(p=>{const k=c.id+'||'+p;const dv=procD[k]||0,nv=procN[k]||0;if(dv+nv>0)pRows.push([p,dv,nv,dv+nv]);}));
+  ORDERED_PROCS.forEach(function(op){const k=op.catId+'||'+op.proc;const dv=procD[k]||0,nv=procN[k]||0;if(dv+nv>0)pRows.push([op.proc,dv,nv,dv+nv]);});
   if(pRows.length>0){
     doc.setFillColor(0,60,100); doc.roundedRect(ML,cy,CW,7,1.5,1.5,'F');
     doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(255);
