@@ -540,8 +540,8 @@ function renderExamBody() {
       row.className = 'lab-row';
       row.innerHTML =
         '<div class="lab-name">'+e+'</div>'+
-        '<div class="lab-cell"><input type="number" min="0" value="'+bu+'" oninput="updateExame(''+e+'','bu',this.value)" id="ex-'+sl+'-bu"></div>'+
-        '<div class="lab-cell"><input type="number" min="0" value="'+int+'" oninput="updateExame(''+e+'','int',this.value)" id="ex-'+sl+'-int"></div>'+
+        '<div class="lab-cell"><input type="number" min="0" value="'+bu+'" data-exam="'+esc(e)+'" data-col="bu" oninput="handleExamInput(this)" id="ex-'+sl+'-bu"></div>'+
+        '<div class="lab-cell"><input type="number" min="0" value="'+int+'" data-exam="'+esc(e)+'" data-col="int" oninput="handleExamInput(this)" id="ex-'+sl+'-int"></div>'+
         '<div class="lab-cell"><span class="lab-tot-val" id="ex-'+sl+'-tot">'+(bu+int)+'</span></div>';
       body.appendChild(row);
     });
@@ -567,8 +567,8 @@ function renderPosBody() {
     row.className = 'pos-row';
     row.innerHTML =
       '<div class="pos-name">'+e+'</div>'+
-      '<div class="pos-cell"><input type="number" min="0" value="'+bu+'" oninput="updatePositivo(''+e+'','bu',this.value)"></div>'+
-      '<div class="pos-cell"><input type="number" min="0" value="'+int+'" oninput="updatePositivo(''+e+'','int',this.value)"></div>'+
+      '<div class="pos-cell"><input type="number" min="0" value="'+bu+'" data-exam="'+esc(e)+'" data-col="bu" oninput="handlePosInput(this)"></div>'+
+      '<div class="pos-cell"><input type="number" min="0" value="'+int+'" data-exam="'+esc(e)+'" data-col="int" oninput="handlePosInput(this)"></div>'+
       '<div class="pos-cell"><span class="pos-tot-val" id="pos-'+sl+'-tot">'+(bu+int)+'</span></div>';
     body.appendChild(row);
   });
@@ -576,6 +576,8 @@ function renderPosBody() {
 
 function slug(s) { return s.replace(/[^a-zA-Z0-9]/g,'-'); }
 function esc(s)  { return String(s).replace(/"/g,'&quot;'); }
+function handleExamInput(el) { updateExame(el.dataset.exam, el.dataset.col, el.value); }
+function handlePosInput(el)  { updatePositivo(el.dataset.exam, el.dataset.col, el.value); }
 
 // ─── UPDATES ───
 function updateExame(name, col, val) {
@@ -713,8 +715,8 @@ function buildMonthlyForm() {
       html +=
         '<div class="mrpt-row">'+
         '<div class="mrpt-name">'+e+'</div>'+
-        '<div class="mrpt-cell"><input type="number" min="0" id="mr-'+sl+'-bu" value="'+bu+'" oninput="mrptUpdate(''+e+'','bu',this.value)"></div>'+
-        '<div class="mrpt-cell"><input type="number" min="0" id="mr-'+sl+'-int" value="'+int+'" oninput="mrptUpdate(''+e+'','int',this.value)"></div>'+
+        '<div class="mrpt-cell"><input type="number" min="0" id="mr-'+sl+'-bu" value="'+bu+'" data-exam="'+esc(e)+'" data-col="bu" oninput="handleMrptInput(this)"></div>'+
+        '<div class="mrpt-cell"><input type="number" min="0" id="mr-'+sl+'-int" value="'+int+'" data-exam="'+esc(e)+'" data-col="int" oninput="handleMrptInput(this)"></div>'+
         '<div class="mrpt-cell"><span class="mrpt-tot" id="mr-'+sl+'-tot">'+(bu+int)+'</span></div>'+
         '</div>';
     });
@@ -729,6 +731,7 @@ function buildMonthlyForm() {
   cont.innerHTML = html;
 }
 
+function handleMrptInput(el) { mrptUpdate(el.dataset.exam, el.dataset.col, el.value); }
 function mrptUpdate(name, col, val) {
   if(!mrptData[name]) mrptData[name]={bu:0,int:0};
   mrptData[name][col] = Number(val)||0;
