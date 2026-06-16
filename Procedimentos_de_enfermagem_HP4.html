@@ -751,7 +751,7 @@ var SKIP_IDS = new Set(['med_homem','med_mulher','bloco_urgente','bloco_electiva
 
 const CATEGORIES = [
   { id:'medicacao',    label:'Medicação e Terapêutica',         color:'green',
-    procs:['Medicação Oral','Injecção IM','Injecção IV','Injecção SC','Venoclise (Hidratação EV)','Nebulização','Medicação Rectal','Oxigenoterapia','Hidratação Via Oral / SRO','Hemotransfusão','Insulinoterapia','Nutrição Parentérica'] },
+    procs:['Medicação Oral','Injecção IM','Injecção IV','Injecção SC','Venoclise (Hidratação EV)','Nebulização','Medicação Rectal','Oxigenoterapia','Hidratação Via Oral / SRO','Hemotransfusão','Insulinoterapia'] },
   { id:'monitorizacao',label:'Monitorização e Avaliação',       color:'blue',
     procs:['Avaliação da TA','Controle da Temperatura','Glicemia Capilar','Electrocardiograma','Controle da Respiração','Controle do Pulso','Controle do Peso','Monitoramento da Dor','Balanço Hídrico'] },
   { id:'invasivos',    label:'Procedimentos Invasivos e Sondas',color:'purple',
@@ -843,7 +843,6 @@ const ORDERED_PROCS = [
   {proc:'Orientação do Doente na Alta',            catId:'gestao'},
   {proc:'Arrumação dos Doentes',                   catId:'gestao'},
   {proc:'Transporte dos Doentes',                  catId:'gestao'},
-  {proc:'Nutrição Parentérica',                    catId:'medicacao'},
 ];
 
 // ════════════════════════════════════════════════════════════
@@ -2537,7 +2536,7 @@ function exportTabela13PDF() {
     var vInt = (gInt.procD[k]||0) + (gInt.procN[k]||0);
     var vTot = vAmb + vUrg + vInt;
     totAmb += vAmb; totUrg += vUrg; totInt += vInt; totGeral += vTot;
-    rows.push([op.proc, vAmb || '', vUrg || '', vInt || '', vTot || '']);
+    rows.push([op.proc, vAmb, vUrg, vInt, vTot]);
   });
 
   if(totGeral === 0){ showToast('⚠️ Sem dados para este mês'); return; }
