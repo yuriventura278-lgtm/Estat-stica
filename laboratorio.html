@@ -1,0 +1,1587 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Laboratório — HP41</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<style>
+/* ════ CLINICAL MINIMAL — Laboratório ════ */
+:root {
+  --bg:#fafaf9; --surface:#ffffff;
+  --border:#e8e8e4;
+  --text:#0a0a0a; --muted:#6b6b6b;
+  --accent:#059669; --accent-tint:#f0fdf4; --accent-ring:#bbf7d0;
+  --danger:#dc2626; --warn:#d97706; --blue:#2563eb;
+  --surface2:#f5f5f4;
+  --font-head:'Inter',sans-serif;
+  --font-body:'IBM Plex Mono',monospace;
+  --nav-w:220px; --hdr-h:56px;
+}
+
+/* SPLASH */
+#splash{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;align-items:center;justify-content:center;transition:opacity .5s .1s;}
+#splash.hidden{opacity:0;pointer-events:none;}
+.spl-inner{display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;}
+.spl-ring{position:relative;width:92px;height:92px;}
+.spl-ring-svg{position:absolute;inset:0;transform:rotate(-90deg);}
+.spl-img{position:absolute;inset:9px;border-radius:50%;overflow:hidden;border:1px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:26px;}
+.spl-hosp{font-family:var(--font-head);font-size:.55rem;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);}
+.spl-name{font-family:var(--font-head);font-size:.95rem;font-weight:700;color:var(--text);}
+.spl-pct{font-family:var(--font-body);font-size:.65rem;color:var(--accent);font-weight:600;}
+
+/* RESET */
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-height:100vh;overflow-x:hidden;}
+
+/* HEADER */
+header{position:fixed;top:0;left:0;right:0;z-index:200;height:var(--hdr-h);padding:0 20px;
+  background:var(--surface);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.logo-area{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+.logo-badge{width:32px;height:32px;border-radius:7px;background:var(--accent-tint);
+  border:1px solid var(--accent-ring);display:flex;align-items:center;justify-content:center;font-size:17px;}
+.logo-text h1{font-family:var(--font-head);font-size:.88rem;font-weight:700;color:var(--accent);}
+.logo-text p{font-size:.45rem;color:var(--muted);text-transform:uppercase;letter-spacing:2px;margin-top:1px;}
+.hdr-mid{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;}
+.week-nav{display:flex;align-items:center;gap:6px;}
+.week-nav-btn{padding:4px 10px;background:var(--surface);border:1px solid var(--border);border-radius:4px;
+  cursor:pointer;font-size:.75rem;color:var(--muted);transition:border-color .12s;}
+.week-nav-btn:hover{border-color:var(--accent);color:var(--accent);}
+.week-display-wrap{text-align:center;}
+.week-display{font-family:var(--font-head);font-size:.76rem;font-weight:700;color:var(--accent);}
+.week-range{font-size:.54rem;color:var(--muted);}
+.hdr-right{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+.btn-h{padding:5px 11px;border-radius:4px;cursor:pointer;font-family:var(--font-head);font-size:.57rem;
+  font-weight:600;letter-spacing:.4px;text-transform:uppercase;transition:all .13s;white-space:nowrap;border:none;
+  display:inline-flex;align-items:center;gap:5px;}
+.btn-save{background:var(--accent);color:#fff;}
+.btn-save:hover{opacity:.83;}
+.btn-out{background:transparent;border:1px solid var(--border)!important;color:var(--muted);}
+.btn-out:hover{border-color:var(--accent)!important;color:var(--accent);}
+
+/* LAYOUT */
+.app-shell{display:flex;padding-top:var(--hdr-h);min-height:100vh;}
+
+/* SIDEBAR */
+.sidebar{position:fixed;top:var(--hdr-h);left:0;bottom:0;width:var(--nav-w);
+  background:var(--surface);border-right:1px solid var(--border);overflow-y:auto;z-index:100;
+  display:flex;flex-direction:column;}
+.sidebar::-webkit-scrollbar{width:3px;}
+.sidebar::-webkit-scrollbar-thumb{background:var(--border);}
+.sb-hdr{padding:10px 14px 8px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface);}
+.sb-hdr span{font-family:var(--font-head);font-size:.48rem;font-weight:600;text-transform:uppercase;letter-spacing:2.5px;color:var(--muted);}
+.nav-list{padding:6px 8px;display:flex;flex-direction:column;gap:1px;}
+.nav-item{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:5px;cursor:pointer;
+  transition:background .12s;user-select:none;border:1px solid transparent;background:none;width:100%;text-align:left;
+  font-family:var(--font-head);font-size:.57rem;font-weight:500;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);}
+.nav-item:hover{background:var(--accent-tint);color:var(--accent);}
+.nav-item.active{background:var(--accent-tint);border-color:var(--accent-ring);color:var(--accent);}
+.sb-sec{padding:8px 14px 2px;font-size:.45rem;text-transform:uppercase;letter-spacing:2px;
+  color:var(--muted);font-family:var(--font-head);font-weight:600;}
+.sb-divider{margin:4px 10px;border:none;border-top:1px solid var(--border);}
+
+/* MAIN */
+.main-content{margin-left:var(--nav-w);flex:1;padding:28px 32px 72px;}
+.section{display:none;animation:fadeIn .16s ease;}
+.section.active{display:block;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
+
+/* PAGE HEADER */
+.pg-hdr{display:flex;align-items:center;gap:12px;margin-bottom:22px;padding-bottom:14px;border-bottom:1px solid var(--border);}
+.pg-hdr-icon{width:36px;height:36px;border-radius:8px;background:var(--accent-tint);
+  border:1px solid var(--accent-ring);display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0;}
+.pg-hdr h2{font-family:var(--font-head);font-size:1.05rem;font-weight:700;color:var(--text);}
+.pg-hdr p{font-size:.5rem;color:var(--muted);text-transform:uppercase;letter-spacing:2px;margin-top:2px;}
+.pg-badge{display:inline-flex;align-items:center;padding:2px 9px;border-radius:3px;font-size:.5rem;
+  font-weight:600;text-transform:uppercase;letter-spacing:2px;font-family:var(--font-head);margin-right:4px;margin-bottom:3px;}
+.badge-week{background:var(--accent-tint);color:var(--accent);border:1px solid var(--accent-ring);}
+.badge-month{background:#f5f3ff;color:#5b21b6;border:1px solid #ddd6fe;}
+.badge-q{background:#fffbeb;color:#b45309;border:1px solid #fde68a;}
+.badge-sem{background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;}
+.badge-year{background:#fef2f2;color:var(--danger);border:1px solid #fecaca;}
+
+/* KPI */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:20px;}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:14px;text-align:center;}
+.kpi-label{font-family:var(--font-head);font-size:.46rem;font-weight:600;text-transform:uppercase;
+  letter-spacing:1.5px;color:var(--muted);margin-bottom:6px;}
+.kpi-val{font-size:2rem;font-weight:300;color:var(--text);font-family:var(--font-body);line-height:1;}
+.kpi.c-accent .kpi-val{color:var(--accent);}
+.kpi.c-danger .kpi-val{color:var(--danger);}
+.kpi.c-blue .kpi-val{color:var(--blue);}
+.kpi.c-warn .kpi-val{color:var(--warn);}
+
+/* CARD */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:18px;margin-bottom:14px;}
+.card.card-danger{border-color:#fecaca;}
+.card-label{font-family:var(--font-head);font-size:.5rem;font-weight:600;text-transform:uppercase;
+  letter-spacing:2px;color:var(--muted);margin-bottom:12px;}
+.card-label.danger{color:var(--danger);}
+
+/* EXAM TABLE (grid-based, like proc-row) */
+.lab-thead{display:grid;grid-template-columns:1fr 80px 80px 64px;padding:5px 8px;
+  border-bottom:2px solid var(--border);margin-bottom:2px;}
+.lab-thead span{font-family:var(--font-head);font-size:.46rem;font-weight:600;text-transform:uppercase;
+  letter-spacing:1.5px;color:var(--muted);text-align:center;}
+.lab-thead .th-name{text-align:left;}
+.lab-thead .th-bu{color:var(--danger);}
+.lab-thead .th-int{color:var(--blue);}
+.lab-sec-hdr{background:var(--bg);padding:5px 8px;font-family:var(--font-head);
+  font-size:.46rem;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;
+  color:var(--accent);border-bottom:1px solid var(--border);border-top:1px solid var(--border);margin-top:2px;}
+.lab-row{display:grid;grid-template-columns:1fr 80px 80px 64px;align-items:center;
+  border-bottom:1px solid var(--border);transition:background .1s;}
+.lab-row:hover{background:var(--accent-tint);}
+.lab-row:last-child{border-bottom:none;}
+.lab-name{padding:5px 8px;font-size:.82rem;font-family:var(--font-head);color:var(--text);}
+.lab-cell{padding:3px 5px;display:flex;align-items:center;justify-content:center;}
+.lab-cell input[type=number]{width:68px;background:var(--surface);border:1px solid var(--border);
+  border-radius:4px;color:var(--text);font-family:var(--font-body);font-size:.85rem;
+  padding:4px 2px;outline:none;text-align:center;-moz-appearance:textfield;transition:border-color .12s;}
+.lab-cell input[type=number]::-webkit-outer-spin-button,
+.lab-cell input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
+.lab-cell input[type=number]:focus{border-color:var(--accent);}
+.lab-tot-val{font-size:.88rem;font-weight:600;font-family:var(--font-body);text-align:center;color:var(--text);}
+.lab-subtot{display:grid;grid-template-columns:1fr 80px 80px 64px;padding:5px 8px;
+  background:var(--accent-tint);border-bottom:1px solid var(--border);}
+.lab-subtot span{font-family:var(--font-head);font-size:.52rem;font-weight:700;color:var(--accent);text-align:center;}
+.lab-subtot .st-name{text-align:left;color:var(--accent);}
+.lab-grand{display:grid;grid-template-columns:1fr 80px 80px 64px;padding:7px 8px;
+  background:var(--accent-tint);border-top:2px solid var(--accent-ring);}
+.lab-grand span{font-family:var(--font-head);font-size:.58rem;font-weight:800;color:var(--accent);text-align:center;}
+.lab-grand .g-name{text-align:left;}
+
+/* POSITIVOS TABLE */
+.pos-thead{display:grid;grid-template-columns:1fr 80px 80px 64px;padding:5px 8px;
+  border-bottom:2px solid #fecaca;margin-bottom:2px;background:#fef2f2;}
+.pos-thead span{font-family:var(--font-head);font-size:.46rem;font-weight:600;text-transform:uppercase;
+  letter-spacing:1.5px;color:var(--danger);text-align:center;}
+.pos-thead .th-name{text-align:left;}
+.pos-row{display:grid;grid-template-columns:1fr 80px 80px 64px;align-items:center;
+  border-bottom:1px solid #fee2e2;transition:background .1s;}
+.pos-row:hover{background:#fef2f2;}
+.pos-row:last-child{border-bottom:none;}
+.pos-name{padding:5px 8px;font-size:.82rem;font-family:var(--font-head);color:var(--danger);}
+.pos-cell{padding:3px 5px;display:flex;align-items:center;justify-content:center;}
+.pos-cell input[type=number]{width:68px;background:var(--surface);border:1px solid #fecaca;
+  border-radius:4px;color:var(--danger);font-family:var(--font-body);font-size:.85rem;
+  padding:4px 2px;outline:none;text-align:center;-moz-appearance:textfield;}
+.pos-cell input[type=number]::-webkit-outer-spin-button,
+.pos-cell input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
+.pos-cell input[type=number]:focus{border-color:var(--danger);}
+.pos-tot-val{font-size:.88rem;font-weight:600;font-family:var(--font-body);text-align:center;color:var(--danger);}
+.pos-grand{display:grid;grid-template-columns:1fr 80px 80px 64px;padding:7px 8px;
+  background:#fef2f2;border-top:2px solid #fecaca;}
+.pos-grand span{font-family:var(--font-head);font-size:.56rem;font-weight:800;color:var(--danger);text-align:center;}
+.pos-grand .pg-name{text-align:left;}
+
+/* TECHNICIANS */
+.techs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;margin-bottom:8px;}
+.tech-item{display:flex;align-items:center;gap:6px;}
+.tech-num{font-family:var(--font-body);font-size:.58rem;color:var(--accent);background:var(--accent-tint);
+  width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;border:1px solid var(--accent-ring);}
+.tech-inp{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:5px 8px;
+  font-family:var(--font-head);font-size:.72rem;color:var(--text);width:100%;outline:none;}
+.tech-inp:focus{border-color:var(--accent);}
+
+/* NOTES */
+.notes-area{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:4px;
+  padding:9px;font-family:var(--font-body);font-size:.72rem;color:var(--text);
+  resize:vertical;min-height:64px;outline:none;line-height:1.6;}
+.notes-area:focus{border-color:var(--accent);}
+
+/* REPORT TABLE */
+.rpt-table{width:100%;border-collapse:collapse;font-size:.72rem;}
+.rpt-table thead tr{background:var(--bg);}
+.rpt-table th{padding:8px 10px;text-align:left;font-family:var(--font-head);font-size:.47rem;
+  font-weight:600;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);
+  border-bottom:2px solid var(--border);}
+.rpt-table th.r{text-align:right;}
+.rpt-table td{padding:7px 10px;border-bottom:1px solid var(--border);font-family:var(--font-body);}
+.rpt-table tbody tr:hover{background:var(--accent-tint);}
+.rpt-table .r{text-align:right;font-variant-numeric:tabular-nums;font-weight:500;}
+.rpt-table .r.ca{color:var(--accent);}
+.rpt-table .r.cd{color:var(--danger);}
+.rpt-table .r.cm{color:var(--muted);}
+.rpt-table .sec-hdr td{background:var(--bg);font-family:var(--font-head);font-size:.46rem;
+  font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent);padding:5px 10px;}
+.rpt-table .subtot-row td{background:var(--accent-tint);font-weight:700;color:var(--accent);}
+.rpt-table .grand-row td{background:var(--accent-tint);font-weight:800;color:var(--accent);
+  border-top:2px solid var(--accent-ring);font-family:var(--font-head);}
+.rpt-table .pos-hdr td{background:#fef2f2;font-family:var(--font-head);font-size:.46rem;
+  font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--danger);padding:5px 10px;}
+.rpt-table .pos-total-row td{background:#fef2f2;font-weight:800;color:var(--danger);
+  border-top:2px solid #fecaca;font-family:var(--font-head);}
+.rpt-wrap{overflow-x:auto;margin-bottom:14px;}
+
+/* PERIOD CONTROLS */
+.period-row{display:flex;align-items:center;gap:9px;margin-bottom:16px;flex-wrap:wrap;}
+.period-row label{font-size:.5rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);
+  font-family:var(--font-head);}
+.period-row input,.period-row select{background:var(--surface);border:1px solid var(--border);
+  color:var(--text);font-family:var(--font-body);font-size:.68rem;padding:5px 8px;border-radius:4px;outline:none;}
+.period-row input:focus,.period-row select:focus{border-color:var(--accent);}
+.btn-load{padding:6px 14px;background:var(--accent);color:#fff;border:none;border-radius:4px;
+  font-family:var(--font-head);font-size:.58rem;font-weight:600;letter-spacing:.4px;
+  text-transform:uppercase;cursor:pointer;transition:opacity .13s;display:inline-flex;align-items:center;gap:5px;}
+.btn-load:hover{opacity:.83;}
+.btn-load.secondary{background:var(--muted);}
+
+/* SUMMARY CARDS */
+.sum-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:9px;margin-bottom:14px;}
+.sum-card{border-radius:5px;padding:12px;text-align:center;}
+.sum-card.c1{background:var(--accent-tint);border:1px solid var(--accent-ring);}
+.sum-card.c2{background:#fef2f2;border:1px solid #fecaca;}
+.sum-card.c3{background:#eff6ff;border:1px solid #bfdbfe;}
+.sum-card.c4{background:#f5f5f4;border:1px solid var(--border);}
+.sum-label{font-size:.45rem;text-transform:uppercase;letter-spacing:1.5px;font-family:var(--font-head);
+  font-weight:600;color:var(--muted);margin-bottom:4px;}
+.sum-val{font-size:1.65rem;font-weight:300;color:var(--text);line-height:1;font-family:var(--font-body);}
+.sum-sub{font-size:.5rem;color:var(--muted);margin-top:3px;font-family:var(--font-head);}
+
+/* HISTORY */
+.hist-item{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;
+  border-bottom:1px solid var(--border);transition:background .1s;cursor:pointer;}
+.hist-item:hover{background:var(--accent-tint);}
+.hist-week{font-family:var(--font-head);font-size:.68rem;font-weight:600;color:var(--text);}
+.hist-range{font-size:.55rem;color:var(--muted);font-family:var(--font-body);margin-top:2px;}
+.hist-total{font-family:var(--font-body);font-size:1.1rem;font-weight:300;color:var(--accent);}
+
+/* EXPORT */
+.export-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;}
+.export-card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:16px;}
+.export-card h4{font-family:var(--font-head);font-size:.65rem;font-weight:700;color:var(--text);margin-bottom:4px;}
+.export-card p{font-size:.56rem;color:var(--muted);margin-bottom:12px;font-family:var(--font-head);line-height:1.5;}
+.export-controls{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.exp-inp{background:var(--surface);border:1px solid var(--border);color:var(--text);
+  font-family:var(--font-body);font-size:.68rem;padding:5px 8px;border-radius:4px;outline:none;}
+.exp-inp:focus{border-color:var(--accent);}
+
+/* NO DATA */
+.no-data{text-align:center;padding:42px 20px;color:var(--muted);font-family:var(--font-head);}
+.no-data .nd-icon{font-size:1.6rem;display:block;margin-bottom:8px;opacity:.35;}
+.no-data .nd-txt{font-size:.72rem;text-transform:uppercase;letter-spacing:1.5px;}
+
+/* NOTICE */
+.notice{padding:9px 14px;background:var(--accent-tint);border:1px solid var(--accent-ring);
+  border-radius:5px;font-size:.62rem;color:var(--muted);font-family:var(--font-head);
+  letter-spacing:.3px;margin-bottom:13px;}
+
+/* TOAST */
+.toast{position:fixed;bottom:52px;left:50%;transform:translateX(-50%) translateY(12px);
+  background:var(--text);color:#fff;padding:8px 18px;border-radius:5px;
+  font-family:var(--font-head);font-size:.66rem;font-weight:500;
+  opacity:0;transition:all .22s;z-index:9999;pointer-events:none;white-space:nowrap;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* SAVE BAR */
+.save-bar{position:fixed;bottom:0;left:var(--nav-w);right:0;height:42px;background:var(--surface);
+  border-top:1px solid var(--border);display:flex;align-items:center;
+  justify-content:space-between;padding:0 24px;z-index:50;}
+.save-status{font-size:.56rem;color:var(--muted);font-family:var(--font-head);}
+.save-status strong{color:var(--accent);}
+
+/* BUTTON GROUP */
+.btn-group{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-top:8px;}
+
+@media(max-width:768px){
+  .sidebar{display:none;}
+  .main-content{margin-left:0;padding:22px 16px 70px;}
+  .save-bar{left:0;}
+  .hdr-mid{display:none;}
+}
+</style>
+</head>
+<body>
+
+<!-- ══ SPLASH ══ -->
+<div id="splash">
+  <div class="spl-inner">
+    <div class="spl-ring">
+      <svg class="spl-ring-svg" viewBox="0 0 92 92" aria-hidden="true">
+        <circle cx="46" cy="46" r="42" fill="none" stroke="var(--border)" stroke-width="4"/>
+        <circle id="spl-arc" cx="46" cy="46" r="42" fill="none" stroke="var(--accent)" stroke-width="4"
+          stroke-linecap="round" stroke-dasharray="263.9" stroke-dashoffset="263.9"/>
+      </svg>
+      <div class="spl-img">🧪</div>
+    </div>
+    <div class="spl-hosp">Hospital do Prenda · Luanda</div>
+    <div class="spl-name">Serviço de Laboratório</div>
+    <div class="spl-pct" id="spl-pct">0%</div>
+  </div>
+</div>
+
+<!-- ══ HEADER ══ -->
+<header>
+  <div class="logo-area">
+    <div class="logo-badge">🧪</div>
+    <div class="logo-text">
+      <h1>Laboratório</h1>
+      <p>Hospital do Prenda · HP41</p>
+    </div>
+  </div>
+  <div class="hdr-mid">
+    <div class="week-nav">
+      <button class="week-nav-btn" onclick="prevWeek()" title="Semana anterior">‹</button>
+      <div class="week-display-wrap">
+        <div class="week-display" id="hdr-week-label">—</div>
+        <div class="week-range" id="hdr-week-range">a carregar…</div>
+      </div>
+      <button class="week-nav-btn" onclick="nextWeek()" title="Semana seguinte">›</button>
+    </div>
+  </div>
+  <div class="hdr-right">
+    <button class="btn-h btn-out" onclick="showSection('sec-historico',null)">Histórico</button>
+    <button class="btn-h btn-save" onclick="saveAll()">💾 Guardar</button>
+  </div>
+</header>
+
+<!-- ══ APP SHELL ══ -->
+<div class="app-shell">
+
+  <!-- SIDEBAR -->
+  <nav class="sidebar">
+    <div class="sb-hdr"><span>Laboratório</span></div>
+    <div class="nav-list">
+      <div class="sb-sec">Registo</div>
+      <button class="nav-item active" id="nav-registo" onclick="showSection('sec-registo',this)">🧪 Registo Semanal</button>
+      <hr class="sb-divider">
+      <div class="sb-sec">Relatórios</div>
+      <button class="nav-item" id="nav-mensal" onclick="showSection('sec-mensal',this)">📆 Mensal</button>
+      <button class="nav-item" id="nav-trimestral" onclick="showSection('sec-trimestral',this)">📈 Trimestral</button>
+      <button class="nav-item" id="nav-semestral" onclick="showSection('sec-semestral',this)">📉 Semestral</button>
+      <button class="nav-item" id="nav-anual" onclick="showSection('sec-anual',this)">📅 Anual</button>
+      <hr class="sb-divider">
+      <div class="sb-sec">Dados</div>
+      <button class="nav-item" id="nav-historico" onclick="showSection('sec-historico',this)">📋 Histórico</button>
+      <button class="nav-item" id="nav-exportar" onclick="showSection('sec-exportar',this)">📤 Exportar</button>
+    </div>
+  </nav>
+
+  <!-- MAIN CONTENT -->
+  <main class="main-content">
+
+    <!-- ══════════════════════════════════
+         REGISTO SEMANAL
+    ══════════════════════════════════ -->
+    <div class="section active" id="sec-registo">
+      <div class="pg-hdr">
+        <div class="pg-hdr-icon">🧪</div>
+        <div>
+          <span class="pg-badge badge-week">Semanal</span>
+          <h2>Registo Semanal de Exames</h2>
+          <p>B. Urgência + Internamento · Hematologia · Imunologia · Bioquímica · Urinologia</p>
+        </div>
+      </div>
+
+      <!-- KPIs -->
+      <div class="kpi-grid">
+        <div class="kpi c-accent">
+          <div class="kpi-label">Total Exames</div>
+          <div class="kpi-val" id="kpi-total">0</div>
+        </div>
+        <div class="kpi c-danger">
+          <div class="kpi-label">B. Urgência</div>
+          <div class="kpi-val" id="kpi-bu">0</div>
+        </div>
+        <div class="kpi c-blue">
+          <div class="kpi-label">Internamento</div>
+          <div class="kpi-val" id="kpi-int">0</div>
+        </div>
+        <div class="kpi c-warn">
+          <div class="kpi-label">Positivos</div>
+          <div class="kpi-val" id="kpi-pos">0</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Hematologia</div>
+          <div class="kpi-val" id="kpi-hematologia">0</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Imunologia</div>
+          <div class="kpi-val" id="kpi-imunologia">0</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Bioquímica</div>
+          <div class="kpi-val" id="kpi-bioquimica">0</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Urinologia</div>
+          <div class="kpi-val" id="kpi-urinologia">0</div>
+        </div>
+      </div>
+
+      <!-- Técnicos -->
+      <div class="card">
+        <div class="card-label">Técnicos de Serviço</div>
+        <div class="techs-grid" id="techs-grid"></div>
+        <div class="btn-group">
+          <button class="btn-h btn-out" onclick="addTech()">+ Técnico</button>
+          <button class="btn-h btn-out" onclick="removeTech()">− Remover</button>
+        </div>
+      </div>
+
+      <!-- Exames Realizados -->
+      <div class="card">
+        <div class="card-label">Exames Realizados — Semana</div>
+        <div class="lab-thead">
+          <span class="th-name">Exame</span>
+          <span class="th-bu">B. Urgência</span>
+          <span class="th-int">Internamento</span>
+          <span>Total</span>
+        </div>
+        <div id="exam-body"></div>
+        <div class="lab-grand" id="lab-grand">
+          <span class="g-name">TOTAL GERAL</span>
+          <span id="grand-bu">0</span>
+          <span id="grand-int">0</span>
+          <span id="grand-tot">0</span>
+        </div>
+      </div>
+
+      <!-- Exames Positivos -->
+      <div class="card card-danger">
+        <div class="card-label danger">⚠️ Exames Positivos</div>
+        <div class="pos-thead">
+          <span class="th-name">Exame</span>
+          <span>B. Urgência</span>
+          <span>Internamento</span>
+          <span>Total</span>
+        </div>
+        <div id="pos-body"></div>
+        <div class="pos-grand">
+          <span class="pg-name">TOTAL POSITIVOS</span>
+          <span id="pos-grand-bu">0</span>
+          <span id="pos-grand-int">0</span>
+          <span id="pos-grand-tot">0</span>
+        </div>
+      </div>
+
+      <!-- Observações -->
+      <div class="card">
+        <div class="card-label">Observações da Semana</div>
+        <textarea class="notes-area" id="notas-semana"
+          placeholder="Observações, intercorrências, situações especiais…"
+          oninput="cd.notas=this.value"></textarea>
+      </div>
+
+      <button class="btn-h btn-save" style="font-size:.6rem;padding:8px 20px;" onclick="saveAll()">
+        💾 Guardar Registo Semanal
+      </button>
+    </div>
+
+
+    <!-- ══════════════════════════════════
+         RELATÓRIO MENSAL
+    ══════════════════════════════════ -->
+    <div class="section" id="sec-mensal">
+      <div class="pg-hdr">
+        <div class="pg-hdr-icon">📆</div>
+        <div>
+          <span class="pg-badge badge-month">Mensal</span>
+          <h2>Relatório Mensal</h2>
+          <p>Agregação de todas as semanas do mês seleccionado</p>
+        </div>
+      </div>
+      <div class="period-row">
+        <label>Mês</label>
+        <input type="month" id="men-month">
+        <button class="btn-load" onclick="loadReport('mensal')">Carregar</button>
+        <button class="btn-load secondary" onclick="exportReportPDF('mensal')">⬇ PDF</button>
+      </div>
+      <div id="men-content">
+        <div class="no-data"><span class="nd-icon">📆</span><span class="nd-txt">Seleccione o mês e clique em Carregar</span></div>
+      </div>
+    </div>
+
+
+    <!-- ══════════════════════════════════
+         RELATÓRIO TRIMESTRAL
+    ══════════════════════════════════ -->
+    <div class="section" id="sec-trimestral">
+      <div class="pg-hdr">
+        <div class="pg-hdr-icon">📈</div>
+        <div>
+          <span class="pg-badge badge-q">Trimestral</span>
+          <h2>Relatório Trimestral</h2>
+          <p>Agregação de 3 meses por trimestre</p>
+        </div>
+      </div>
+      <div class="period-row">
+        <label>Ano</label>
+        <input type="number" id="tri-year" style="width:80px" min="2020" max="2099">
+        <label>Trimestre</label>
+        <select id="tri-q">
+          <option value="1">T1 — Jan, Fev, Mar</option>
+          <option value="2">T2 — Abr, Mai, Jun</option>
+          <option value="3">T3 — Jul, Ago, Set</option>
+          <option value="4">T4 — Out, Nov, Dez</option>
+        </select>
+        <button class="btn-load" onclick="loadReport('trimestral')">Carregar</button>
+        <button class="btn-load secondary" onclick="exportReportPDF('trimestral')">⬇ PDF</button>
+      </div>
+      <div id="tri-content">
+        <div class="no-data"><span class="nd-icon">📈</span><span class="nd-txt">Seleccione o período e clique em Carregar</span></div>
+      </div>
+    </div>
+
+
+    <!-- ══════════════════════════════════
+         RELATÓRIO SEMESTRAL
+    ══════════════════════════════════ -->
+    <div class="section" id="sec-semestral">
+      <div class="pg-hdr">
+        <div class="pg-hdr-icon">📉</div>
+        <div>
+          <span class="pg-badge badge-sem">Semestral</span>
+          <h2>Relatório Semestral</h2>
+          <p>Agregação de 6 meses por semestre</p>
+        </div>
+      </div>
+      <div class="period-row">
+        <label>Ano</label>
+        <input type="number" id="seme-year" style="width:80px" min="2020" max="2099">
+        <label>Semestre</label>
+        <select id="seme-h">
+          <option value="1">S1 — Janeiro a Junho</option>
+          <option value="2">S2 — Julho a Dezembro</option>
+        </select>
+        <button class="btn-load" onclick="loadReport('semestral')">Carregar</button>
+        <button class="btn-load secondary" onclick="exportReportPDF('semestral')">⬇ PDF</button>
+      </div>
+      <div id="seme-content">
+        <div class="no-data"><span class="nd-icon">📉</span><span class="nd-txt">Seleccione o período e clique em Carregar</span></div>
+      </div>
+    </div>
+
+
+    <!-- ══════════════════════════════════
+         RELATÓRIO ANUAL
+    ══════════════════════════════════ -->
+    <div class="section" id="sec-anual">
+      <div class="pg-hdr">
+        <div class="pg-hdr-icon">📅</div>
+        <div>
+          <span class="pg-badge badge-year">Anual</span>
+          <h2>Relatório Anual</h2>
+          <p>Resumo completo do ano</p>
+        </div>
+      </div>
+      <div class="period-row">
+        <label>Ano</label>
+        <input type="number" id="anu-year" style="width:80px" min="2020" max="2099">
+        <button class="btn-load" onclick="loadReport('anual')">Carregar</button>
+        <button class="btn-load secondary" onclick="exportReportPDF('anual')">⬇ PDF</button>
+      </div>
+      <div id="anu-content">
+        <div class="no-data"><span class="nd-icon">📅</span><span class="nd-txt">Introduza o ano e clique em Carregar</span></div>
+      </div>
+    </div>
+
+
+    <!-- ══════════════════════════════════
+         HISTÓRICO
+    ══════════════════════════════════ -->
+    <div class="section" id="sec-historico">
+      <div class="pg-hdr">
+        <div class="pg-hdr-icon">📋</div>
+        <div>
+          <h2>Histórico de Registos</h2>
+          <p>Semanas com dados guardados · clique para carregar</p>
+        </div>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div id="hist-list"></div>
+      </div>
+    </div>
+
+
+    <!-- ══════════════════════════════════
+         EXPORTAR
+    ══════════════════════════════════ -->
+    <div class="section" id="sec-exportar">
+      <div class="pg-hdr">
+        <div class="pg-hdr-icon">📤</div>
+        <div>
+          <h2>Exportar Dados</h2>
+          <p>Relatórios em PDF por período</p>
+        </div>
+      </div>
+      <div class="export-grid">
+        <div class="export-card">
+          <h4>Semana Actual</h4>
+          <p>Exames e positivos da semana em curso</p>
+          <div class="export-controls">
+            <button class="btn-load" onclick="exportWeekPDF()">⬇ PDF Semana</button>
+          </div>
+        </div>
+        <div class="export-card">
+          <h4>Mensal</h4>
+          <p>Todas as semanas do mês seleccionado</p>
+          <div class="export-controls">
+            <input type="month" id="exp-month" class="exp-inp">
+            <button class="btn-load" onclick="exportFromExport('mensal')">⬇ PDF</button>
+          </div>
+        </div>
+        <div class="export-card">
+          <h4>Trimestral</h4>
+          <p>Resumo por trimestre</p>
+          <div class="export-controls">
+            <input type="number" id="exp-tri-year" class="exp-inp" style="width:72px" placeholder="Ano" min="2020" max="2099">
+            <select id="exp-tri-q" class="exp-inp">
+              <option value="1">T1</option><option value="2">T2</option>
+              <option value="3">T3</option><option value="4">T4</option>
+            </select>
+            <button class="btn-load" onclick="exportFromExport('trimestral')">⬇ PDF</button>
+          </div>
+        </div>
+        <div class="export-card">
+          <h4>Anual</h4>
+          <p>Relatório anual completo</p>
+          <div class="export-controls">
+            <input type="number" id="exp-year" class="exp-inp" style="width:72px" placeholder="Ano" min="2020" max="2099">
+            <button class="btn-load" onclick="exportFromExport('anual')">⬇ PDF</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div><!-- /app-shell -->
+
+<div class="toast" id="toast"></div>
+
+<div class="save-bar">
+  <div class="save-status">Laboratório · Hospital do Prenda · <strong id="bar-week">—</strong></div>
+  <button class="btn-h btn-save" onclick="saveAll()">💾 Guardar</button>
+</div>
+
+<!-- ══════════════════════════════════════════
+     JAVASCRIPT
+══════════════════════════════════════════ -->
+<script>
+// ─────────────────────────────────────────
+// DEFINIÇÃO DE EXAMES
+// ─────────────────────────────────────────
+const EXAM_SECTIONS = [
+  {
+    id: 'hematologia', label: 'Hematologia',
+    exames: ['Gota espessa','Hemograma','Tempo de Coagulação','Tempo de Hemorragia',
+             'Hemoglobina','Ag Malária','VS','Coagulograma']
+  },
+  {
+    id: 'imunologia', label: 'Imunologia',
+    exames: ['HIV','Chicungunya','Dengue','Ag HBS','Ac HVB','Ac HCV',
+             'TASO (Título antiestreptolisina)','Factor Reumatoide','PCR','Vidal','VDRL']
+  },
+  {
+    id: 'bioquimica', label: 'Bioquímica',
+    exames: ['Ureia','Creatinina','TGO','TGP','Glicemia','Triglicéridos',
+             'Albumina','Albumina LCR','Bilirrubina total','Bilirrubina direta','Colesterol']
+  },
+  {
+    id: 'urinologia', label: 'Urinologia',
+    exames: ['Urinologia','Urina II']
+  }
+];
+
+const ALL_EXAMES = EXAM_SECTIONS.flatMap(s => s.exames);
+
+const POSITIVOS = [
+  'Gota espessa','Hemograma','HIV','Ag HBS','Ac HVB','Ac HCV',
+  'VDRL','Chicungunya','Dengue'
+];
+
+// ─────────────────────────────────────────
+// UTILITÁRIOS DE SEMANA (ISO 8601)
+// ─────────────────────────────────────────
+function isoWeekKey(date) {
+  const d = new Date(typeof date === 'string' ? date + 'T12:00:00' : date);
+  const day = d.getDay() || 7;
+  d.setDate(d.getDate() + 4 - day);
+  const yearStart = new Date(d.getFullYear(), 0, 1);
+  const wn = Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
+  return `${d.getFullYear()}-W${String(wn).padStart(2,'0')}`;
+}
+
+function weekMonday(weekKey) {
+  const [y, wPart] = weekKey.split('-W');
+  const year = parseInt(y), w = parseInt(wPart);
+  const jan4 = new Date(year, 0, 4);
+  const firstMon = new Date(jan4);
+  firstMon.setDate(jan4.getDate() - ((jan4.getDay() + 6) % 7));
+  const mon = new Date(firstMon);
+  mon.setDate(firstMon.getDate() + (w - 1) * 7);
+  return mon;
+}
+
+function weekRange(weekKey) {
+  const mon = weekMonday(weekKey);
+  const sun = new Date(mon);
+  sun.setDate(mon.getDate() + 6);
+  const fmtShort = d => d.toLocaleDateString('pt-AO', { day: 'numeric', month: 'short' });
+  return `${fmtShort(mon)} – ${fmtShort(sun)} ${sun.getFullYear()}`;
+}
+
+function weekNum(weekKey)  { return parseInt(weekKey.split('-W')[1]); }
+function weekYear(weekKey) { return parseInt(weekKey.split('-W')[0]); }
+
+function prevWeekKey(wk) {
+  const m = weekMonday(wk); m.setDate(m.getDate() - 7); return isoWeekKey(m);
+}
+function nextWeekKey(wk) {
+  const m = weekMonday(wk); m.setDate(m.getDate() + 7); return isoWeekKey(m);
+}
+
+function todayWeekKey() { return isoWeekKey(new Date()); }
+
+// ─────────────────────────────────────────
+// ARMAZENAMENTO (localStorage)
+// ─────────────────────────────────────────
+const SK_PREFIX = 'lab_week_';
+const SK_INDEX  = 'lab_saved_weeks';
+
+function sk(wk) { return SK_PREFIX + wk; }
+
+function getSavedWeeks() {
+  try { return JSON.parse(localStorage.getItem(SK_INDEX) || '[]'); } catch(e) { return []; }
+}
+function addSavedWeek(wk) {
+  const arr = getSavedWeeks();
+  if (!arr.includes(wk)) { arr.push(wk); arr.sort(); localStorage.setItem(SK_INDEX, JSON.stringify(arr)); }
+}
+
+// ─────────────────────────────────────────
+// DADOS ACTUAIS
+// ─────────────────────────────────────────
+let currentWeek = todayWeekKey();
+let numTechs    = 3;
+let cd          = newData(currentWeek);
+
+function newData(wk) {
+  return { week: wk, techs: [], exames: {}, positivos: {}, notas: '' };
+}
+
+function collectFromDOM() {
+  cd.notas = document.getElementById('notas-semana')?.value || '';
+  cd.techs = [];
+  for (let i = 0; i < numTechs; i++) {
+    const el = document.getElementById(`tech-${i}`);
+    cd.techs.push(el ? el.value : '');
+  }
+}
+
+// ─────────────────────────────────────────
+// RENDER — FORMULÁRIO
+// ─────────────────────────────────────────
+function renderForm() {
+  updateHeaderWeek();
+  renderTechs();
+  renderExamBody();
+  renderPosBody();
+  recalcAll();
+  const nt = document.getElementById('notas-semana');
+  if (nt) nt.value = cd.notas || '';
+}
+
+function updateHeaderWeek() {
+  const wn = weekNum(currentWeek), wy = weekYear(currentWeek);
+  const el1 = document.getElementById('hdr-week-label');
+  const el2 = document.getElementById('hdr-week-range');
+  const el3 = document.getElementById('bar-week');
+  if (el1) el1.textContent = `Semana ${wn}  ·  ${wy}`;
+  if (el2) el2.textContent = weekRange(currentWeek);
+  if (el3) el3.textContent = `Sem. ${wn}/${wy}`;
+}
+
+function renderTechs() {
+  const g = document.getElementById('techs-grid');
+  if (!g) return;
+  numTechs = Math.max(3, cd.techs.length || 3);
+  g.innerHTML = '';
+  for (let i = 0; i < numTechs; i++) {
+    const d = document.createElement('div');
+    d.className = 'tech-item';
+    d.innerHTML = `<span class="tech-num">${i + 1}</span>
+      <input class="tech-inp" id="tech-${i}" type="text" placeholder="Nome do técnico"
+        value="${esc(cd.techs[i] || '')}" oninput="cd.techs[${i}]=this.value">`;
+    g.appendChild(d);
+  }
+}
+
+function renderExamBody() {
+  const body = document.getElementById('exam-body');
+  if (!body) return;
+  body.innerHTML = '';
+  EXAM_SECTIONS.forEach(sec => {
+    // Section header
+    const hdr = document.createElement('div');
+    hdr.className = 'lab-sec-hdr';
+    hdr.textContent = sec.label.toUpperCase();
+    body.appendChild(hdr);
+    // Rows
+    sec.exames.forEach(e => {
+      const bu  = cd.exames[e]?.bu  || 0;
+      const int = cd.exames[e]?.int || 0;
+      const sl  = slug(e);
+      const row = document.createElement('div');
+      row.className = 'lab-row';
+      row.innerHTML = `
+        <div class="lab-name">${e}</div>
+        <div class="lab-cell">
+          <input type="number" min="0" value="${bu}"
+            oninput="updateExame('${e}','bu',this.value)" id="ex-${sl}-bu">
+        </div>
+        <div class="lab-cell">
+          <input type="number" min="0" value="${int}"
+            oninput="updateExame('${e}','int',this.value)" id="ex-${sl}-int">
+        </div>
+        <div class="lab-cell">
+          <span class="lab-tot-val" id="ex-${sl}-tot">${bu + int}</span>
+        </div>`;
+      body.appendChild(row);
+    });
+    // Subtotal
+    let stBu = 0, stInt = 0;
+    sec.exames.forEach(e => { stBu += +( cd.exames[e]?.bu || 0); stInt += +(cd.exames[e]?.int || 0); });
+    const st = document.createElement('div');
+    st.className = 'lab-subtot';
+    st.innerHTML = `
+      <span class="st-name">Subtotal ${sec.label}</span>
+      <span id="st-${sec.id}-bu">${stBu}</span>
+      <span id="st-${sec.id}-int">${stInt}</span>
+      <span id="st-${sec.id}-tot">${stBu + stInt}</span>`;
+    body.appendChild(st);
+  });
+}
+
+function renderPosBody() {
+  const body = document.getElementById('pos-body');
+  if (!body) return;
+  body.innerHTML = '';
+  POSITIVOS.forEach(e => {
+    const bu  = cd.positivos[e]?.bu  || 0;
+    const int = cd.positivos[e]?.int || 0;
+    const sl  = slug(e);
+    const row = document.createElement('div');
+    row.className = 'pos-row';
+    row.innerHTML = `
+      <div class="pos-name">${e}</div>
+      <div class="pos-cell">
+        <input type="number" min="0" value="${bu}"
+          oninput="updatePositivo('${e}','bu',this.value)">
+      </div>
+      <div class="pos-cell">
+        <input type="number" min="0" value="${int}"
+          oninput="updatePositivo('${e}','int',this.value)">
+      </div>
+      <div class="pos-cell">
+        <span class="pos-tot-val" id="pos-${sl}-tot">${bu + int}</span>
+      </div>`;
+    body.appendChild(row);
+  });
+}
+
+function slug(s)  { return s.replace(/[^a-zA-Z0-9]/g, '-'); }
+function esc(s)   { return s.replace(/"/g, '&quot;'); }
+
+// ─────────────────────────────────────────
+// UPDATE — INPUTS
+// ─────────────────────────────────────────
+function updateExame(name, col, val) {
+  if (!cd.exames[name]) cd.exames[name] = { bu: 0, int: 0 };
+  cd.exames[name][col] = Number(val) || 0;
+  const sl = slug(name);
+  const totEl = document.getElementById(`ex-${sl}-tot`);
+  if (totEl) totEl.textContent = (cd.exames[name].bu || 0) + (cd.exames[name].int || 0);
+  recalcAll();
+}
+
+function updatePositivo(name, col, val) {
+  if (!cd.positivos[name]) cd.positivos[name] = { bu: 0, int: 0 };
+  cd.positivos[name][col] = Number(val) || 0;
+  const sl = slug(name);
+  const totEl = document.getElementById(`pos-${sl}-tot`);
+  if (totEl) totEl.textContent = (cd.positivos[name].bu || 0) + (cd.positivos[name].int || 0);
+  recalcPosGrand();
+  updateKPIs();
+}
+
+// ─────────────────────────────────────────
+// RECALCULAR TOTAIS
+// ─────────────────────────────────────────
+function recalcAll() {
+  let gBu = 0, gInt = 0;
+  EXAM_SECTIONS.forEach(sec => {
+    let bu = 0, int = 0;
+    sec.exames.forEach(e => {
+      bu  += +(cd.exames[e]?.bu  || 0);
+      int += +(cd.exames[e]?.int || 0);
+    });
+    setTxt(`st-${sec.id}-bu`,  bu);
+    setTxt(`st-${sec.id}-int`, int);
+    setTxt(`st-${sec.id}-tot`, bu + int);
+    gBu  += bu;
+    gInt += int;
+  });
+  setTxt('grand-bu',  gBu);
+  setTxt('grand-int', gInt);
+  setTxt('grand-tot', gBu + gInt);
+  recalcPosGrand();
+  updateKPIs();
+}
+
+function recalcPosGrand() {
+  let bu = 0, int = 0;
+  POSITIVOS.forEach(e => {
+    bu  += +(cd.positivos[e]?.bu  || 0);
+    int += +(cd.positivos[e]?.int || 0);
+  });
+  setTxt('pos-grand-bu',  bu);
+  setTxt('pos-grand-int', int);
+  setTxt('pos-grand-tot', bu + int);
+}
+
+function updateKPIs() {
+  let gBu = 0, gInt = 0;
+  ALL_EXAMES.forEach(e => {
+    gBu  += +(cd.exames[e]?.bu  || 0);
+    gInt += +(cd.exames[e]?.int || 0);
+  });
+  setTxt('kpi-total', gBu + gInt);
+  setTxt('kpi-bu',   gBu);
+  setTxt('kpi-int',  gInt);
+  let pos = 0;
+  POSITIVOS.forEach(e => { pos += +(cd.positivos[e]?.bu || 0) + +(cd.positivos[e]?.int || 0); });
+  setTxt('kpi-pos', pos);
+  EXAM_SECTIONS.forEach(sec => {
+    let t = 0;
+    sec.exames.forEach(e => { t += +(cd.exames[e]?.bu || 0) + +(cd.exames[e]?.int || 0); });
+    setTxt(`kpi-${sec.id}`, t);
+  });
+}
+
+function setTxt(id, v) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = v;
+}
+
+// ─────────────────────────────────────────
+// NAVEGAÇÃO DE SEMANAS
+// ─────────────────────────────────────────
+function prevWeek() { navigateToWeek(prevWeekKey(currentWeek)); }
+function nextWeek() { navigateToWeek(nextWeekKey(currentWeek)); }
+
+function navigateToWeek(wk) {
+  collectFromDOM();
+  currentWeek = wk;
+  const raw = localStorage.getItem(sk(wk));
+  if (raw) {
+    try { cd = { ...newData(wk), ...JSON.parse(raw) }; }
+    catch(e) { cd = newData(wk); }
+  } else {
+    cd = newData(wk);
+  }
+  renderForm();
+  showSection('sec-registo', document.getElementById('nav-registo'));
+}
+
+// ─────────────────────────────────────────
+// GUARDAR / CARREGAR
+// ─────────────────────────────────────────
+function saveAll() {
+  collectFromDOM();
+  cd.week = currentWeek;
+  localStorage.setItem(sk(currentWeek), JSON.stringify(cd));
+  addSavedWeek(currentWeek);
+  showToast(`✅ Semana ${weekNum(currentWeek)}/${weekYear(currentWeek)} guardada`);
+}
+
+// ─────────────────────────────────────────
+// TÉCNICOS
+// ─────────────────────────────────────────
+function addTech()    { collectFromDOM(); numTechs++; renderTechs(); }
+function removeTech() {
+  if (numTechs > 1) {
+    collectFromDOM();
+    numTechs--;
+    cd.techs = cd.techs.slice(0, numTechs);
+    renderTechs();
+  }
+}
+
+// ─────────────────────────────────────────
+// AGREGAÇÃO DE DADOS
+// ─────────────────────────────────────────
+function getAllWeekData() {
+  const weeks = {};
+  Object.keys(localStorage).forEach(k => {
+    if (k.startsWith(SK_PREFIX)) {
+      try { weeks[k.replace(SK_PREFIX, '')] = JSON.parse(localStorage.getItem(k)); }
+      catch(e) {}
+    }
+  });
+  return weeks;
+}
+
+function weeksForPeriod(type, val) {
+  const all = Object.keys(getAllWeekData()).sort();
+  return all.filter(wk => {
+    const mon = weekMonday(wk);
+    const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+    const covers = d => {
+      const ym  = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+      const yr  = d.getFullYear();
+      const mo  = d.getMonth(); // 0-based
+      if (type === 'mensal')     return ym === val;
+      if (type === 'trimestral') {
+        const [y, q] = val.split('-T');
+        const startM = (parseInt(q) - 1) * 3;
+        return yr === parseInt(y) && mo >= startM && mo < startM + 3;
+      }
+      if (type === 'semestral') {
+        const [y, h] = val.split('-S');
+        const startM = (parseInt(h) - 1) * 6;
+        return yr === parseInt(y) && mo >= startM && mo < startM + 6;
+      }
+      if (type === 'anual') return yr === parseInt(val);
+      return false;
+    };
+    return covers(mon) || covers(sun);
+  });
+}
+
+function aggregateWeeks(wks) {
+  const agg = { exames: {}, positivos: {}, weekCount: wks.length };
+  ALL_EXAMES.forEach(e => { agg.exames[e]    = { bu: 0, int: 0 }; });
+  POSITIVOS.forEach(e  => { agg.positivos[e] = { bu: 0, int: 0 }; });
+  const all = getAllWeekData();
+  wks.forEach(wk => {
+    const d = all[wk]; if (!d) return;
+    ALL_EXAMES.forEach(e => {
+      agg.exames[e].bu  += +(d.exames?.[e]?.bu  || 0);
+      agg.exames[e].int += +(d.exames?.[e]?.int || 0);
+    });
+    POSITIVOS.forEach(e => {
+      agg.positivos[e].bu  += +(d.positivos?.[e]?.bu  || 0);
+      agg.positivos[e].int += +(d.positivos?.[e]?.int || 0);
+    });
+  });
+  agg.grandBu  = ALL_EXAMES.reduce((s, e) => s + agg.exames[e].bu,  0);
+  agg.grandInt = ALL_EXAMES.reduce((s, e) => s + agg.exames[e].int, 0);
+  agg.grandTot = agg.grandBu + agg.grandInt;
+  agg.posBu    = POSITIVOS.reduce((s, e) => s + agg.positivos[e].bu,  0);
+  agg.posInt   = POSITIVOS.reduce((s, e) => s + agg.positivos[e].int, 0);
+  agg.posTot   = agg.posBu + agg.posInt;
+  return agg;
+}
+
+// ─────────────────────────────────────────
+// RENDER RELATÓRIO (com tabela)
+// ─────────────────────────────────────────
+function renderReportHTML(agg, title, wks) {
+  if (!wks.length) {
+    return `<div class="no-data">
+      <span class="nd-icon">🔍</span>
+      <span class="nd-txt">Sem dados para o período seleccionado</span>
+    </div>`;
+  }
+
+  // ── Sumário KPI cards ──
+  let html = `
+  <div class="sum-grid">
+    <div class="sum-card c1">
+      <div class="sum-label">Total Exames</div>
+      <div class="sum-val">${agg.grandTot}</div>
+    </div>
+    <div class="sum-card c2">
+      <div class="sum-label">Positivos</div>
+      <div class="sum-val">${agg.posTot}</div>
+    </div>
+    <div class="sum-card c3">
+      <div class="sum-label">B. Urgência</div>
+      <div class="sum-val">${agg.grandBu}</div>
+    </div>
+    <div class="sum-card c4">
+      <div class="sum-label">Internamento</div>
+      <div class="sum-val">${agg.grandInt}</div>
+    </div>
+    <div class="sum-card c4">
+      <div class="sum-label">Semanas</div>
+      <div class="sum-val">${agg.weekCount}</div>
+    </div>
+  </div>`;
+
+  // ── Tabela principal de exames ──
+  html += `
+  <div class="card">
+    <div class="card-label">Exames Realizados — ${title}</div>
+    <div class="rpt-wrap">
+      <table class="rpt-table">
+        <thead>
+          <tr>
+            <th>Área / Exame</th>
+            <th class="r">B. Urgência</th>
+            <th class="r">Internamento</th>
+            <th class="r">Total</th>
+          </tr>
+        </thead>
+        <tbody>`;
+
+  EXAM_SECTIONS.forEach(sec => {
+    let secBu = 0, secInt = 0;
+    html += `<tr class="sec-hdr"><td colspan="4">${sec.label.toUpperCase()}</td></tr>`;
+    sec.exames.forEach(e => {
+      const bu  = agg.exames[e]?.bu  || 0;
+      const int = agg.exames[e]?.int || 0;
+      const tot = bu + int;
+      if (tot === 0) return;
+      secBu  += bu;
+      secInt += int;
+      html += `<tr>
+        <td style="padding-left:18px">${e}</td>
+        <td class="r ca">${bu}</td>
+        <td class="r cm">${int}</td>
+        <td class="r ca">${tot}</td>
+      </tr>`;
+    });
+    html += `<tr class="subtot-row">
+      <td>↳ Subtotal ${sec.label}</td>
+      <td class="r">${secBu}</td>
+      <td class="r">${secInt}</td>
+      <td class="r">${secBu + secInt}</td>
+    </tr>`;
+  });
+
+  html += `<tr class="grand-row">
+    <td>TOTAL GERAL</td>
+    <td class="r">${agg.grandBu}</td>
+    <td class="r">${agg.grandInt}</td>
+    <td class="r">${agg.grandTot}</td>
+  </tr>`;
+
+  // ── Secção Positivos ──
+  html += `<tr class="pos-hdr"><td colspan="4">⚠ EXAMES POSITIVOS</td></tr>`;
+  let anyPos = false;
+  POSITIVOS.forEach(e => {
+    const bu  = agg.positivos[e]?.bu  || 0;
+    const int = agg.positivos[e]?.int || 0;
+    const tot = bu + int;
+    if (tot === 0) return;
+    anyPos = true;
+    html += `<tr>
+      <td style="padding-left:18px;color:var(--danger)">${e}</td>
+      <td class="r cd">${bu}</td>
+      <td class="r cd">${int}</td>
+      <td class="r cd">${tot}</td>
+    </tr>`;
+  });
+  if (!anyPos) {
+    html += `<tr><td colspan="4" style="text-align:center;color:var(--muted);font-family:var(--font-head);font-size:.62rem;padding:8px">
+      Sem positivos no período</td></tr>`;
+  }
+  html += `<tr class="pos-total-row">
+    <td>TOTAL POSITIVOS</td>
+    <td class="r cd">${agg.posBu}</td>
+    <td class="r cd">${agg.posInt}</td>
+    <td class="r cd">${agg.posTot}</td>
+  </tr>`;
+
+  html += `</tbody></table></div></div>`;
+
+  // ── Detalhe por semana (quando há mais de 1) ──
+  if (wks.length > 1) {
+    const allWkData = getAllWeekData();
+    html += `
+    <div class="card">
+      <div class="card-label">Detalhe por Semana</div>
+      <div class="rpt-wrap">
+        <table class="rpt-table">
+          <thead><tr>
+            <th>Semana</th>
+            <th>Período</th>
+            <th class="r">B. Urgência</th>
+            <th class="r">Internamento</th>
+            <th class="r">Total</th>
+            <th class="r">Positivos</th>
+          </tr></thead>
+          <tbody>`;
+    let cumBu = 0, cumInt = 0, cumPos = 0;
+    wks.forEach(wk => {
+      const d = allWkData[wk];
+      let bu = 0, int = 0, pos = 0;
+      if (d) {
+        ALL_EXAMES.forEach(e => { bu  += +(d.exames?.[e]?.bu  || 0); int += +(d.exames?.[e]?.int || 0); });
+        POSITIVOS.forEach(e  => { pos += +(d.positivos?.[e]?.bu || 0) + +(d.positivos?.[e]?.int || 0); });
+      }
+      cumBu += bu; cumInt += int; cumPos += pos;
+      html += `<tr>
+        <td><strong>Sem. ${weekNum(wk)}</strong></td>
+        <td style="font-size:.63rem;color:var(--muted)">${weekRange(wk)}</td>
+        <td class="r ca">${bu}</td>
+        <td class="r cm">${int}</td>
+        <td class="r ca">${bu + int}</td>
+        <td class="r cd">${pos}</td>
+      </tr>`;
+    });
+    html += `<tr class="grand-row">
+      <td colspan="2">Totais</td>
+      <td class="r">${cumBu}</td>
+      <td class="r">${cumInt}</td>
+      <td class="r">${cumBu + cumInt}</td>
+      <td class="r" style="color:var(--danger)">${cumPos}</td>
+    </tr>`;
+    html += `</tbody></table></div></div>`;
+  }
+
+  return html;
+}
+
+// ─────────────────────────────────────────
+// CARREGAR RELATÓRIOS
+// ─────────────────────────────────────────
+const RPT_CFG = {
+  mensal:     { inputFn: ()=> document.getElementById('men-month')?.value || '',
+                valFn:   v => v,
+                titleFn: v => { const [y,m]=v.split('-'); return new Date(+y,+m-1,1).toLocaleDateString('pt-AO',{month:'long',year:'numeric'}); },
+                contentId: 'men-content' },
+  trimestral: { inputFn: ()=> `${document.getElementById('tri-year')?.value||''}-T${document.getElementById('tri-q')?.value||''}`,
+                valFn:   v => v,
+                titleFn: v => { const [y,q]=v.split('-T'); return `${y} — Trimestre ${q}`; },
+                contentId: 'tri-content' },
+  semestral:  { inputFn: ()=> `${document.getElementById('seme-year')?.value||''}-S${document.getElementById('seme-h')?.value||''}`,
+                valFn:   v => v,
+                titleFn: v => { const [y,h]=v.split('-S'); return `${y} — Semestre ${h}`; },
+                contentId: 'seme-content' },
+  anual:      { inputFn: ()=> document.getElementById('anu-year')?.value || '',
+                valFn:   v => v,
+                titleFn: v => `Ano ${v}`,
+                contentId: 'anu-content' }
+};
+
+function loadReport(type) {
+  const cfg = RPT_CFG[type];
+  if (!cfg) return;
+  const raw = cfg.inputFn();
+  if (!raw || raw.includes('undefined') || raw.endsWith('-')) {
+    showToast('⚠️ Preencha o período'); return;
+  }
+  const val   = cfg.valFn(raw);
+  const title = cfg.titleFn(val);
+  const wks   = weeksForPeriod(type, val);
+  const agg   = aggregateWeeks(wks);
+  document.getElementById(cfg.contentId).innerHTML = renderReportHTML(agg, title, wks);
+}
+
+// ─────────────────────────────────────────
+// HISTÓRICO
+// ─────────────────────────────────────────
+function renderHistory() {
+  const list = document.getElementById('hist-list');
+  if (!list) return;
+  const all  = getAllWeekData();
+  const keys = Object.keys(all).sort().reverse();
+  if (!keys.length) {
+    list.innerHTML = `<div class="no-data"><span class="nd-icon">📋</span><span class="nd-txt">Nenhuma semana registada</span></div>`;
+    return;
+  }
+  list.innerHTML = '';
+  keys.forEach(wk => {
+    const d = all[wk];
+    let total = 0;
+    ALL_EXAMES.forEach(e => { total += +(d.exames?.[e]?.bu || 0) + +(d.exames?.[e]?.int || 0); });
+    const item = document.createElement('div');
+    item.className = 'hist-item';
+    item.innerHTML = `
+      <div>
+        <div class="hist-week">Semana ${weekNum(wk)} / ${weekYear(wk)}</div>
+        <div class="hist-range">${weekRange(wk)}</div>
+      </div>
+      <div class="hist-total">${total}&thinsp;exames</div>`;
+    item.addEventListener('click', () => navigateToWeek(wk));
+    list.appendChild(item);
+  });
+}
+
+// ─────────────────────────────────────────
+// NAVEGAÇÃO DE SECÇÕES
+// ─────────────────────────────────────────
+function showSection(id, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const sec = document.getElementById(id);
+  if (sec) sec.classList.add('active');
+  if (btn) btn.classList.add('active');
+  if (id === 'sec-historico') renderHistory();
+}
+
+// ─────────────────────────────────────────
+// EXPORTAR — PDF SEMANA ACTUAL
+// ─────────────────────────────────────────
+function exportWeekPDF() {
+  if (!window.jspdf?.jsPDF) { showToast('⚠️ jsPDF não disponível'); return; }
+  collectFromDOM();
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  const ML = 14, PW = 182;
+  let cy = 16;
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.text('SERVIÇO DE LABORATÓRIO — HOSPITAL DO PRENDA', ML, cy); cy += 6;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.text(`Semana ${weekNum(currentWeek)}/${weekYear(currentWeek)} · ${weekRange(currentWeek)}`, ML, cy); cy += 4;
+  doc.setDrawColor(200); doc.line(ML, cy, ML + PW, cy); cy += 5;
+
+  // Exam body
+  const rows = [];
+  EXAM_SECTIONS.forEach(sec => {
+    rows.push([{ content: sec.label.toUpperCase(), colSpan: 4,
+      styles: { fillColor: [240,253,244], textColor: [5,150,105], fontStyle: 'bold', fontSize: 7 }
+    }, '', '', '']);
+    let secBu = 0, secInt = 0;
+    sec.exames.forEach(e => {
+      const bu = +(cd.exames[e]?.bu || 0), int = +(cd.exames[e]?.int || 0);
+      secBu += bu; secInt += int;
+      rows.push([e, bu || '—', int || '—', bu + int || '—']);
+    });
+    rows.push([{ content: `Subtotal ${sec.label}`, styles: { fontStyle: 'italic', fillColor: [248,255,252] }},
+      secBu, secInt, secBu + secInt]);
+  });
+
+  let gBu = 0, gInt = 0;
+  ALL_EXAMES.forEach(e => { gBu += +(cd.exames[e]?.bu || 0); gInt += +(cd.exames[e]?.int || 0); });
+  rows.push([{ content: 'TOTAL GERAL', styles: { fontStyle: 'bold', fillColor: [220,252,231] }},
+    { content: gBu, styles: { fontStyle: 'bold', fillColor: [220,252,231] }},
+    { content: gInt, styles: { fontStyle: 'bold', fillColor: [220,252,231] }},
+    { content: gBu + gInt, styles: { fontStyle: 'bold', fillColor: [220,252,231] }}
+  ]);
+
+  doc.autoTable({
+    head: [['Exame', 'B. Urgência', 'Internamento', 'Total']],
+    body: rows, startY: cy, margin: { left: ML, right: ML },
+    styles: { fontSize: 7, cellPadding: 2 },
+    headStyles: { fillColor: [30,41,59], textColor: [148,163,184], fontStyle: 'bold' },
+    columnStyles: { 1: { halign: 'center' }, 2: { halign: 'center' }, 3: { halign: 'center' } }
+  });
+  cy = doc.lastAutoTable.finalY + 7;
+
+  // Positivos
+  const posRows = POSITIVOS.map(e => {
+    const bu = +(cd.positivos[e]?.bu || 0), int = +(cd.positivos[e]?.int || 0);
+    return [e, bu || '—', int || '—', bu + int || '—'];
+  });
+  const pBu  = POSITIVOS.reduce((s, e) => s + +(cd.positivos[e]?.bu  || 0), 0);
+  const pInt = POSITIVOS.reduce((s, e) => s + +(cd.positivos[e]?.int || 0), 0);
+  posRows.push([{ content: 'TOTAL POSITIVOS', styles: { fontStyle: 'bold' }}, pBu, pInt, pBu + pInt]);
+
+  doc.autoTable({
+    head: [['Exame Positivo', 'B. Urgência', 'Internamento', 'Total']],
+    body: posRows, startY: cy, margin: { left: ML, right: ML },
+    styles: { fontSize: 7, cellPadding: 2, textColor: [185,28,28] },
+    headStyles: { fillColor: [74,14,14], textColor: [252,165,165], fontStyle: 'bold' },
+    columnStyles: { 1: { halign: 'center' }, 2: { halign: 'center' }, 3: { halign: 'center' } }
+  });
+
+  doc.save(`Laboratorio_Sem${weekNum(currentWeek)}_${weekYear(currentWeek)}.pdf`);
+  showToast('✅ PDF exportado com sucesso');
+}
+
+// ─────────────────────────────────────────
+// EXPORTAR — PDF PERÍODO (via relatório)
+// ─────────────────────────────────────────
+function exportReportPDF(type) {
+  if (!window.jspdf?.jsPDF) { showToast('⚠️ jsPDF não disponível'); return; }
+  const cfg = RPT_CFG[type];
+  if (!cfg) return;
+  const raw = cfg.inputFn();
+  if (!raw || raw.includes('undefined') || raw.endsWith('-')) {
+    showToast('⚠️ Preencha o período'); return;
+  }
+  const val   = cfg.valFn(raw);
+  const title = cfg.titleFn(val);
+  const wks   = weeksForPeriod(type, val);
+  const agg   = aggregateWeeks(wks);
+  if (!wks.length) { showToast('⚠️ Sem dados para o período'); return; }
+  buildPeriodPDF(agg, title, wks, type);
+}
+
+function exportFromExport(type) {
+  // Map export page inputs to report inputs before calling exportReportPDF
+  const m = document.getElementById('exp-month')?.value;
+  if (type === 'mensal' && m)    document.getElementById('men-month').value = m;
+  const ty = document.getElementById('exp-tri-year')?.value;
+  const tq = document.getElementById('exp-tri-q')?.value;
+  if (type === 'trimestral' && ty) {
+    document.getElementById('tri-year').value = ty;
+    document.getElementById('tri-q').value    = tq;
+  }
+  const ey = document.getElementById('exp-year')?.value;
+  if (type === 'anual' && ey) document.getElementById('anu-year').value = ey;
+  exportReportPDF(type);
+}
+
+function buildPeriodPDF(agg, title, wks, type) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  const ML = 14, PW = 182;
+  let cy = 16;
+
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(12);
+  doc.text('SERVIÇO DE LABORATÓRIO — HOSPITAL DO PRENDA', ML, cy); cy += 6;
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
+  doc.text(`Relatório ${title.toUpperCase()} · ${wks.length} semana(s) · ${weekRange(wks[0])} → ${weekRange(wks[wks.length-1])}`, ML, cy); cy += 4;
+  doc.setDrawColor(200); doc.line(ML, cy, ML + PW, cy); cy += 5;
+
+  // Summary row
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
+  doc.text(`Total Exames: ${agg.grandTot}   B. Urgência: ${agg.grandBu}   Internamento: ${agg.grandInt}   Positivos: ${agg.posTot}`, ML, cy); cy += 6;
+
+  // Main exam table
+  const rows = [];
+  EXAM_SECTIONS.forEach(sec => {
+    rows.push([{ content: sec.label.toUpperCase(), colSpan: 4,
+      styles: { fillColor: [240,253,244], textColor: [5,150,105], fontStyle: 'bold', fontSize: 7 }
+    }, '', '', '']);
+    let secBu = 0, secInt = 0;
+    sec.exames.forEach(e => {
+      const bu = agg.exames[e]?.bu || 0, int = agg.exames[e]?.int || 0;
+      secBu += bu; secInt += int;
+      if (bu + int > 0) rows.push([e, bu, int, bu + int]);
+    });
+    rows.push([{ content: `Subtotal ${sec.label}`, styles: { fontStyle: 'italic', fillColor: [248,255,252] }},
+      secBu, secInt, secBu + secInt]);
+  });
+  rows.push([{ content: 'TOTAL GERAL', styles: { fontStyle: 'bold', fillColor: [220,252,231] }},
+    { content: agg.grandBu, styles: { fontStyle: 'bold', fillColor: [220,252,231] }},
+    { content: agg.grandInt, styles: { fontStyle: 'bold', fillColor: [220,252,231] }},
+    { content: agg.grandTot, styles: { fontStyle: 'bold', fillColor: [220,252,231] }}]);
+
+  doc.autoTable({
+    head: [['Exame', 'B. Urgência', 'Internamento', 'Total']],
+    body: rows, startY: cy, margin: { left: ML, right: ML },
+    styles: { fontSize: 7, cellPadding: 2 },
+    headStyles: { fillColor: [30,41,59], textColor: [148,163,184], fontStyle: 'bold' },
+    columnStyles: { 1: { halign: 'center' }, 2: { halign: 'center' }, 3: { halign: 'center' } }
+  });
+  cy = doc.lastAutoTable.finalY + 7;
+
+  // Positivos table
+  const posRows = POSITIVOS.map(e => {
+    const bu = agg.positivos[e]?.bu || 0, int = agg.positivos[e]?.int || 0;
+    return bu + int > 0 ? [e, bu, int, bu + int] : null;
+  }).filter(Boolean);
+  posRows.push([{ content: 'TOTAL POSITIVOS', styles: { fontStyle: 'bold' }}, agg.posBu, agg.posInt, agg.posTot]);
+
+  if (cy > 240) { doc.addPage(); cy = 16; }
+  doc.autoTable({
+    head: [['Exame Positivo', 'B. Urgência', 'Internamento', 'Total']],
+    body: posRows, startY: cy, margin: { left: ML, right: ML },
+    styles: { fontSize: 7, cellPadding: 2, textColor: [185,28,28] },
+    headStyles: { fillColor: [74,14,14], textColor: [252,165,165], fontStyle: 'bold' },
+    columnStyles: { 1: { halign: 'center' }, 2: { halign: 'center' }, 3: { halign: 'center' } }
+  });
+  cy = doc.lastAutoTable.finalY + 7;
+
+  // Weekly breakdown
+  if (wks.length > 1) {
+    if (cy > 200) { doc.addPage(); cy = 16; }
+    const allWkData = getAllWeekData();
+    const detailRows = wks.map(wk => {
+      const d = allWkData[wk]; let bu = 0, int = 0, pos = 0;
+      if (d) {
+        ALL_EXAMES.forEach(e => { bu += +(d.exames?.[e]?.bu || 0); int += +(d.exames?.[e]?.int || 0); });
+        POSITIVOS.forEach(e  => { pos += +(d.positivos?.[e]?.bu || 0) + +(d.positivos?.[e]?.int || 0); });
+      }
+      return [`Sem. ${weekNum(wk)}`, weekRange(wk), bu, int, bu + int, pos];
+    });
+    doc.autoTable({
+      head: [['Semana', 'Período', 'B. Urgência', 'Internamento', 'Total', 'Positivos']],
+      body: detailRows, startY: cy, margin: { left: ML, right: ML },
+      styles: { fontSize: 6.5, cellPadding: 2 },
+      headStyles: { fillColor: [30,41,59], textColor: [148,163,184], fontStyle: 'bold' },
+      columnStyles: { 2: { halign:'center'}, 3:{halign:'center'}, 4:{halign:'center'}, 5:{halign:'center'} }
+    });
+  }
+
+  doc.save(`Laboratorio_${type}_${title.replace(/[^a-zA-Z0-9]/g,'_')}.pdf`);
+  showToast('✅ PDF exportado com sucesso');
+}
+
+// ─────────────────────────────────────────
+// TOAST
+// ─────────────────────────────────────────
+let _toastTimer = null;
+function showToast(msg, dur = 3200) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => t.classList.remove('show'), dur);
+}
+
+// ─────────────────────────────────────────
+// SPLASH
+// ─────────────────────────────────────────
+function runSplash(onDone) {
+  const arc  = document.getElementById('spl-arc');
+  const pct  = document.getElementById('spl-pct');
+  const circ = 2 * Math.PI * 42;
+  let p = 0;
+  const iv = setInterval(() => {
+    p += 2;
+    if (p > 100) {
+      clearInterval(iv);
+      document.getElementById('splash').classList.add('hidden');
+      onDone();
+      return;
+    }
+    arc.style.strokeDashoffset = circ - (circ * p / 100);
+    pct.textContent = p + '%';
+  }, 25);
+}
+
+// ─────────────────────────────────────────
+// INICIALIZAÇÃO
+// ─────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  const now   = new Date();
+  const yr    = now.getFullYear();
+  const month = `${yr}-${String(now.getMonth()+1).padStart(2,'0')}`;
+
+  // Pre-fill period inputs with sensible defaults
+  const el = id => document.getElementById(id);
+  if (el('men-month'))  el('men-month').value  = month;
+  if (el('tri-year'))   el('tri-year').value   = yr;
+  if (el('seme-year'))  el('seme-year').value  = yr;
+  if (el('anu-year'))   el('anu-year').value   = yr;
+  if (el('exp-month'))  el('exp-month').value  = month;
+  if (el('exp-tri-year')) el('exp-tri-year').value = yr;
+  if (el('exp-year'))   el('exp-year').value   = yr;
+
+  // Set current trimester
+  const curQ = Math.floor(now.getMonth() / 3) + 1;
+  if (el('tri-q'))    el('tri-q').value    = curQ;
+  if (el('exp-tri-q')) el('exp-tri-q').value = curQ;
+
+  // Set current semester
+  const curH = now.getMonth() < 6 ? 1 : 2;
+  if (el('seme-h')) el('seme-h').value = curH;
+
+  runSplash(() => {
+    // Load current week
+    const raw = localStorage.getItem(sk(currentWeek));
+    if (raw) {
+      try { cd = { ...newData(currentWeek), ...JSON.parse(raw) }; }
+      catch(e) { cd = newData(currentWeek); }
+    }
+    renderForm();
+  });
+});
+</script>
+</body>
+</html>
