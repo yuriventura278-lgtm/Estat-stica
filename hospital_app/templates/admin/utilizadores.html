@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% block titulo %}Gestão de Utilizadores — Hospital do Prenda{% endblock %}
+
+{% block conteudo %}
+<main style="max-width:900px;margin:32px auto;padding:0 20px;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
+    <div>
+      <h1 style="font-size:20px;font-weight:700;">👥 Gestão de Utilizadores</h1>
+      <p style="font-size:13px;color:var(--mut);margin-top:4px;">Criar, ver e desactivar acessos ao sistema</p>
+    </div>
+    <button class="btn btn-primary" onclick="abrirModal('modal-novo-user')">+ Novo Utilizador</button>
+  </div>
+
+  <div class="card" style="padding:0;overflow:hidden;">
+    <table>
+      <thead>
+        <tr>
+          <th>Nome Completo</th>
+          <th>Username</th>
+          <th>Cargo</th>
+          <th>Serviço</th>
+          <th>Criado</th>
+          <th>Acções</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in utilizadores %}
+        <tr tabindex="0">
+          <td style="font-weight:600;">{{ u.nome_completo }}</td>
+          <td style="font-family:var(--fm);font-size:12px;">{{ u.username }}</td>
+          <td>
+            <span class="badge {% if u.cargo == 'admin' %}badge-m{% else %}" style="background:rgba(5,150,105,0.1);color:#059669{% endif %}">
+              {{ u.cargo }}
+            </span>
+          </td>
+          <td>{{ u.servico }}</td>
+          <td style="font-family:var(--fm);font-size:11px;color:var(--mut);">{{ u.criado[:10] }}</td>
+          <td>
+            {% if u.username != 'admin' %}
+            <button class="btn btn-danger btn-sm"
+              onclick="desactivar({{ u.id }}, '{{ u.nome_completo }}')">Desactivar</button>
+            {% else %}
+            <span style="font-size:11px;color:var(--mut);">—</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" style="text-align:center;color:var(--mut);padding:24px;">Nenhum utilizador encontrado</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</main>
+
+<!-- Modal novo utilizador -->
+<div id="modal-novo-user" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span class="modal-title">Novo Utilizador</span>
+      <button class="modal-close" onclick="fecharModal('modal-novo-user')">✕</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="form-group" style="grid-column:1/-1;">
+        <label>Nome Completo *</label>
+        <input type="text" id="u-nome" placeholder="Nome e sobrenome">
+      </div>
+      <div class="form-group">
+        <label>Username *</label>
+        <input type="text" id="u-username" placeholder="ex: drsilva">
+      </div>
+      <div class="form-group">
+        <label>Senha inicial *</label>
+        <input type="password" id="u-senha" placeholder="Mínimo 6 caracteres">
+      </div>
+      <div class="form-group">
+        <label>Cargo</label>
+        <select id="u-cargo">
+          <option value="enfermeiro">Enfermeiro(a)</option>
+          <option value="medico">Médico(a)</option>
+          <option value="tecnico">Técnico(a)</option>
+          <option value="admin">Administrador</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Serviço</label>
+        <select id="u-servico">
+          <option value="geral">Geral (todos)</option>
+          <option value="cirurgia">Cirurgia Geral</option>
+          <option value="laboratorio">Laboratório</option>
+          <option value="hiv">VIH / SIDA</option>
+          <option value="hemoterapia">Hemoterapia</option>
+          <option value="imagiologia">Imagiologia</option>
+          <option value="consulta">Consulta Externa</option>
+          <option value="bloco">Bloco Operatório</option>
+          <option value="fisioterapia">Fisioterapia</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="fecharModal('modal-novo-user')">Cancelar</button>
+      <button class="btn btn-primary" onclick="criarUtilizador()">💾 Criar Utilizador</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function criarUtilizador() {
+  var dados = {
+    nome_completo: document.getElementById('u-nome').value.trim(),
+    username:      document.getElementById('u-username').value.trim(),
+    senha:         document.getElementById('u-senha').value,
+    cargo:         document.getElementById('u-cargo').value,
+    servico:       document.getElementById('u-servico').value,
+  };
+  if(!dados.nome_completo) { toast('Campo obrigatório: Nome','err'); return; }
+  if(!dados.username)      { toast('Campo obrigatório: Username','err'); return; }
+  if(dados.senha.length < 6){ toast('Senha deve ter pelo menos 6 caracteres','err'); return; }
+
+  var r = await api('POST', '/api/admin/utilizadores', dados);
+  if(r) {
+    toast('Utilizador criado com sucesso','save');
+    fecharModal('modal-novo-user');
+    setTimeout(function(){ location.reload(); }, 800);
+  }
+}
+
+async function desactivar(uid, nome) {
+  if(!confirm('Desactivar o utilizador "' + nome + '"? Não poderá mais entrar no sistema.')) return;
+  var r = await api('DELETE', '/api/admin/utilizadores/' + uid);
+  if(r) {
+    toast('Utilizador desactivado','del');
+    setTimeout(function(){ location.reload(); }, 800);
+  }
+}
+</script>
+{% endblock %}

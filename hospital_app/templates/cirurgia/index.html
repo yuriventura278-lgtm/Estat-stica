@@ -1,0 +1,608 @@
+{% extends "base.html" %}
+{% block titulo %}Cirurgia Geral — Hospital do Prenda{% endblock %}
+
+{% block conteudo %}
+<div style="display:flex;min-height:calc(100vh - 64px);">
+
+  <!-- ─── BARRA LATERAL ─────────────────────────────────────── -->
+  <aside style="width:220px;background:var(--s1);border-right:1px solid var(--bd);
+    padding:16px 12px;display:flex;flex-direction:column;gap:4px;flex-shrink:0;">
+
+    <div style="font-size:10px;font-weight:700;color:var(--mut);text-transform:uppercase;
+      letter-spacing:1px;padding:8px 8px 4px;">Cirurgia Geral</div>
+
+    <button class="nav-btn active" onclick="mostrarTab('home')">🏠 Início</button>
+    <button class="nav-btn" onclick="mostrarTab('doentes')">🛏️ Internados</button>
+    <button class="nav-btn" onclick="mostrarTab('altas')">📤 Altas</button>
+    <button class="nav-btn" onclick="mostrarTab('obitos')">📋 Óbitos</button>
+    <button class="nav-btn" onclick="mostrarTab('camas')">🛏️ Camas</button>
+
+    <div style="margin-top:auto;padding-top:16px;border-top:1px solid var(--bd);">
+      <button class="btn btn-outline btn-sm" style="width:100%;justify-content:center;"
+        onclick="exportarDados()">📥 Exportar JSON</button>
+    </div>
+  </aside>
+
+  <!-- ─── CONTEÚDO PRINCIPAL ────────────────────────────────── -->
+  <main style="flex:1;padding:24px;overflow-y:auto;">
+
+    <!-- Barra de data -->
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+      <label style="font-size:12px;font-weight:600;color:var(--mut);">Data:</label>
+      <input type="date" id="data-sel" value="{{ data }}"
+        style="padding:7px 12px;border:1px solid var(--bd);border-radius:8px;
+          font-family:var(--fh);font-size:13px;"
+        onchange="mudarData(this.value)">
+      <span id="resumo-dia" style="font-size:12px;color:var(--mut);margin-left:8px;"></span>
+    </div>
+
+    <!-- ── TAB: INÍCIO ────────────────────────────────────────── -->
+    <div id="tab-home" class="tab-pane">
+      <h2 style="font-size:17px;font-weight:700;margin-bottom:16px;">🔪 Cirurgia Geral</h2>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:24px;">
+        <div class="card" style="text-align:center;padding:16px;">
+          <div style="font-size:28px;font-family:var(--fm);font-weight:700;color:var(--acc);" id="stat-internados">—</div>
+          <div style="font-size:11px;color:var(--mut);margin-top:4px;">Internados</div>
+        </div>
+        <div class="card" style="text-align:center;padding:16px;">
+          <div style="font-size:28px;font-family:var(--fm);font-weight:700;color:var(--grn);" id="stat-altas">—</div>
+          <div style="font-size:11px;color:var(--mut);margin-top:4px;">Altas (mês)</div>
+        </div>
+        <div class="card" style="text-align:center;padding:16px;">
+          <div style="font-size:28px;font-family:var(--fm);font-weight:700;color:var(--red);" id="stat-obitos">—</div>
+          <div style="font-size:11px;color:var(--mut);margin-top:4px;">Óbitos (mês)</div>
+        </div>
+        <div class="card" style="text-align:center;padding:16px;">
+          <div style="font-size:28px;font-family:var(--fm);font-weight:700;color:var(--amb);" id="stat-camas">—</div>
+          <div style="font-size:11px;color:var(--mut);margin-top:4px;">Camas</div>
+        </div>
+        <div class="card" style="text-align:center;padding:16px;">
+          <div style="font-size:28px;font-family:var(--fm);font-weight:700;color:var(--pur);" id="stat-mortalidade">—%</div>
+          <div style="font-size:11px;color:var(--mut);margin-top:4px;">Mortalidade</div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="abrirModalDoente()">+ Registar Doente</button>
+        <button class="btn btn-outline" onclick="mostrarTab('doentes')">Ver Internados</button>
+      </div>
+    </div>
+
+    <!-- ── TAB: INTERNADOS ────────────────────────────────────── -->
+    <div id="tab-doentes" class="tab-pane" style="display:none;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <h2 style="font-size:17px;font-weight:700;">🛏️ Doentes Internados</h2>
+        <button class="btn btn-primary btn-sm" onclick="abrirModalDoente()">+ Novo Doente</button>
+      </div>
+
+      <div class="card" style="padding:0;overflow:hidden;">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Nome</th>
+              <th>Sexo</th>
+              <th>NUP</th>
+              <th>Idade</th>
+              <th>Diagnóstico</th>
+              <th>Entrada</th>
+              <th>Acções</th>
+            </tr>
+          </thead>
+          <tbody id="tabela-doentes">
+            <tr><td colspan="8" style="text-align:center;color:var(--mut);padding:24px;">A carregar...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── TAB: ALTAS ─────────────────────────────────────────── -->
+    <div id="tab-altas" class="tab-pane" style="display:none;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <h2 style="font-size:17px;font-weight:700;">📤 Altas</h2>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <table>
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>Sexo</th>
+              <th>Diag. Final</th>
+              <th>Entrada</th>
+              <th>Alta</th>
+              <th>Modo</th>
+              <th>Acções</th>
+            </tr>
+          </thead>
+          <tbody id="tabela-altas">
+            <tr><td colspan="7" style="text-align:center;color:var(--mut);padding:24px;">A carregar...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── TAB: ÓBITOS ────────────────────────────────────────── -->
+    <div id="tab-obitos" class="tab-pane" style="display:none;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <h2 style="font-size:17px;font-weight:700;">📋 Óbitos</h2>
+        <button class="btn btn-primary btn-sm" onclick="abrirModalObito()">+ Registar Óbito</button>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <table>
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>Sexo</th>
+              <th>Diag. Final</th>
+              <th>Entrada</th>
+              <th>Data Óbito</th>
+              <th>Acções</th>
+            </tr>
+          </thead>
+          <tbody id="tabela-obitos">
+            <tr><td colspan="6" style="text-align:center;color:var(--mut);padding:24px;">A carregar...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── TAB: CAMAS ─────────────────────────────────────────── -->
+    <div id="tab-camas" class="tab-pane" style="display:none;">
+      <h2 style="font-size:17px;font-weight:700;margin-bottom:16px;">🛏️ Lotação de Camas</h2>
+      <div class="card" style="max-width:300px;">
+        <div class="form-group">
+          <label>Número de camas para <span id="camas-data-label"></span></label>
+          <input type="number" id="input-camas" min="0" placeholder="Ex: 30">
+        </div>
+        <button class="btn btn-primary" data-acao="guardar" onclick="guardarCamas()">💾 Guardar Camas</button>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ─── MODAL: REGISTAR DOENTE ───────────────────────────── -->
+<div id="modal-doente" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span class="modal-title">Registar Doente</span>
+      <button class="modal-close" onclick="fecharModal('modal-doente')">✕</button>
+    </div>
+
+    <input type="hidden" id="doente-id">
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="form-group" style="grid-column:1/-1;">
+        <label>Nome completo *</label>
+        <input type="text" id="d-nome" placeholder="Nome do doente">
+      </div>
+      <div class="form-group">
+        <label>Sexo *</label>
+        <select id="d-sexo">
+          <option value="">— Seleccionar —</option>
+          <option value="M">Masculino</option>
+          <option value="F">Feminino</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>NUP *</label>
+        <input type="text" id="d-nup" placeholder="Número Único do Paciente">
+      </div>
+      <div class="form-group">
+        <label>Idade</label>
+        <input type="number" id="d-idade" min="0" max="150" placeholder="Anos">
+      </div>
+      <div class="form-group">
+        <label>Data de Entrada</label>
+        <input type="date" id="d-entrada">
+      </div>
+      <div class="form-group" style="grid-column:1/-1;">
+        <label>Diagnóstico</label>
+        <input type="text" id="d-diag" placeholder="Diagnóstico à entrada">
+      </div>
+      <div class="form-group" style="grid-column:1/-1;">
+        <label>Hospital</label>
+        <select id="d-hospital">
+          {% for h in hospitais %}
+          <option value="{{ h }}">{{ h }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="fecharModal('modal-doente')">Cancelar</button>
+      <button class="btn btn-primary" data-acao="guardar" onclick="guardarDoente()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── MODAL: REGISTAR ALTA ─────────────────────────────── -->
+<div id="modal-alta" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span class="modal-title">Registar Alta</span>
+      <button class="modal-close" onclick="fecharModal('modal-alta')">✕</button>
+    </div>
+
+    <input type="hidden" id="alta-doente-id">
+    <p id="alta-doente-nome" style="font-weight:600;margin-bottom:16px;color:var(--acc);"></p>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="form-group" style="grid-column:1/-1;">
+        <label>Diagnóstico Final *</label>
+        <input type="text" id="a-diag-fim" placeholder="Diagnóstico definitivo">
+      </div>
+      <div class="form-group">
+        <label>Data da Alta *</label>
+        <input type="date" id="a-data-saida">
+      </div>
+      <div class="form-group">
+        <label>Modo de Saída *</label>
+        <select id="a-modo">
+          <option value="">— Seleccionar —</option>
+          <option value="curado">Curado</option>
+          <option value="melhorado">Melhorado</option>
+          <option value="transferido_servico">Transferido (Serviço)</option>
+          <option value="transferido_hospital">Transferido (Hospital)</option>
+          <option value="a_pedido">A Pedido</option>
+          <option value="outro">Outro</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="fecharModal('modal-alta')">Cancelar</button>
+      <button class="btn btn-primary" data-acao="guardar" onclick="guardarAlta()">💾 Registar Alta</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── MODAL: REGISTAR ÓBITO ────────────────────────────── -->
+<div id="modal-obito" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span class="modal-title">Registar Óbito</span>
+      <button class="modal-close" onclick="fecharModal('modal-obito')">✕</button>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="form-group" style="grid-column:1/-1;">
+        <label>Nome completo *</label>
+        <input type="text" id="o-nome" placeholder="Nome do doente">
+      </div>
+      <div class="form-group">
+        <label>Sexo</label>
+        <select id="o-sexo">
+          <option value="">—</option>
+          <option value="M">Masculino</option>
+          <option value="F">Feminino</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>NUP</label>
+        <input type="text" id="o-nup" placeholder="Número Único">
+      </div>
+      <div class="form-group">
+        <label>Idade</label>
+        <input type="number" id="o-idade" min="0">
+      </div>
+      <div class="form-group">
+        <label>Data de Entrada</label>
+        <input type="date" id="o-entrada">
+      </div>
+      <div class="form-group" style="grid-column:1/-1;">
+        <label>Diagnóstico Final *</label>
+        <input type="text" id="o-diag-fim" placeholder="Causa do óbito">
+      </div>
+      <div class="form-group">
+        <label>Data do Óbito *</label>
+        <input type="date" id="o-data">
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="fecharModal('modal-obito')">Cancelar</button>
+      <button class="btn btn-primary" data-acao="guardar" onclick="guardarObito()">💾 Registar Óbito</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block estilos %}
+<style>
+.nav-btn{width:100%;text-align:left;padding:9px 12px;border:none;border-radius:8px;
+  font-family:var(--fh);font-size:13px;font-weight:500;cursor:pointer;
+  background:transparent;color:var(--txt);transition:all .15s;}
+.nav-btn:hover{background:rgba(26,86,219,0.06);color:var(--acc);}
+.nav-btn.active{background:rgba(26,86,219,0.1);color:var(--acc);font-weight:700;}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* ─── Estado da página ────────────────────────────────────── */
+var dataActual = '{{ data }}';
+
+/* ─── Navegação entre abas ───────────────────────────────── */
+function mostrarTab(nome) {
+  // Esconde todas as abas
+  document.querySelectorAll('.tab-pane').forEach(function(el){
+    el.style.display = 'none';
+  });
+  // Mostra a aba pedida
+  document.getElementById('tab-' + nome).style.display = 'block';
+
+  // Actualiza botão activo na barra lateral
+  document.querySelectorAll('.nav-btn').forEach(function(btn){
+    btn.classList.remove('active');
+  });
+  event.target.classList.add('active');
+
+  // Carrega dados da aba
+  if(nome === 'home')      carregarEstatisticas();
+  if(nome === 'doentes')   carregarDoentes();
+  if(nome === 'altas')     carregarAltas();
+  if(nome === 'obitos')    carregarObitos();
+  if(nome === 'camas')     carregarCamas();
+}
+
+function mudarData(novaData) {
+  dataActual = novaData;
+  document.getElementById('camas-data-label').textContent = novaData;
+  carregarEstatisticas();
+  carregarDoentes();
+}
+
+/* ─── Carregar dados da API Python ───────────────────────── */
+async function carregarEstatisticas() {
+  var primeiroDiaMes = dataActual.substring(0,7) + '-01';
+  var r = await api('GET', '/api/cirurgia/estatisticas?data=' + dataActual + '&inicio=' + primeiroDiaMes + '&fim=' + dataActual);
+  if(!r) return;
+  var d = r.dados;
+  document.getElementById('stat-internados').textContent  = d.internados;
+  document.getElementById('stat-altas').textContent       = d.altas;
+  document.getElementById('stat-obitos').textContent      = d.obitos;
+  document.getElementById('stat-camas').textContent       = d.camas;
+  document.getElementById('stat-mortalidade').textContent = d.taxa_mortalidade + '%';
+  document.getElementById('resumo-dia').textContent       =
+    d.internados + ' internados · ' + d.altas + ' altas · ' + d.obitos + ' óbitos';
+}
+
+async function carregarDoentes() {
+  var r = await api('GET', '/api/cirurgia/doentes?data=' + dataActual);
+  if(!r) return;
+  var tbody = document.getElementById('tabela-doentes');
+
+  if(!r.dados || !r.dados.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--mut);padding:24px;">Sem doentes internados nesta data</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = r.dados.map(function(d){
+    return '<tr tabindex="0">' +
+      '<td><code style="font-family:var(--fm);font-size:11px;">' + d.id + '</code></td>' +
+      '<td style="font-weight:600;">' + esc(d.nome) + '</td>' +
+      '<td><span class="badge badge-' + (d.sexo||'').toLowerCase() + '">' + (d.sexo||'—') + '</span></td>' +
+      '<td style="font-family:var(--fm);font-size:12px;">' + esc(d.nup||'—') + '</td>' +
+      '<td>' + (d.idade||'—') + '</td>' +
+      '<td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(d.diagnostico||'—') + '</td>' +
+      '<td style="font-family:var(--fm);font-size:12px;">' + (d.data_entrada||'—') + '</td>' +
+      '<td style="white-space:nowrap;">' +
+        '<button class="btn btn-outline btn-sm" onclick="abrirModalAlta(\'' + d.id + '\',\'' + esc(d.nome) + '\')">Alta</button> ' +
+        '<button class="btn btn-danger btn-sm" onclick="eliminarDoente(\'' + d.id + '\')">✕</button>' +
+      '</td>' +
+    '</tr>';
+  }).join('');
+}
+
+async function carregarAltas() {
+  var r = await api('GET', '/api/cirurgia/altas');
+  if(!r) return;
+  var tbody = document.getElementById('tabela-altas');
+
+  if(!r.dados || !r.dados.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--mut);padding:24px;">Sem altas registadas</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = r.dados.map(function(a){
+    return '<tr tabindex="0">' +
+      '<td style="font-weight:600;">' + esc(a.nome) + '</td>' +
+      '<td><span class="badge badge-' + (a.sexo||'').toLowerCase() + '">' + (a.sexo||'—') + '</span></td>' +
+      '<td>' + esc(a.diag_fim||'—') + '</td>' +
+      '<td style="font-family:var(--fm);font-size:12px;">' + (a.data_entrada||'—') + '</td>' +
+      '<td style="font-family:var(--fm);font-size:12px;">' + (a.data_saida||'—') + '</td>' +
+      '<td>' + esc(a.modo_saida||'—') + '</td>' +
+      '<td><button class="btn btn-danger btn-sm" onclick="eliminarAlta(\'' + a.id + '\')">✕</button></td>' +
+    '</tr>';
+  }).join('');
+}
+
+async function carregarObitos() {
+  var r = await api('GET', '/api/cirurgia/obitos');
+  if(!r) return;
+  var tbody = document.getElementById('tabela-obitos');
+
+  if(!r.dados || !r.dados.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--mut);padding:24px;">Sem óbitos registados</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = r.dados.map(function(o){
+    return '<tr tabindex="0">' +
+      '<td style="font-weight:600;">' + esc(o.nome) + '</td>' +
+      '<td><span class="badge badge-' + (o.sexo||'').toLowerCase() + '">' + (o.sexo||'—') + '</span></td>' +
+      '<td>' + esc(o.diag_fim||'—') + '</td>' +
+      '<td style="font-family:var(--fm);font-size:12px;">' + (o.data_entrada||'—') + '</td>' +
+      '<td style="font-family:var(--fm);font-size:12px;">' + (o.data_obito||'—') + '</td>' +
+      '<td><button class="btn btn-danger btn-sm" onclick="eliminarObito(\'' + o.id + '\')">✕</button></td>' +
+    '</tr>';
+  }).join('');
+}
+
+async function carregarCamas() {
+  document.getElementById('camas-data-label').textContent = dataActual;
+  var r = await api('GET', '/api/cirurgia/camas?data=' + dataActual);
+  if(r) document.getElementById('input-camas').value = r.dados.camas || '';
+}
+
+/* ─── Acções CRUD ────────────────────────────────────────── */
+function abrirModalDoente(id) {
+  document.getElementById('doente-id').value = id || '';
+  ['d-nome','d-nup','d-diag'].forEach(function(f){ document.getElementById(f).value = ''; });
+  document.getElementById('d-sexo').value = '';
+  document.getElementById('d-idade').value = '';
+  document.getElementById('d-entrada').value = dataActual;
+  abrirModal('modal-doente');
+}
+
+async function guardarDoente() {
+  var id = document.getElementById('doente-id').value;
+  var dados = {
+    nome:        document.getElementById('d-nome').value.trim(),
+    sexo:        document.getElementById('d-sexo').value,
+    nup:         document.getElementById('d-nup').value.trim(),
+    idade:       parseInt(document.getElementById('d-idade').value) || null,
+    diagnostico: document.getElementById('d-diag').value.trim(),
+    data_entrada: document.getElementById('d-entrada').value || dataActual,
+    hospital:    document.getElementById('d-hospital').value,
+  };
+
+  var r;
+  if(id) {
+    r = await api('PUT', '/api/cirurgia/doentes/' + id, dados);
+    if(r) { toast('Doente actualizado com sucesso', 'edit'); }
+  } else {
+    r = await api('POST', '/api/cirurgia/doentes', dados);
+    if(r) { toast('Doente registado com sucesso', 'save'); }
+  }
+
+  if(r) {
+    fecharModal('modal-doente');
+    carregarDoentes();
+    carregarEstatisticas();
+  }
+}
+
+async function eliminarDoente(id) {
+  if(!confirm('Confirma a eliminação deste doente?')) return;
+  var r = await api('DELETE', '/api/cirurgia/doentes/' + id);
+  if(r) {
+    toast('Doente eliminado', 'del');
+    carregarDoentes();
+    carregarEstatisticas();
+  }
+}
+
+function abrirModalAlta(doenteId, nomeDoente) {
+  document.getElementById('alta-doente-id').value = doenteId;
+  document.getElementById('alta-doente-nome').textContent = nomeDoente;
+  document.getElementById('a-diag-fim').value = '';
+  document.getElementById('a-data-saida').value = dataActual;
+  document.getElementById('a-modo').value = '';
+  abrirModal('modal-alta');
+}
+
+async function guardarAlta() {
+  var dados = {
+    doente_id: document.getElementById('alta-doente-id').value,
+    diag_fim:  document.getElementById('a-diag-fim').value.trim(),
+    data_saida: document.getElementById('a-data-saida').value,
+    modo_saida: document.getElementById('a-modo').value,
+  };
+  var r = await api('POST', '/api/cirurgia/altas', dados);
+  if(r) {
+    toast('Alta registada com sucesso', 'save');
+    fecharModal('modal-alta');
+    carregarDoentes();
+    carregarAltas();
+    carregarEstatisticas();
+  }
+}
+
+async function eliminarAlta(id) {
+  if(!confirm('Eliminar este registo de alta?')) return;
+  var r = await api('DELETE', '/api/cirurgia/altas/' + id);
+  if(r) { toast('Alta eliminada', 'del'); carregarAltas(); }
+}
+
+function abrirModalObito() {
+  ['o-nome','o-nup','o-diag-fim'].forEach(function(f){ document.getElementById(f).value = ''; });
+  document.getElementById('o-sexo').value = '';
+  document.getElementById('o-idade').value = '';
+  document.getElementById('o-entrada').value = '';
+  document.getElementById('o-data').value = dataActual;
+  abrirModal('modal-obito');
+}
+
+async function guardarObito() {
+  var dados = {
+    nome:        document.getElementById('o-nome').value.trim(),
+    sexo:        document.getElementById('o-sexo').value,
+    nup:         document.getElementById('o-nup').value.trim(),
+    idade:       parseInt(document.getElementById('o-idade').value) || null,
+    diag_fim:    document.getElementById('o-diag-fim').value.trim(),
+    data_entrada: document.getElementById('o-entrada').value,
+    data_obito:  document.getElementById('o-data').value,
+  };
+  var r = await api('POST', '/api/cirurgia/obitos', dados);
+  if(r) {
+    toast('Óbito registado com sucesso', 'save');
+    fecharModal('modal-obito');
+    carregarObitos();
+    carregarEstatisticas();
+  }
+}
+
+async function eliminarObito(id) {
+  if(!confirm('Eliminar este registo de óbito?')) return;
+  var r = await api('DELETE', '/api/cirurgia/obitos/' + id);
+  if(r) { toast('Óbito eliminado', 'del'); carregarObitos(); }
+}
+
+async function guardarCamas() {
+  var dados = {
+    data:  dataActual,
+    camas: parseInt(document.getElementById('input-camas').value) || 0,
+  };
+  var r = await api('POST', '/api/cirurgia/camas', dados);
+  if(r) toast('Lotação de camas guardada', 'save');
+}
+
+async function exportarDados() {
+  toast('A preparar exportação...', 'info');
+  window.location.href = '/api/cirurgia/exportar';
+}
+
+/* ─── Utilitários modais ─────────────────────────────────── */
+function abrirModal(id) {
+  document.getElementById(id).classList.add('open');
+}
+function fecharModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+/* Fechar modal ao clicar fora */
+document.querySelectorAll('.modal-overlay').forEach(function(el){
+  el.addEventListener('click', function(e){
+    if(e.target === el) fecharModal(el.id);
+  });
+});
+
+/* ─── Escapar HTML para evitar XSS ──────────────────────── */
+function esc(s) {
+  return String(s||'')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ─── Inicializar a página ───────────────────────────────── */
+document.addEventListener('DOMContentLoaded', function(){
+  document.getElementById('camas-data-label').textContent = dataActual;
+  carregarEstatisticas();
+  carregarDoentes();
+});
+</script>
+{% endblock %}

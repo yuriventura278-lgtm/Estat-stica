@@ -1,0 +1,1205 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Movimento Hospitalar — Hospital do Prenda</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#f0f4f8;--s1:#fff;--s2:#f8fafc;--bd:#dde3ec;--txt:#1a2332;--mut:#64748b;
+  --acc:#0f4c81;--acc2:#1e6bbf;--grn:#047857;--red:#be123c;--amb:#b45309;
+  --pur:#6d28d9;--teal:#0f766e;--sw:240px;--hh:58px;
+  --r:10px;--r2:6px;--sh:0 2px 12px rgba(0,0,0,.07);
+  --fh:'IBM Plex Sans',sans-serif;--fm:'IBM Plex Mono',monospace
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:var(--fh);background:var(--bg);color:var(--txt)}
+
+header{position:fixed;top:0;left:0;right:0;height:var(--hh);background:linear-gradient(135deg,#0a2c52,#0f4c81);display:flex;align-items:center;padding:0 18px;gap:13px;z-index:1000;box-shadow:0 3px 16px rgba(0,0,0,.3)}
+.h-logo{flex-shrink:0}
+.h-ti{color:#fff;font-weight:700;font-size:.98rem;line-height:1.2}
+.h-su{color:rgba(255,255,255,.55);font-size:.68rem}
+.h-sp{flex:1}
+.h-btn{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:#fff;padding:6px 13px;border-radius:7px;cursor:pointer;font-size:.78rem;font-family:var(--fh);font-weight:500;transition:.2s}
+.h-btn:hover{background:rgba(255,255,255,.22)}
+.h-sel{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:#fff;padding:6px 9px;border-radius:7px;font-size:.8rem;font-family:var(--fh);cursor:pointer}
+.h-sel option{background:#1e3a5f;color:#fff}
+
+.sidebar{position:fixed;top:var(--hh);left:0;bottom:0;width:var(--sw);background:var(--s1);border-right:1px solid var(--bd);display:flex;flex-direction:column;z-index:100;overflow-y:auto}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 18px;cursor:pointer;font-size:.855rem;color:var(--mut);transition:.2s;border-left:3px solid transparent}
+.nav-item:hover{background:#f0f4f8;color:var(--txt)}
+.nav-item.active{background:#e8f0fb;color:var(--acc);border-left-color:var(--acc2);font-weight:600}
+.nav-ico{font-size:1rem;min-width:20px;text-align:center}
+.nav-sep{height:1px;background:var(--bd);margin:4px 14px}
+.nav-lbl{padding:7px 18px 3px;font-size:.63rem;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.08em}
+.svc-item{display:flex;align-items:center;gap:9px;padding:8px 14px 8px 36px;cursor:pointer;font-size:.8rem;color:var(--mut);transition:.15s;border-left:3px solid transparent;position:relative}
+.svc-item:hover{background:#f0f4f8;color:var(--acc)}
+.svc-item.active{background:#e8f0fb;color:var(--acc);border-left-color:var(--acc2);font-weight:600}
+.svc-dot{width:7px;height:7px;border-radius:50%;background:var(--bd);flex-shrink:0;transition:.2s}
+.svc-item.active .svc-dot{background:var(--acc2)}
+.svc-leitos{font-size:.65rem;color:var(--mut);margin-left:auto;background:#f0f4f8;padding:1px 5px;border-radius:4px}
+.svc-item.active .svc-leitos{background:#c7d9f5;color:var(--acc)}
+.sb-info{padding:12px 16px;font-size:.73rem;color:var(--mut);border-top:1px solid var(--bd);margin-top:auto}
+.sb-info strong{color:var(--txt)}
+
+.main{margin-left:var(--sw);margin-top:var(--hh);padding:22px;min-height:calc(100vh - var(--hh));padding-bottom:40px}
+.tab-sec{display:none}.tab-sec.active{display:block}
+.pg-title{font-size:1.3rem;font-weight:700;margin-bottom:3px;color:var(--txt)}
+.pg-sub{color:var(--mut);font-size:.83rem;margin-bottom:18px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+
+.card{background:var(--s1);border-radius:var(--r);border:1px solid var(--bd);padding:18px;box-shadow:var(--sh)}
+.card-title{font-size:.8rem;font-weight:700;color:var(--txt);margin-bottom:12px;display:flex;align-items:center;gap:8px;text-transform:uppercase;letter-spacing:.04em}
+
+.kpi-strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(138px,1fr));gap:11px;margin-bottom:18px}
+.kpi{background:var(--s1);border-radius:var(--r);border:1px solid var(--bd);padding:13px 15px;box-shadow:var(--sh)}
+.kpi-val{font-size:1.75rem;font-weight:700;line-height:1;margin-bottom:3px}
+.kpi-lbl{font-size:.67rem;color:var(--mut);text-transform:uppercase;letter-spacing:.05em}
+.kpi-sub{font-size:.68rem;color:var(--mut);margin-top:2px}
+
+.svc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:13px;margin-bottom:18px}
+.svc-card{background:var(--s1);border-radius:var(--r);border:1px solid var(--bd);padding:15px;box-shadow:var(--sh);cursor:pointer;transition:.2s;position:relative;overflow:hidden}
+.svc-card:hover{border-color:var(--acc2);box-shadow:0 4px 16px rgba(15,76,129,.12)}
+.svc-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--acc2)}
+.svc-card-name{font-weight:600;font-size:.86rem;margin-bottom:4px}
+.svc-card-andar{font-size:.71rem;color:var(--mut);margin-bottom:9px}
+.svc-card-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:3px}
+.sc-stat{text-align:center}.sc-val{font-size:1rem;font-weight:700}.sc-lbl{font-size:.58rem;color:var(--mut);text-transform:uppercase}
+
+.entry-wrap{background:var(--s1);border-radius:var(--r);border:1px solid var(--bd);box-shadow:var(--sh);overflow:hidden}
+.entry-hdr{background:linear-gradient(135deg,#0a2c52,#0f4c81);padding:15px 20px;display:flex;align-items:flex-start;gap:14px}
+.entry-hdr h2{color:#fff;font-size:1rem;font-weight:700}
+.entry-hdr .sub{color:rgba(255,255,255,.6);font-size:.76rem;margin-top:2px}
+.leitos-box{text-align:right;flex-shrink:0}
+.leitos-box .lbl{color:rgba(255,255,255,.7);font-size:.68rem;text-transform:uppercase;letter-spacing:.05em}
+.leitos-box .val{color:#fff;font-size:2rem;font-weight:700;line-height:1}
+
+.day-tbl-wrap{overflow-x:auto}
+table.day-tbl{width:100%;border-collapse:collapse;font-size:.81rem;min-width:750px}
+table.day-tbl thead th{background:#f0f4f8;padding:8px 9px;text-align:center;font-size:.67rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--mut);border-bottom:2px solid var(--bd);white-space:nowrap;position:sticky;top:0;z-index:1}
+table.day-tbl thead th:first-child{text-align:left;width:46px}
+table.day-tbl thead .th-grp{border-bottom:2px solid var(--bd)}
+table.day-tbl thead .th-obito{background:#fff0f0;color:#9b1c1c}
+table.day-tbl thead .th-calc{background:#f0f4f8;color:#94a3b8}
+table.day-tbl tbody tr{border-bottom:1px solid var(--bd)}
+table.day-tbl tbody tr:nth-child(even){background:#fafbfd}
+table.day-tbl tbody tr:hover{background:#f0f4f8}
+table.day-tbl tbody td{padding:4px 6px;vertical-align:middle;text-align:center}
+table.day-tbl tbody td:first-child{font-weight:600;font-size:.75rem;color:var(--mut);text-align:left;padding-left:13px}
+table.day-tbl tbody td.we{background:#fffbeb}
+.di{width:70px;border:1.5px solid var(--bd);border-radius:4px;padding:4px 6px;font-family:var(--fm);font-size:.8rem;color:var(--txt);text-align:center;background:var(--s2);transition:.15s}
+.di:focus{outline:none;border-color:var(--acc2);background:#fff;box-shadow:0 0 0 2px rgba(30,107,191,.12)}
+.di::-webkit-inner-spin-button{opacity:.4}
+.di.di-obit{border-color:#fecaca;background:#fff5f5}.di.di-obit:focus{border-color:#e11d48}
+.td-calc{font-family:var(--fm);font-size:.8rem;font-weight:600;min-width:60px}
+.tfoot-row td{padding:9px 10px;font-weight:700;font-size:.8rem;text-align:center;background:#e8f0fb;color:var(--acc);border-top:2px solid var(--acc2)}
+.tfoot-row td:first-child{text-align:left;padding-left:13px}
+
+.stats-bar{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:9px;padding:14px 16px;background:#f8fafc;border-top:1px solid var(--bd)}
+.sb-item{text-align:center}
+.sb-val{font-size:1.2rem;font-weight:700;color:var(--acc)}
+.sb-lbl{font-size:.62rem;color:var(--mut);text-transform:uppercase;letter-spacing:.04em;margin-top:2px}
+.sb-formula{font-size:.57rem;color:#adb5bd;font-family:var(--fm)}
+
+.mort-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;padding:12px 16px;background:#fff5f5;border-top:1px solid #fecaca}
+.mort-item{text-align:center}
+.mort-val{font-size:1.2rem;font-weight:700;color:#9b1c1c}
+.mort-lbl{font-size:.62rem;color:#9b1c1c;text-transform:uppercase;letter-spacing:.04em;margin-top:2px}
+.mort-formula{font-size:.57rem;color:#fca5a5;font-family:var(--fm)}
+
+.summ-tbl-wrap{overflow-x:auto;border-radius:var(--r2);border:1px solid var(--bd)}
+table.summ-tbl{width:100%;border-collapse:collapse;font-size:.79rem;min-width:900px}
+table.summ-tbl thead tr:first-child th{background:#0a2c52;color:#fff;padding:9px 10px;font-size:.69rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;text-align:center}
+table.summ-tbl thead tr:first-child th:first-child{text-align:left}
+table.summ-tbl thead tr:last-child th{background:#0f4c81;color:rgba(255,255,255,.88);padding:6px 10px;font-size:.67rem;font-weight:500;white-space:nowrap;text-align:center}
+table.summ-tbl thead .th-mort{background:#7f1d1d;color:rgba(255,255,255,.9)}
+table.summ-tbl tbody td{padding:8px 10px;border-bottom:1px solid var(--bd);text-align:center;font-family:var(--fm);font-size:.79rem}
+table.summ-tbl tbody td:first-child{text-align:left;font-family:var(--fh);font-weight:600;font-size:.8rem;padding-left:14px}
+table.summ-tbl tbody tr:nth-child(even){background:#f8fafc}
+table.summ-tbl tbody tr:hover{background:#e8f0fb}
+table.summ-tbl tbody tr.total-row td{background:#e8f0fb;font-weight:700;color:var(--acc);border-top:2px solid var(--acc2)}
+table.summ-tbl tbody tr.total-row td:first-child{color:var(--acc)}
+.ocup-cell{border-radius:4px;padding:2px 7px;font-weight:700;display:inline-block;font-size:.77rem}
+.ocup-hi{background:#fee2e2;color:#9b1c1c}.ocup-med{background:#fef3c7;color:#78350f}
+.ocup-ok{background:#d1fae5;color:#064e3b}.ocup-lo{background:#f0f4f8;color:var(--mut)}
+.mort-cell{border-radius:4px;padding:2px 7px;font-weight:700;display:inline-block;font-size:.77rem}
+.mort-hi{background:#fee2e2;color:#9b1c1c}.mort-lo{background:#f0fdf4;color:#065f46}.mort-zero{background:#f0f4f8;color:var(--mut)}
+
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px}
+.chart-card{background:var(--s1);border-radius:var(--r);border:1px solid var(--bd);padding:16px;box-shadow:var(--sh)}
+.chart-t{font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--txt);margin-bottom:12px}
+canvas{max-height:260px}
+.chart-full{grid-column:1/-1}
+
+.btn{padding:8px 18px;border-radius:7px;border:none;cursor:pointer;font-family:var(--fh);font-size:.85rem;font-weight:600;transition:.2s}
+.btn-pri{background:var(--acc);color:#fff}.btn-pri:hover{background:#0a2c52}
+.btn-sec{background:var(--s2);border:1.5px solid var(--bd);color:var(--txt)}.btn-sec:hover{background:var(--bd)}
+.btn-grn{background:var(--grn);color:#fff}.btn-grn:hover{background:#065f46}
+.btn-sm{padding:6px 13px;font-size:.78rem}
+
+.badge{border-radius:4px;padding:2px 7px;font-size:.7rem;font-weight:600}
+.badge-ok{background:#d1fae5;color:#065f46}.badge-warn{background:#fef3c7;color:#78350f}.badge-hi{background:#fee2e2;color:#9b1c1c}
+
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);background:#1e293b;color:#fff;padding:10px 22px;border-radius:8px;font-size:.875rem;transition:.3s;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.3);pointer-events:none}
+.toast.show{transform:translateX(-50%) translateY(0)}.toast.ok{background:var(--grn)}.toast.err{background:var(--red)}
+
+.modal-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;align-items:center;justify-content:center}
+.modal-ov.open{display:flex}
+.modal-box{background:var(--s1);border-radius:var(--r);max-width:460px;width:92%;box-shadow:0 20px 60px rgba(0,0,0,.3);padding:24px}
+.modal-box h3{font-size:1rem;margin-bottom:12px}
+.mbns{display:flex;gap:10px;justify-content:flex-end;margin-top:16px}
+.mbn{padding:8px 18px;border-radius:7px;border:none;cursor:pointer;font-family:var(--fh);font-weight:600;font-size:.84rem}
+
+.form-g{display:flex;flex-direction:column;gap:5px;margin-bottom:11px}
+.form-lbl{font-size:.77rem;font-weight:600}
+input[type=number],input[type=text],select.inp{border:1.5px solid var(--bd);border-radius:var(--r2);padding:7px 10px;font-family:var(--fh);font-size:.875rem;color:var(--txt);background:var(--s2);transition:.2s;width:100%}
+input:focus,select.inp:focus{outline:none;border-color:var(--acc2);background:#fff;box-shadow:0 0 0 2px rgba(30,107,191,.12)}
+
+.flex-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.empty{text-align:center;padding:50px 20px;color:var(--mut)}
+.info-box{background:#e8f0fb;border-left:4px solid var(--acc2);border-radius:5px;padding:10px 13px;font-size:.8rem;color:#0a2c52;margin-bottom:13px}
+.warn-box{background:#fef3c7;border-left:4px solid var(--amb);border-radius:5px;padding:10px 13px;font-size:.8rem;color:#78350f;margin-bottom:13px}
+
+@media(max-width:768px){:root{--sw:0px}.chart-grid{grid-template-columns:1fr}.svc-grid{grid-template-columns:1fr}.main{margin-left:0}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="h-logo">
+    <svg width="38" height="38" viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="38" height="38" rx="9" fill="white"/>
+      <rect x="15" y="4" width="8" height="30" rx="3" fill="#0f4c81"/>
+      <rect x="4" y="15" width="30" height="8" rx="3" fill="#0f4c81"/>
+    </svg>
+  </div>
+  <div>
+    <div class="h-ti">Movimento Hospitalar</div>
+    <div class="h-su">Hospital do Prenda · Luanda · Angola</div>
+  </div>
+  <div class="h-sp"></div>
+  <select class="h-sel" id="hdr-month" onchange="onMonthChange()"></select>
+  <button class="h-btn" onclick="openCfgModal()">⚙️ Serviços</button>
+  <button class="h-btn" onclick="openBackup()">💾 Backup</button>
+</header>
+
+<nav class="sidebar" id="sidebar">
+  <div class="nav-item active" onclick="showTab('home')" id="nb-home"><span class="nav-ico">🏠</span>Início</div>
+  <div class="nav-sep"></div>
+  <div class="nav-lbl">Internamento</div>
+  <div id="svc-nav-items"></div>
+  <div class="nav-sep"></div>
+  <div class="nav-item" onclick="showTab('resumo')" id="nb-resumo"><span class="nav-ico">📊</span>Resumo do Mês</div>
+  <div class="nav-item" onclick="showTab('comp')" id="nb-comp"><span class="nav-ico">📈</span>Comparação</div>
+  <div class="nav-sep"></div>
+  <div class="nav-item" onclick="showTab('relat')" id="nb-relat"><span class="nav-ico">🖨️</span>Relatórios / PDF</div>
+  <div class="sb-info" id="sb-info">A carregar…</div>
+</nav>
+
+<main class="main">
+
+<!-- HOME -->
+<div class="tab-sec active" id="tab-home">
+  <div class="pg-title">Movimento Hospitalar</div>
+  <div class="pg-sub"><span id="home-period-lbl">—</span><span style="color:var(--bd)">|</span>Hospital do Prenda</div>
+  <div class="kpi-strip" id="kpi-strip"></div>
+  <div class="svc-grid" id="svc-grid"></div>
+  <div class="chart-grid">
+    <div class="chart-card"><div class="chart-t">📊 Taxa de Ocupação por Serviço (%)</div><canvas id="ch-ocup"></canvas></div>
+    <div class="chart-card"><div class="chart-t">📥 Entradas vs Saídas por Serviço</div><canvas id="ch-esai"></canvas></div>
+    <div class="chart-card chart-full"><div class="chart-t">📅 Evolução Diária — Doentes Existentes</div><canvas id="ch-dias" style="max-height:220px"></canvas></div>
+  </div>
+</div>
+
+<!-- ENTRY -->
+<div class="tab-sec" id="tab-entry">
+  <div class="pg-title" id="entry-title">Entrada de Dados</div>
+  <div class="pg-sub">Preencha dia a dia. Saídas Total e Saldo são calculados automaticamente.</div>
+  <div class="entry-wrap">
+    <div class="entry-hdr">
+      <div style="flex:1">
+        <h2 id="entry-svc-name">—</h2>
+        <div class="sub" id="entry-svc-andar"></div>
+      </div>
+      <div class="leitos-box">
+        <div class="lbl">Leitos (este mês)</div>
+        <div class="val" id="entry-leitos">—</div>
+        <button class="h-btn" onclick="openEditLeitos()" style="margin-top:5px;font-size:.7rem;padding:4px 9px">✏️ Editar</button>
+      </div>
+    </div>
+    <div class="day-tbl-wrap">
+      <table class="day-tbl">
+        <thead>
+          <tr>
+            <th rowspan="2" style="text-align:left">Dia</th>
+            <th rowspan="2">Existentes<br><small style="font-weight:400;color:#94a3b8">(Censo)</small></th>
+            <th rowspan="2">Entradas</th>
+            <th colspan="2" style="background:#f0f6ff;color:#1e40af;border-bottom:1px solid var(--bd)">Altas</th>
+            <th colspan="2" style="background:#fff0f0;color:#9b1c1c;border-bottom:1px solid #fecaca">Óbitos</th>
+            <th rowspan="2" class="th-calc">Saídas<br>Total</th>
+            <th rowspan="2" class="th-calc">Saldo</th>
+          </tr>
+          <tr>
+            <th style="background:#f0f6ff;color:#1e40af;font-size:.63rem">Altas</th>
+            <th style="background:#f0f6ff;color:#1e40af;font-size:.63rem">Transf.<br>Saídas</th>
+            <th class="th-obito" style="font-size:.63rem">Óbitos<br>&lt;48h</th>
+            <th class="th-obito" style="font-size:.63rem">Óbitos<br>≥48h</th>
+          </tr>
+        </thead>
+        <tbody id="day-tbody"></tbody>
+        <tfoot>
+          <tr class="tfoot-row">
+            <td>TOTAL</td>
+            <td id="tf-ocup">—</td>
+            <td id="tf-ent">—</td>
+            <td id="tf-altas">—</td>
+            <td id="tf-transf">—</td>
+            <td id="tf-obit_l">—</td>
+            <td id="tf-obit_t">—</td>
+            <td id="tf-sai">—</td>
+            <td id="tf-sal">—</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+    <div class="stats-bar" id="stats-bar"></div>
+    <div class="mort-strip" id="mort-strip"></div>
+  </div>
+</div>
+
+<!-- RESUMO -->
+<div class="tab-sec" id="tab-resumo">
+  <div class="pg-title">Resumo do Mês</div>
+  <div class="pg-sub">
+    <span id="resumo-period">—</span>
+    <button class="btn btn-pri btn-sm" onclick="exportResumoPDF()">📄 PDF Resumo</button>
+    <button class="btn btn-sec btn-sm" onclick="exportCSV()">📥 CSV</button>
+  </div>
+  <div class="card" style="padding:0;margin-bottom:14px">
+    <div class="summ-tbl-wrap">
+      <table class="summ-tbl">
+        <thead>
+          <tr>
+            <th rowspan="2" style="text-align:left;min-width:170px">Serviço</th>
+            <th colspan="3">Capacidade</th>
+            <th colspan="5">Movimento</th>
+            <th colspan="4">Indicadores</th>
+            <th colspan="3" class="th-mort">Mortalidade</th>
+          </tr>
+          <tr>
+            <th>Leitos</th><th>DC</th><th>Dias Dtes</th>
+            <th>Entradas</th><th>Altas</th><th>Transf.</th><th>Óbitos</th><th>Saídas</th>
+            <th>Taxa Ocup.%</th><th>T.M.P.</th><th>Rotativ.</th><th>Interv.Sub.</th>
+            <th class="th-mort">TMB%</th><th class="th-mort">TML%</th><th class="th-mort">Nº Óbitos</th>
+          </tr>
+        </thead>
+        <tbody id="summ-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="info-box" style="font-size:.77rem">
+    <strong>DC</strong>=Leitos×DiasDoMês &nbsp;|&nbsp; <strong>Taxa Ocup.</strong>=DD÷DC×100 &nbsp;|&nbsp; <strong>T.M.P.</strong>=DD÷Saídas &nbsp;|&nbsp;
+    <strong>Rotativ.</strong>=Saídas÷Leitos &nbsp;|&nbsp; <strong>Interv.Sub.</strong>=(DC−DD)÷Saídas &nbsp;|&nbsp;
+    <strong>TMB</strong>=Óbitos÷Saídas×100 &nbsp;|&nbsp; <strong>TML</strong>=Óbitos≥48h÷Saídas×100
+  </div>
+</div>
+
+<!-- COMPARAÇÃO -->
+<div class="tab-sec" id="tab-comp">
+  <div class="pg-title">Comparação entre Meses</div>
+  <div class="pg-sub">
+    Serviço:
+    <select class="inp" id="comp-svc" onchange="renderComp()" style="width:auto;font-size:.8rem;padding:4px 8px">
+      <option value="_all">🏥 Hospital (Total)</option>
+    </select>
+    Métrica:
+    <select class="inp" id="comp-metric" onchange="renderComp()" style="width:auto;font-size:.8rem;padding:4px 8px">
+      <option value="taxaOcup">Taxa de Ocupação (%)</option>
+      <option value="diasDoentes">Dias Doentes</option>
+      <option value="totalEnt">Total Entradas</option>
+      <option value="totalSai">Total Saídas</option>
+      <option value="totalObitos">Total Óbitos</option>
+      <option value="tmp">T.M.P. (dias)</option>
+      <option value="rotativ">Rotatividade</option>
+      <option value="tmb">TMB (%)</option>
+      <option value="tml">TML (%)</option>
+    </select>
+  </div>
+  <div class="chart-card" style="margin-bottom:16px">
+    <div class="chart-t">📈 Evolução Mensal</div>
+    <canvas id="ch-comp" style="max-height:280px"></canvas>
+  </div>
+  <div id="comp-table-wrap"></div>
+</div>
+
+<!-- RELATÓRIOS -->
+<div class="tab-sec" id="tab-relat">
+  <div class="pg-title">Relatórios e Exportação</div>
+  <div class="pg-sub">Gerar documentos PDF e exportar dados</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px">
+
+    <div class="card">
+      <div class="card-title">📄 Relatório Mensal Completo</div>
+      <p style="font-size:.81rem;color:var(--mut);margin-bottom:12px">Todos os serviços: tabela resumo com indicadores e mortalidade.</p>
+      <div class="form-g" style="margin-bottom:12px"><label class="form-lbl">Mês</label><select class="inp" id="rpt-month"></select></div>
+      <button class="btn btn-pri" onclick="exportFullPDF()">📄 Gerar PDF Completo</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📊 Relatório por Serviço</div>
+      <p style="font-size:.81rem;color:var(--mut);margin-bottom:12px">Dados diários detalhados de um serviço com indicadores.</p>
+      <div class="form-g" style="margin-bottom:7px"><label class="form-lbl">Mês</label><select class="inp" id="rpt-svc-month"></select></div>
+      <div class="form-g" style="margin-bottom:12px"><label class="form-lbl">Serviço</label><select class="inp" id="rpt-svc-id"></select></div>
+      <button class="btn btn-pri" onclick="exportSvcPDF()">📄 Gerar PDF Serviço</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📥 Exportar CSV</div>
+      <p style="font-size:.81rem;color:var(--mut);margin-bottom:12px">Dados do mês em formato CSV com todos os campos.</p>
+      <div class="form-g" style="margin-bottom:12px"><label class="form-lbl">Mês</label><select class="inp" id="rpt-csv-month"></select></div>
+      <button class="btn btn-grn" onclick="exportCSVModal()">📥 Exportar CSV</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">💾 Backup / Restauro</div>
+      <p style="font-size:.81rem;color:var(--mut);margin-bottom:12px">Exportar para JSON. Restauro com <strong>Mesclar</strong> mantém dados mais recentes.</p>
+      <div class="flex-row">
+        <button class="btn btn-grn btn-sm" onclick="openBackup()">⬇️ Backup</button>
+        <button class="btn btn-sec btn-sm" onclick="document.getElementById('imp-file').click()">⬆️ Importar</button>
+        <input type="file" id="imp-file" accept=".json" style="display:none" onchange="importBackup(event)">
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🗑️ Gestão de Dados</div>
+      <p style="font-size:.81rem;color:var(--mut);margin-bottom:12px">Apagar dados de um mês específico.</p>
+      <div class="form-g" style="margin-bottom:10px"><label class="form-lbl">Mês</label><select class="inp" id="rpt-del-month"></select></div>
+      <button class="btn btn-sm" style="background:#fee2e2;color:#9b1c1c;border:none;cursor:pointer;border-radius:7px;font-weight:600;padding:7px 14px" onclick="delMonthData()">🗑️ Apagar Mês</button>
+    </div>
+
+  </div>
+</div>
+
+</main>
+
+<!-- Modal: Leitos -->
+<div class="modal-ov" id="leitos-modal">
+  <div class="modal-box">
+    <h3>✏️ Editar Leitos — Este Mês</h3>
+    <div class="warn-box" style="margin-bottom:12px;font-size:.8rem">Esta alteração afecta <strong>apenas o mês seleccionado</strong>. Os outros meses não são alterados.</div>
+    <div class="form-g"><label class="form-lbl">Serviço</label><input type="text" id="leitos-svc-name" disabled style="background:#f1f5f9"></div>
+    <div class="form-g"><label class="form-lbl">Mês</label><input type="text" id="leitos-month-lbl" disabled style="background:#f1f5f9"></div>
+    <div class="form-g"><label class="form-lbl">Número de Leitos (camas reais)</label><input type="number" id="leitos-val" min="1" max="500"></div>
+    <div class="mbns">
+      <button class="mbn" style="background:var(--bd)" onclick="document.getElementById('leitos-modal').classList.remove('open')">Cancelar</button>
+      <button class="mbn" style="background:var(--acc);color:#fff" onclick="saveLeitos()">Gravar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Config services -->
+<div class="modal-ov" id="cfg-modal">
+  <div class="modal-box" style="max-width:560px">
+    <h3>⚙️ Configuração dos Serviços</h3>
+    <div class="info-box" style="margin-bottom:10px;font-size:.79rem">Os leitos aqui definidos são usados como <strong>valor padrão para novos meses</strong>. Para alterar um mês específico, use o botão "Editar" na entrada de dados.</div>
+    <div id="cfg-svc-list"></div>
+    <div class="mbns">
+      <button class="mbn" style="background:var(--bd)" onclick="document.getElementById('cfg-modal').classList.remove('open')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Backup merge -->
+<div class="modal-ov" id="bk-modal">
+  <div class="modal-box">
+    <h3>💾 Importar Backup</h3>
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:11px;margin-bottom:9px;font-size:.82rem;color:#166534">
+      <strong>↑ Mesclar</strong> — Mantém os dados mais recentes de cada mês/serviço.
+    </div>
+    <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:11px;font-size:.82rem;color:#991b1b">
+      <strong>⚠️ Substituir</strong> — Apaga todos os dados locais e substitui pelo backup.
+    </div>
+    <div class="mbns">
+      <button class="mbn" style="background:var(--bd)" onclick="document.getElementById('bk-modal').classList.remove('open')">Cancelar</button>
+      <button class="mbn" style="background:var(--grn);color:#fff" id="merge-btn">↑ Mesclar</button>
+      <button class="mbn" style="background:var(--red);color:#fff" id="replace-btn">Substituir</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ══ CONSTANTS ══
+const MESES_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const DATA_VERSION = 2;
+
+const DEFAULT_SVCS = [
+  {id:'cir_geral',   nome:'Cirurgia Geral',              andar:'2º Andar', leitos:40},
+  {id:'maxilo_urol', nome:'Maxilo-Facial e Urologia',    andar:'1º Andar', leitos:62},
+  {id:'med_int',     nome:'Medicina Interna',             andar:'',         leitos:57},
+  {id:'nefro',       nome:'Nefrologia',                   andar:'3º Andar', leitos:21},
+  {id:'neurocir',    nome:'Neurocirurgia',                andar:'',         leitos:31},
+  {id:'ortopedia',   nome:'Ortopedia',                    andar:'',         leitos:95},
+  {id:'uci',         nome:'UCI (Cuidados Intensivos)',    andar:'2º Andar', leitos:19},
+];
+
+const SVCS_KEY = 'mov_hp_svcs';
+const DATA_PFX = 'mov_hp_';
+
+// ══ STATE ══
+let SVCS = [];
+let _curYM = null;
+let _curSvcIdx = 0;
+let _charts = {};
+let _pendingImport = null;
+let _entryData = null;
+
+// ══ UTILS ══
+function daysInMonth(y,m){return new Date(y,m,0).getDate();}
+function ymLabel(ym){const y=parseInt(ym.slice(0,4)),m=parseInt(ym.slice(4,6));return MESES_PT[m-1]+' '+y;}
+function ymKey(ym){return DATA_PFX+ym;}
+function today(){const d=new Date();return ''+d.getFullYear()+String(d.getMonth()+1).padStart(2,'0');}
+function isWeekend(y,m,d){const day=new Date(y,m-1,d).getDay();return day===0||day===6;}
+function showToast(msg,type=''){const t=document.getElementById('toast');t.textContent=msg;t.className='toast '+(type||'');t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3200);}
+function fmt1(n){return isFinite(n)&&n!==null?n.toFixed(1):'—';}
+function fmt0(n){return isFinite(n)&&n!==null?Math.round(n):'—';}
+
+// ══ SVCS ══
+function loadSvcs(){
+  try{
+    const stored=JSON.parse(localStorage.getItem(SVCS_KEY)||'null');
+    if(stored&&Array.isArray(stored)){
+      const byId={};
+      stored.forEach(s=>byId[s.id]=s);
+      SVCS=DEFAULT_SVCS.map(def=>byId[def.id]?{...def,leitos:byId[def.id].leitos}:{...def});
+    } else {
+      SVCS=DEFAULT_SVCS.map(s=>({...s}));
+    }
+  } catch(e){SVCS=DEFAULT_SVCS.map(s=>({...s}));}
+}
+function saveSvcs(){localStorage.setItem(SVCS_KEY,JSON.stringify(SVCS));}
+
+// ══ DATA ══
+function migrateDay(d){
+  // v1 had {ocup,ent,sai} → v2 {ocup,ent,altas,transf,obit_l,obit_t}
+  if(d.sai!==undefined&&d.altas===undefined){
+    d.altas=d.sai||0; d.transf=0; d.obit_l=0; d.obit_t=0; delete d.sai;
+  }
+  return d;
+}
+
+function emptyDay(){return {ocup:0,ent:0,altas:0,transf:0,obit_l:0,obit_t:0};}
+
+function loadMonthData(ym){
+  try{
+    const raw=localStorage.getItem(ymKey(ym));
+    if(raw){
+      const data=JSON.parse(raw);
+      // Migrate if old version
+      SVCS.forEach(s=>{
+        if(data.svcs&&data.svcs[s.id]){
+          const sd=data.svcs[s.id];
+          if(!sd.dias)sd.dias={};
+          Object.keys(sd.dias).forEach(d=>sd.dias[d]=migrateDay(sd.dias[d]));
+        }
+      });
+      return data;
+    }
+  } catch(e){}
+  const data={ym,_v:DATA_VERSION,_ts:0,svcs:{}};
+  SVCS.forEach(s=>{data.svcs[s.id]={leitos:s.leitos,dias:{}}; });
+  return data;
+}
+
+function saveMonthData(ym,data){
+  data._ts=Date.now(); data._v=DATA_VERSION;
+  localStorage.setItem(ymKey(ym),JSON.stringify(data));
+  updateSidebar();
+}
+
+function getMonthData(ym){
+  const data=loadMonthData(ym);
+  SVCS.forEach(s=>{
+    if(!data.svcs[s.id]) data.svcs[s.id]={leitos:s.leitos,dias:{}};
+    else if(data.svcs[s.id].leitos===undefined) data.svcs[s.id].leitos=s.leitos;
+  });
+  return data;
+}
+
+function getAllYMs(){
+  const yms=[];
+  for(let i=0;i<localStorage.length;i++){
+    const k=localStorage.key(i);
+    if(k&&k.startsWith(DATA_PFX)){const ym=k.slice(DATA_PFX.length);if(/^\d{6}$/.test(ym))yms.push(ym);}
+  }
+  return yms.sort();
+}
+
+// ══ CALCULATIONS ══
+function calcSvcStats(svcData,diasMes){
+  const leitos=svcData.leitos||0;
+  let diasDoentes=0,totalEnt=0,totalAltas=0,totalTransf=0,totalObitL=0,totalObitT=0;
+  for(let d=1;d<=diasMes;d++){
+    const day=svcData.dias[d]||emptyDay();
+    diasDoentes+=Number(day.ocup)||0;
+    totalEnt   +=Number(day.ent)||0;
+    totalAltas +=Number(day.altas)||0;
+    totalTransf+=Number(day.transf)||0;
+    totalObitL +=Number(day.obit_l)||0;
+    totalObitT +=Number(day.obit_t)||0;
+  }
+  const totalObitos=totalObitL+totalObitT;
+  const totalSai=totalAltas+totalTransf+totalObitos;
+  const dc=leitos*diasMes;
+  const taxaOcup=dc>0?+(diasDoentes/dc*100).toFixed(1):0;
+  const tmp=totalSai>0?+(diasDoentes/totalSai).toFixed(1):0;
+  const rotativ=leitos>0?+(totalSai/leitos).toFixed(2):0;
+  const interv=totalSai>0?+((dc-diasDoentes)/totalSai).toFixed(1):0;
+  const tmb=totalSai>0?+(totalObitos/totalSai*100).toFixed(2):0;
+  const tml=totalSai>0?+(totalObitT/totalSai*100).toFixed(2):0;
+  return{leitos,dc,diasDoentes,totalEnt,totalAltas,totalTransf,totalObitL,totalObitT,totalObitos,totalSai,taxaOcup,tmp,rotativ,interv,tmb,tml};
+}
+
+function calcHospStats(monthData,ym){
+  const [y,m]=[parseInt(ym.slice(0,4)),parseInt(ym.slice(4,6))];
+  const diasMes=daysInMonth(y,m);
+  let totLeitos=0,totDC=0,totDD=0,totEnt=0,totAltas=0,totTransf=0,totObitL=0,totObitT=0,totSai=0;
+  const svcStats={};
+  SVCS.forEach(s=>{
+    const sd=monthData.svcs[s.id]||{leitos:s.leitos,dias:{}};
+    const st=calcSvcStats(sd,diasMes);
+    svcStats[s.id]=st;
+    totLeitos+=st.leitos; totDC+=st.dc; totDD+=st.diasDoentes;
+    totEnt+=st.totalEnt; totAltas+=st.totalAltas; totTransf+=st.totalTransf;
+    totObitL+=st.totalObitL; totObitT+=st.totalObitT; totSai+=st.totalSai;
+  });
+  const totObitos=totObitL+totObitT;
+  const taxaOcup=totDC>0?+(totDD/totDC*100).toFixed(1):0;
+  const tmp=totSai>0?+(totDD/totSai).toFixed(1):0;
+  const rotativ=totLeitos>0?+(totSai/totLeitos).toFixed(2):0;
+  const interv=totSai>0?+((totDC-totDD)/totSai).toFixed(1):0;
+  const tmb=totSai>0?+(totObitos/totSai*100).toFixed(2):0;
+  const tml=totSai>0?+(totObitT/totSai*100).toFixed(2):0;
+  return{totLeitos,totDC,totDD,totEnt,totAltas,totTransf,totObitL,totObitT,totObitos,totSai,taxaOcup,tmp,rotativ,interv,tmb,tml,svcStats,diasMes};
+}
+
+// ══ SELECTS + NAV ══
+function buildMonthSelects(){
+  const now=new Date();
+  const curYM=today();
+  const yms=[];
+  for(let i=-12;i<=1;i++){
+    const d=new Date(now.getFullYear(),now.getMonth()+i,1);
+    const ym=''+d.getFullYear()+String(d.getMonth()+1).padStart(2,'0');
+    yms.push(ym);
+  }
+  getAllYMs().forEach(ym=>{if(!yms.includes(ym))yms.push(ym);});
+  yms.sort((a,b)=>b.localeCompare(a));
+  ['hdr-month','rpt-month','rpt-svc-month','rpt-csv-month','rpt-del-month'].forEach(id=>{
+    const el=document.getElementById(id); if(!el)return;
+    el.innerHTML=yms.map(ym=>`<option value="${ym}"${ym===curYM?' selected':''}>${ymLabel(ym)}</option>`).join('');
+  });
+  const compSvc=document.getElementById('comp-svc');
+  if(compSvc) compSvc.innerHTML='<option value="_all">🏥 Hospital (Total)</option>'+SVCS.map(s=>`<option value="${s.id}">${s.nome}</option>`).join('');
+  const rptSvc=document.getElementById('rpt-svc-id');
+  if(rptSvc) rptSvc.innerHTML=SVCS.map(s=>`<option value="${s.id}">${s.nome}</option>`).join('');
+}
+
+function buildSvcNavItems(){
+  document.getElementById('svc-nav-items').innerHTML=SVCS.map((s,i)=>`
+    <div class="svc-item${i===_curSvcIdx?' active':''}" id="svc-ni-${i}" onclick="showSvc(${i})">
+      <span class="svc-dot"></span>
+      <span style="line-height:1.2">${s.nome}</span>
+      <span class="svc-leitos" id="svc-ni-leitos-${i}">${s.leitos}</span>
+    </div>`).join('');
+}
+
+function onMonthChange(){
+  _curYM=document.getElementById('hdr-month').value;
+  buildSvcNavItems();
+  renderAll();
+}
+
+// ══ NAV ══
+function showSvc(idx){
+  _curSvcIdx=idx;
+  showTab('entry');
+}
+
+function showTab(id){
+  document.querySelectorAll('.tab-sec').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.querySelectorAll('.svc-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  if(id==='entry'){
+    const ni=document.getElementById('svc-ni-'+_curSvcIdx);
+    if(ni)ni.classList.add('active');
+    renderEntry();
+  } else {
+    const nb=document.getElementById('nb-'+id);
+    if(nb)nb.classList.add('active');
+    if(id==='home')renderHome();
+    if(id==='resumo')renderResumo();
+    if(id==='comp')renderComp();
+  }
+}
+
+function updateSidebar(){
+  const monthData=getMonthData(_curYM);
+  const stats=calcHospStats(monthData,_curYM);
+  // Update leitos badges in sidebar
+  SVCS.forEach((s,i)=>{
+    const el=document.getElementById('svc-ni-leitos-'+i);
+    const sd=monthData.svcs[s.id];
+    if(el&&sd) el.textContent=sd.leitos;
+  });
+  document.getElementById('sb-info').innerHTML=
+    `<strong>${ymLabel(_curYM)}</strong><br>`+
+    `Ocup: <strong>${stats.taxaOcup}%</strong><br>`+
+    `ENT: <strong>${stats.totEnt}</strong> · SAI: <strong>${stats.totSai}</strong><br>`+
+    `Óbitos: <strong>${stats.totObitos}</strong> · TMB: <strong>${stats.tmb}%</strong>`;
+}
+
+// ══ HOME ══
+function destroyChart(id){if(_charts[id]){_charts[id].destroy();delete _charts[id];}}
+
+function renderHome(){
+  const ym=_curYM;
+  const monthData=getMonthData(ym);
+  const stats=calcHospStats(monthData,ym);
+  document.getElementById('home-period-lbl').textContent=ymLabel(ym);
+
+  const tmbClr=stats.tmb>5?'#9b1c1c':stats.tmb>2?'#78350f':'#065f46';
+  document.getElementById('kpi-strip').innerHTML=`
+    <div class="kpi"><div class="kpi-val" style="color:var(--acc)">${stats.totLeitos}</div><div class="kpi-lbl">Total Leitos</div></div>
+    <div class="kpi"><div class="kpi-val" style="color:var(--acc)">${stats.totDC}</div><div class="kpi-lbl">Dias Camas (DC)</div><div class="kpi-sub">${stats.totLeitos}×${stats.diasMes} dias</div></div>
+    <div class="kpi"><div class="kpi-val" style="color:var(--pur)">${stats.totDD}</div><div class="kpi-lbl">Dias Doentes</div></div>
+    <div class="kpi"><div class="kpi-val" style="color:${stats.taxaOcup>85?'#9b1c1c':stats.taxaOcup>70?'#78350f':'#065f46'}">${stats.taxaOcup}%</div><div class="kpi-lbl">Taxa de Ocupação</div></div>
+    <div class="kpi"><div class="kpi-val" style="color:var(--grn)">${stats.totEnt}</div><div class="kpi-lbl">Total Entradas</div></div>
+    <div class="kpi"><div class="kpi-val" style="color:var(--acc)">${stats.totAltas}</div><div class="kpi-lbl">Total Altas</div></div>
+    <div class="kpi"><div class="kpi-val" style="color:var(--amb)">${stats.totTransf}</div><div class="kpi-lbl">Transferências</div></div>
+    <div class="kpi"><div class="kpi-val" style="color:#9b1c1c">${stats.totObitos}</div><div class="kpi-lbl">Total Óbitos</div><div class="kpi-sub">&lt;48h: ${stats.totObitL} | ≥48h: ${stats.totObitT}</div></div>
+    <div class="kpi"><div class="kpi-val" style="color:var(--teal)">${stats.tmp}</div><div class="kpi-lbl">T.M.P. (dias)</div></div>
+    <div class="kpi"><div class="kpi-val" style="color:var(--pur)">${stats.rotativ}</div><div class="kpi-lbl">Rotatividade</div></div>
+    <div class="kpi"><div class="kpi-val" style="color:${tmbClr}">${stats.tmb}%</div><div class="kpi-lbl">Taxa Mort. Bruta</div><div class="kpi-sub">Óbitos÷Saídas×100</div></div>
+    <div class="kpi"><div class="kpi-val" style="color:${tmbClr}">${stats.tml}%</div><div class="kpi-lbl">Taxa Mort. Líquida</div><div class="kpi-sub">Óbitos≥48h÷Saídas×100</div></div>
+  `;
+
+  document.getElementById('svc-grid').innerHTML=SVCS.map(s=>{
+    const st=stats.svcStats[s.id]||{};
+    const tx=st.taxaOcup||0;
+    const cls=tx>=85?'#fee2e2':tx>=70?'#fef3c7':'#d1fae5';
+    const tc=tx>=85?'#9b1c1c':tx>=70?'#78350f':'#065f46';
+    return`<div class="svc-card" onclick="_curSvcIdx=${SVCS.indexOf(s)};showTab('entry')">
+      <div class="svc-card-name">${s.nome}</div>
+      <div class="svc-card-andar">${(stats.svcStats[s.id]&&monthData.svcs[s.id]?monthData.svcs[s.id].leitos:s.leitos)} leitos${s.andar?' · '+s.andar:''}</div>
+      <div class="svc-card-stats">
+        <div class="sc-stat"><div class="sc-val" style="color:${tc};background:${cls};border-radius:5px;padding:1px 5px">${tx}%</div><div class="sc-lbl">Ocup.</div></div>
+        <div class="sc-stat"><div class="sc-val" style="color:var(--grn)">${st.totalEnt||0}</div><div class="sc-lbl">Entr.</div></div>
+        <div class="sc-stat"><div class="sc-val" style="color:var(--acc)">${st.totalAltas||0}</div><div class="sc-lbl">Altas</div></div>
+        <div class="sc-stat"><div class="sc-val" style="color:#9b1c1c">${st.totalObitos||0}</div><div class="sc-lbl">Óbitos</div></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  destroyChart('ch-ocup');destroyChart('ch-esai');destroyChart('ch-dias');
+  const labels=SVCS.map(s=>s.nome.split(' ')[0]);
+  const ocupData=SVCS.map(s=>(stats.svcStats[s.id]||{}).taxaOcup||0);
+  const entData =SVCS.map(s=>(stats.svcStats[s.id]||{}).totalEnt||0);
+  const saiData =SVCS.map(s=>(stats.svcStats[s.id]||{}).totalSai||0);
+
+  _charts['ch-ocup']=new Chart(document.getElementById('ch-ocup'),{
+    type:'bar',
+    data:{labels,datasets:[{label:'Taxa Ocupação %',data:ocupData,backgroundColor:ocupData.map(v=>v>=85?'rgba(190,18,60,.7)':v>=70?'rgba(180,83,9,.7)':'rgba(4,120,87,.7)'),borderRadius:5}]},
+    options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,max:100,ticks:{callback:v=>v+'%'}}}}
+  });
+  _charts['ch-esai']=new Chart(document.getElementById('ch-esai'),{
+    type:'bar',
+    data:{labels,datasets:[{label:'Entradas',data:entData,backgroundColor:'rgba(30,107,191,.7)',borderRadius:3},{label:'Saídas',data:saiData,backgroundColor:'rgba(180,83,9,.7)',borderRadius:3}]},
+    options:{plugins:{legend:{position:'top'}},scales:{y:{beginAtZero:true}}}
+  });
+
+  const [y2,m2]=[parseInt(ym.slice(0,4)),parseInt(ym.slice(4,6))];
+  const diasMes=daysInMonth(y2,m2);
+  const dayLabels=Array.from({length:diasMes},(_,i)=>i+1);
+  const palette=['#0f4c81','#b45309','#047857','#6d28d9','#0f766e','#9b1c1c','#1e40af'];
+  const datasets=SVCS.map((s,i)=>{
+    const sd=monthData.svcs[s.id]||{dias:{}};
+    return{label:s.nome.split(' ')[0],data:dayLabels.map(d=>(sd.dias[d]||{}).ocup||0),borderColor:palette[i%palette.length],backgroundColor:'transparent',tension:.3,pointRadius:2,borderWidth:2};
+  });
+  _charts['ch-dias']=new Chart(document.getElementById('ch-dias'),{
+    type:'line',data:{labels:dayLabels,datasets},
+    options:{plugins:{legend:{position:'top'}},scales:{y:{beginAtZero:true}},interaction:{mode:'index',intersect:false}}
+  });
+}
+
+// ══ ENTRY ══
+function renderEntry(){
+  const svc=SVCS[_curSvcIdx];
+  if(!svc)return;
+  document.getElementById('entry-title').textContent='Entrada de Dados — '+ymLabel(_curYM);
+  document.getElementById('entry-svc-name').textContent=svc.nome;
+  document.getElementById('entry-svc-andar').textContent=svc.andar||'Serviço';
+
+  _entryData=getMonthData(_curYM);
+  const sd=_entryData.svcs[svc.id];
+  if(!sd)return;
+
+  // Use per-month stored leitos (NOT global SVCS default)
+  document.getElementById('entry-leitos').textContent=sd.leitos;
+
+  const [y,m]=[parseInt(_curYM.slice(0,4)),parseInt(_curYM.slice(4,6))];
+  const diasMes=daysInMonth(y,m);
+
+  let tbody='';
+  for(let d=1;d<=diasMes;d++){
+    const day=sd.dias[d]||emptyDay();
+    const we=isWeekend(y,m,d);
+    const weCls=we?' class="we"':'';
+    const sai=(Number(day.altas)||0)+(Number(day.transf)||0)+(Number(day.obit_l)||0)+(Number(day.obit_t)||0);
+    const saldo=(Number(day.ent)||0)-sai;
+    const sClr=saldo>0?'color:#047857':saldo<0?'color:#be123c':'color:var(--mut)';
+    tbody+=`<tr>
+      <td${weCls}>${we?'🟡':''}${String(d).padStart(2,'0')}</td>
+      <td${weCls}><input class="di" type="number" min="0" value="${day.ocup||0}" oninput="onDayInput(${d},'ocup',this.value)"></td>
+      <td${weCls}><input class="di" type="number" min="0" value="${day.ent||0}" oninput="onDayInput(${d},'ent',this.value)"></td>
+      <td${weCls}><input class="di" type="number" min="0" value="${day.altas||0}" oninput="onDayInput(${d},'altas',this.value)"></td>
+      <td${weCls}><input class="di" type="number" min="0" value="${day.transf||0}" oninput="onDayInput(${d},'transf',this.value)"></td>
+      <td${weCls}><input class="di di-obit" type="number" min="0" value="${day.obit_l||0}" oninput="onDayInput(${d},'obit_l',this.value)"></td>
+      <td${weCls}><input class="di di-obit" type="number" min="0" value="${day.obit_t||0}" oninput="onDayInput(${d},'obit_t',this.value)"></td>
+      <td class="td-calc" id="sai-${d}" style="color:var(--acc)">${sai}</td>
+      <td class="td-calc" id="saldo-${d}" style="${sClr}">${saldo>=0?'+':''}${saldo}</td>
+    </tr>`;
+  }
+  document.getElementById('day-tbody').innerHTML=tbody;
+  updateEntryTotals();
+}
+
+function onDayInput(dia,field,val){
+  const svc=SVCS[_curSvcIdx];
+  if(!_entryData||!svc)return;
+  const sd=_entryData.svcs[svc.id];
+  if(!sd.dias[dia])sd.dias[dia]=emptyDay();
+  sd.dias[dia][field]=Number(val)||0;
+  const d=sd.dias[dia];
+  const sai=(d.altas||0)+(d.transf||0)+(d.obit_l||0)+(d.obit_t||0);
+  const saldo=(d.ent||0)-sai;
+  const saiEl=document.getElementById('sai-'+dia);
+  const salEl=document.getElementById('saldo-'+dia);
+  if(saiEl)saiEl.textContent=sai;
+  if(salEl){salEl.textContent=(saldo>=0?'+':'')+saldo;salEl.style.color=saldo>0?'#047857':saldo<0?'#be123c':'var(--mut)';}
+  updateEntryTotals();
+  saveDayAuto();
+}
+
+let _saveTimer=null;
+function saveDayAuto(){
+  clearTimeout(_saveTimer);
+  _saveTimer=setTimeout(()=>{saveMonthData(_curYM,_entryData);},800);
+}
+
+function updateEntryTotals(){
+  const svc=SVCS[_curSvcIdx];
+  if(!_entryData||!svc)return;
+  const sd=_entryData.svcs[svc.id];
+  const [y,m]=[parseInt(_curYM.slice(0,4)),parseInt(_curYM.slice(4,6))];
+  const diasMes=daysInMonth(y,m);
+  const st=calcSvcStats(sd,diasMes);
+
+  document.getElementById('tf-ocup').textContent=st.diasDoentes;
+  document.getElementById('tf-ent').textContent=st.totalEnt;
+  document.getElementById('tf-altas').textContent=st.totalAltas;
+  document.getElementById('tf-transf').textContent=st.totalTransf;
+  document.getElementById('tf-obit_l').textContent=st.totalObitL;
+  document.getElementById('tf-obit_t').textContent=st.totalObitT;
+  document.getElementById('tf-sai').textContent=st.totalSai;
+  const totSaldo=st.totalEnt-st.totalSai;
+  const tfSal=document.getElementById('tf-sal');
+  tfSal.textContent=(totSaldo>=0?'+':'')+totSaldo;
+  tfSal.style.color=totSaldo>0?'#047857':totSaldo<0?'#be123c':'inherit';
+
+  const ocupBadge=st.taxaOcup>=85?'badge-hi':st.taxaOcup>=70?'badge-warn':'badge-ok';
+  document.getElementById('stats-bar').innerHTML=`
+    <div class="sb-item"><div class="sb-val">${st.dc}</div><div class="sb-lbl">DC (Dias Camas)</div><div class="sb-formula">${sd.leitos}×${diasMes}</div></div>
+    <div class="sb-item"><div class="sb-val">${st.diasDoentes}</div><div class="sb-lbl">Dias Doentes</div><div class="sb-formula">Σ Existentes Diário</div></div>
+    <div class="sb-item"><div class="sb-val"><span class="badge ${ocupBadge}">${st.taxaOcup}%</span></div><div class="sb-lbl">Taxa de Ocupação</div><div class="sb-formula">DD÷DC×100</div></div>
+    <div class="sb-item"><div class="sb-val">${st.totalSai}</div><div class="sb-lbl">Total Saídas</div><div class="sb-formula">Altas+Transf+Óbitos</div></div>
+    <div class="sb-item"><div class="sb-val">${st.tmp}</div><div class="sb-lbl">T.M.P. (dias)</div><div class="sb-formula">DD÷Saídas</div></div>
+    <div class="sb-item"><div class="sb-val">${st.rotativ}</div><div class="sb-lbl">Rotatividade</div><div class="sb-formula">Saídas÷Leitos</div></div>
+    <div class="sb-item"><div class="sb-val">${!isFinite(st.interv)||st.interv<0?'—':st.interv}</div><div class="sb-lbl">Interv. Sub.</div><div class="sb-formula">(DC−DD)÷Saídas</div></div>
+  `;
+  const tmbClr=st.tmb>5?'#9b1c1c':st.tmb>2?'#b45309':'#065f46';
+  document.getElementById('mort-strip').innerHTML=`
+    <div class="mort-item"><div class="mort-val">${st.totalObitos}</div><div class="mort-lbl">Total Óbitos</div><div class="mort-formula">&lt;48h: ${st.totalObitL} | ≥48h: ${st.totalObitT}</div></div>
+    <div class="mort-item"><div class="mort-val" style="color:${tmbClr}">${st.tmb}%</div><div class="mort-lbl">Taxa Mort. Bruta</div><div class="mort-formula">Óbitos÷Saídas×100</div></div>
+    <div class="mort-item"><div class="mort-val" style="color:${tmbClr}">${st.tml}%</div><div class="mort-lbl">Taxa Mort. Líquida</div><div class="mort-formula">Óbitos≥48h÷Saídas×100</div></div>
+  `;
+}
+
+function openEditLeitos(){
+  const svc=SVCS[_curSvcIdx]; if(!svc)return;
+  const sd=_entryData&&_entryData.svcs[svc.id];
+  document.getElementById('leitos-svc-name').value=svc.nome;
+  document.getElementById('leitos-month-lbl').value=ymLabel(_curYM);
+  document.getElementById('leitos-val').value=sd?sd.leitos:svc.leitos;
+  document.getElementById('leitos-modal').classList.add('open');
+}
+
+function saveLeitos(){
+  const val=Number(document.getElementById('leitos-val').value)||1;
+  const svc=SVCS[_curSvcIdx]; if(!svc)return;
+  // Save ONLY to this month's data, not to global SVCS
+  if(!_entryData)_entryData=getMonthData(_curYM);
+  if(!_entryData.svcs[svc.id])_entryData.svcs[svc.id]={leitos:val,dias:{}};
+  _entryData.svcs[svc.id].leitos=val;
+  saveMonthData(_curYM,_entryData);
+  document.getElementById('entry-leitos').textContent=val;
+  // Update sidebar badge for this service
+  const lEl=document.getElementById('svc-ni-leitos-'+_curSvcIdx);
+  if(lEl)lEl.textContent=val;
+  document.getElementById('leitos-modal').classList.remove('open');
+  updateEntryTotals();
+  showToast('✅ Leitos de '+ymLabel(_curYM)+' actualizados — outros meses não alterados','ok');
+}
+
+// ══ RESUMO ══
+function renderResumo(){
+  const ym=_curYM;
+  document.getElementById('resumo-period').textContent=ymLabel(ym);
+  const monthData=getMonthData(ym);
+  const stats=calcHospStats(monthData,ym);
+
+  let tbody=SVCS.map(s=>{
+    const st=stats.svcStats[s.id]||{};
+    const tx=st.taxaOcup||0;
+    const ocCls=tx>=85?'ocup-hi':tx>=70?'ocup-med':tx>0?'ocup-ok':'ocup-lo';
+    const tmb=st.tmb||0;
+    const mortCls=tmb>5?'mort-hi':tmb>0?'':' mort-zero';
+    return`<tr>
+      <td>${s.nome}${s.andar?` <small style="color:var(--mut)">(${s.andar})</small>`:''}</td>
+      <td>${monthData.svcs[s.id]?monthData.svcs[s.id].leitos:st.leitos||0}</td>
+      <td>${st.dc||0}</td><td style="font-weight:600">${st.diasDoentes||0}</td>
+      <td>${st.totalEnt||0}</td><td>${st.totalAltas||0}</td>
+      <td>${st.totalTransf||0}</td><td style="color:#9b1c1c;font-weight:600">${st.totalObitos||0}</td>
+      <td>${st.totalSai||0}</td>
+      <td><span class="ocup-cell ${ocCls}">${tx}%</span></td>
+      <td>${st.tmp||'—'}</td><td>${st.rotativ||'—'}</td>
+      <td>${!st.interv||!isFinite(st.interv)||st.interv<0?'—':st.interv}</td>
+      <td><span class="mort-cell${mortCls}" style="${tmb>5?'background:#fee2e2;color:#9b1c1c':tmb>0?'background:#fef3c7;color:#78350f':'background:#f0f4f8;color:var(--mut)'}">${st.tmb||0}%</span></td>
+      <td style="color:${(st.tml||0)>5?'#9b1c1c':'var(--txt)'};font-weight:600">${st.tml||0}%</td>
+      <td style="color:#9b1c1c;font-weight:600">${st.totalObitos||0}</td>
+    </tr>`;
+  }).join('');
+
+  const tx=stats.taxaOcup;
+  const totCls=tx>=85?'ocup-hi':tx>=70?'ocup-med':tx>0?'ocup-ok':'ocup-lo';
+  tbody+=`<tr class="total-row">
+    <td>🏥 TOTAL HOSPITAL</td>
+    <td>${stats.totLeitos}</td><td>${stats.totDC}</td><td>${stats.totDD}</td>
+    <td>${stats.totEnt}</td><td>${stats.totAltas}</td>
+    <td>${stats.totTransf}</td><td>${stats.totObitos}</td><td>${stats.totSai}</td>
+    <td><span class="ocup-cell ${totCls}">${tx}%</span></td>
+    <td>${stats.tmp}</td><td>${stats.rotativ}</td>
+    <td>${!stats.interv||!isFinite(stats.interv)||stats.interv<0?'—':stats.interv}</td>
+    <td>${stats.tmb}%</td><td>${stats.tml}%</td><td>${stats.totObitos}</td>
+  </tr>`;
+  document.getElementById('summ-tbody').innerHTML=tbody;
+}
+
+// ══ COMPARAÇÃO ══
+function renderComp(){
+  const svcId=document.getElementById('comp-svc').value;
+  const metric=document.getElementById('comp-metric').value;
+  const yms=getAllYMs().sort();
+  if(!yms.length){
+    document.getElementById('ch-comp').parentElement.innerHTML='<div class="empty"><h3>Sem dados históricos</h3><p>Preencha dados em vários meses.</p></div>';
+    document.getElementById('comp-table-wrap').innerHTML='';return;
+  }
+  const mLabels={taxaOcup:'Taxa Ocupação (%)',diasDoentes:'Dias Doentes',totalEnt:'Total Entradas',totalSai:'Total Saídas',totalObitos:'Total Óbitos',tmp:'T.M.P. (dias)',rotativ:'Rotatividade',tmb:'TMB (%)',tml:'TML (%)'};
+  const values=yms.map(ym=>{
+    const monthData=getMonthData(ym);
+    const stats=calcHospStats(monthData,ym);
+    if(svcId==='_all'){
+      return{taxaOcup:stats.taxaOcup,diasDoentes:stats.totDD,totalEnt:stats.totEnt,totalSai:stats.totSai,totalObitos:stats.totObitos,tmp:stats.tmp,rotativ:stats.rotativ,tmb:stats.tmb,tml:stats.tml}[metric]||0;
+    } else {
+      const st=stats.svcStats[svcId]||{};
+      return st[metric]||0;
+    }
+  });
+  destroyChart('ch-comp');
+  _charts['ch-comp']=new Chart(document.getElementById('ch-comp'),{
+    type:'bar',
+    data:{labels:yms.map(ymLabel),datasets:[{label:mLabels[metric]||metric,data:values,backgroundColor:values.map((_,i)=>i===yms.indexOf(_curYM)?'rgba(15,76,129,.85)':'rgba(30,107,191,.5)'),borderRadius:5}]},
+    options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{callback:v=>['taxaOcup','tmb','tml'].includes(metric)?v+'%':v}}}}
+  });
+  const tableRows=yms.map((ym,i)=>{
+    const v=values[i];const prev=i>0?values[i-1]:null;
+    let diff='';
+    if(prev!==null&&prev!==0){const d=((v-prev)/Math.abs(prev)*100).toFixed(1);diff=`<span style="font-size:.73rem;font-weight:600;color:${d>0?'#059669':'#dc2626'}">${d>0?'↑':'↓'} ${Math.abs(d)}%</span>`;}
+    return`<tr${ym===_curYM?' style="background:#e8f0fb;font-weight:600"':''}>
+      <td style="padding:8px 12px">${ymLabel(ym)}</td>
+      <td style="padding:8px 12px;text-align:center;font-family:var(--fm);font-weight:600">${v}${['taxaOcup','tmb','tml'].includes(metric)?'%':''}</td>
+      <td style="padding:8px 12px;text-align:center">${diff}</td>
+    </tr>`;
+  }).reverse().join('');
+  document.getElementById('comp-table-wrap').innerHTML=`
+    <div class="card" style="padding:0">
+      <table style="width:100%;border-collapse:collapse;font-size:.83rem">
+        <thead><tr>
+          <th style="background:#f0f4f8;padding:8px 12px;text-align:left;font-size:.7rem;font-weight:700;text-transform:uppercase;color:var(--mut);border-bottom:1px solid var(--bd)">Mês</th>
+          <th style="background:#f0f4f8;padding:8px 12px;text-align:center;font-size:.7rem;font-weight:700;text-transform:uppercase;color:var(--mut);border-bottom:1px solid var(--bd)">${mLabels[metric]||metric}</th>
+          <th style="background:#f0f4f8;padding:8px 12px;text-align:center;font-size:.7rem;font-weight:700;text-transform:uppercase;color:var(--mut);border-bottom:1px solid var(--bd)">Var. Mês Anterior</th>
+        </tr></thead><tbody>${tableRows}</tbody>
+      </table>
+    </div>`;
+}
+
+function renderAll(){
+  updateSidebar();
+  const active=document.querySelector('.tab-sec.active');if(!active)return;
+  const id=active.id.replace('tab-','');
+  if(id==='home')renderHome();
+  else if(id==='entry')renderEntry();
+  else if(id==='resumo')renderResumo();
+  else if(id==='comp')renderComp();
+}
+
+// ══ PDF ══
+function pdfHdr(doc,title,sub,landscape){
+  const W=landscape?297:210;
+  doc.setFillColor(10,44,82);doc.rect(0,0,W,30,'F');
+  // Logo cross
+  doc.setFillColor(255,255,255);
+  doc.roundedRect(W-24,4,18,22,2,2,'F');
+  doc.setFillColor(10,44,82);
+  doc.rect(W-18,6,6,18,undefined,'F');
+  doc.rect(W-23,11,16,6,undefined,'F');
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(11);doc.setFont('helvetica','bold');
+  doc.text('HOSPITAL DO PRENDA',14,10);
+  doc.setFontSize(7.5);doc.setFont('helvetica','normal');
+  doc.text('Movimento Hospitalar · Luanda · Angola',14,16);
+  doc.setFontSize(9.5);doc.setFont('helvetica','bold');
+  doc.text(title,14,24);
+  if(sub){doc.setFontSize(7.5);doc.setFont('helvetica','normal');doc.text(sub,W-30,24,{align:'right'});}
+  doc.setTextColor(0,0,0);
+  return 34;
+}
+
+function exportResumoPDF(){
+  const ym=_curYM;
+  const monthData=getMonthData(ym);
+  const stats=calcHospStats(monthData,ym);
+  const{jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+  pdfHdr(doc,'Resumo de Internamento — '+ymLabel(ym),'DC = Leitos × '+stats.diasMes+' dias',true);
+
+  const rows=SVCS.map(s=>{
+    const st=stats.svcStats[s.id]||{};
+    const leitos=monthData.svcs[s.id]?monthData.svcs[s.id].leitos:st.leitos||0;
+    return[s.nome+(s.andar?' ('+s.andar+')':''),leitos,st.dc||0,st.diasDoentes||0,st.totalEnt||0,st.totalAltas||0,st.totalTransf||0,st.totalObitos||0,st.totalSai||0,(st.taxaOcup||0)+'%',st.tmp||'—',st.rotativ||'—',(st.tmb||0)+'%',(st.tml||0)+'%'];
+  });
+  rows.push(['TOTAL HOSPITAL',stats.totLeitos,stats.totDC,stats.totDD,stats.totEnt,stats.totAltas,stats.totTransf,stats.totObitos,stats.totSai,stats.taxaOcup+'%',stats.tmp,stats.rotativ,stats.tmb+'%',stats.tml+'%']);
+
+  doc.autoTable({
+    startY:38,
+    head:[['Serviço','Leitos','DC','Dias Dtes','Entradas','Altas','Transf.','Óbitos','Saídas','Taxa Ocup.','T.M.P.','Rotativ.','TMB','TML']],
+    body:rows,
+    headStyles:{fillColor:[10,44,82],textColor:255,fontSize:7.5,fontStyle:'bold'},
+    bodyStyles:{fontSize:7.5},
+    alternateRowStyles:{fillColor:[240,244,248]},
+    columnStyles:{0:{cellWidth:50},9:{fontStyle:'bold'},3:{fontStyle:'bold'},12:{textColor:[155,28,28],fontStyle:'bold'},13:{textColor:[155,28,28],fontStyle:'bold'},7:{textColor:[155,28,28]}},
+    margin:{left:10,right:10}
+  });
+
+  const fy=doc.lastAutoTable.finalY+5;
+  doc.setFontSize(6.5);doc.setTextColor(100,116,139);
+  doc.text('DC=Leitos×Dias | Taxa Ocup.=DD÷DC×100 | T.M.P.=DD÷Saídas | Rotativ.=Saídas÷Leitos | TMB=Óbitos÷Saídas×100 | TML=Óbitos≥48h÷Saídas×100',10,fy);
+
+  doc.save('MovHosp_Resumo_'+ym+'.pdf');
+  showToast('✅ PDF exportado','ok');
+}
+
+function exportFullPDF(){
+  const ym=document.getElementById('rpt-month').value;
+  const monthData=getMonthData(ym);
+  const stats=calcHospStats(monthData,ym);
+  const{jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+  pdfHdr(doc,'Relatório Mensal — '+ymLabel(ym),'Gerado: '+new Date().toLocaleDateString('pt-PT'),true);
+
+  const rows=SVCS.map(s=>{
+    const st=stats.svcStats[s.id]||{};
+    const leitos=monthData.svcs[s.id]?monthData.svcs[s.id].leitos:st.leitos||0;
+    return[s.nome+(s.andar?' ('+s.andar+')':''),leitos,st.dc||0,st.diasDoentes||0,st.totalEnt||0,st.totalAltas||0,st.totalTransf||0,st.totalObitos||0,st.totalSai||0,(st.taxaOcup||0)+'%',st.tmp||'—',st.rotativ||'—',(st.tmb||0)+'%',(st.tml||0)+'%'];
+  });
+  rows.push(['TOTAL HOSPITAL',stats.totLeitos,stats.totDC,stats.totDD,stats.totEnt,stats.totAltas,stats.totTransf,stats.totObitos,stats.totSai,stats.taxaOcup+'%',stats.tmp,stats.rotativ,stats.tmb+'%',stats.tml+'%']);
+  doc.autoTable({startY:38,head:[['Serviço','Leitos','DC','Dias Dtes','Entradas','Altas','Transf.','Óbitos','Saídas','Taxa Ocup.','T.M.P.','Rotativ.','TMB','TML']],body:rows,headStyles:{fillColor:[10,44,82],textColor:255,fontSize:7.5,fontStyle:'bold'},bodyStyles:{fontSize:7.5},alternateRowStyles:{fillColor:[240,244,248]},columnStyles:{0:{cellWidth:50},7:{textColor:[155,28,28]},12:{textColor:[155,28,28]},13:{textColor:[155,28,28]}},margin:{left:10,right:10}});
+
+  // Per-service pages
+  SVCS.forEach(s=>{
+    const sd=monthData.svcs[s.id]||{leitos:s.leitos,dias:{}};
+    const st=stats.svcStats[s.id]||{};
+    doc.addPage();
+    pdfHdr(doc,s.nome+' — '+ymLabel(ym),'Leitos: '+sd.leitos,true);
+    const [y2,m2]=[parseInt(ym.slice(0,4)),parseInt(ym.slice(4,6))];
+    const diasMes=daysInMonth(y2,m2);
+    const dayRows=[];
+    for(let d=1;d<=diasMes;d++){
+      const day=sd.dias[d]||emptyDay();
+      const sai=(day.altas||0)+(day.transf||0)+(day.obit_l||0)+(day.obit_t||0);
+      const obitos=(day.obit_l||0)+(day.obit_t||0);
+      dayRows.push([d,day.ocup||0,day.ent||0,day.altas||0,day.transf||0,day.obit_l||0,day.obit_t||0,obitos,sai,(day.ent||0)-sai]);
+    }
+    dayRows.push(['TOTAL',st.diasDoentes||0,st.totalEnt||0,st.totalAltas||0,st.totalTransf||0,st.totalObitL||0,st.totalObitT||0,st.totalObitos||0,st.totalSai||0,st.totalEnt-st.totalSai]);
+    doc.autoTable({startY:38,head:[['Dia','Existentes','Entradas','Altas','Transf.','Óbitos<48h','Óbitos≥48h','Óbitos Tot.','Saídas','Saldo']],body:dayRows,headStyles:{fillColor:[10,44,82],textColor:255,fontSize:8},bodyStyles:{fontSize:8},alternateRowStyles:{fillColor:[240,244,248]},columnStyles:{0:{halign:'center'},1:{halign:'center',fontStyle:'bold'},2:{halign:'center'},3:{halign:'center'},4:{halign:'center'},5:{halign:'center',textColor:[155,28,28]},6:{halign:'center',textColor:[155,28,28]},7:{halign:'center',textColor:[155,28,28],fontStyle:'bold'},8:{halign:'center'},9:{halign:'center'}},margin:{left:10,right:10}});
+    const fy=doc.lastAutoTable.finalY+5;
+    doc.setFillColor(232,240,251);doc.roundedRect(10,fy,277,22,3,3,'F');
+    const kpis=[['DC',st.dc||0],['Dias Dtes',st.diasDoentes||0],['Taxa Ocup.',(st.taxaOcup||0)+'%'],['Entradas',st.totalEnt||0],['Altas',st.totalAltas||0],['Óbitos',st.totalObitos||0],['Saídas',st.totalSai||0],['T.M.P.',st.tmp||'—'],['TMB',(st.tmb||0)+'%'],['TML',(st.tml||0)+'%']];
+    doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(10,44,82);
+    kpis.forEach((k,i)=>{const x=12+i*28;doc.text(String(k[1]),x,fy+10);doc.setFontSize(6);doc.setFont('helvetica','normal');doc.text(k[0],x,fy+16);doc.setFont('helvetica','bold');doc.setFontSize(8);});
+    doc.setTextColor(0,0,0);
+  });
+  doc.save('MovHosp_Completo_'+ym+'.pdf');
+  showToast('✅ PDF completo exportado','ok');
+}
+
+function exportSvcPDF(){
+  const ym=document.getElementById('rpt-svc-month').value;
+  const svcId=document.getElementById('rpt-svc-id').value;
+  const svc=SVCS.find(s=>s.id===svcId);if(!svc)return;
+  const monthData=getMonthData(ym);
+  const [y,m]=[parseInt(ym.slice(0,4)),parseInt(ym.slice(4,6))];
+  const diasMes=daysInMonth(y,m);
+  const sd=monthData.svcs[svcId]||{leitos:svc.leitos,dias:{}};
+  const st=calcSvcStats(sd,diasMes);
+  const{jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  pdfHdr(doc,svc.nome+' — '+ymLabel(ym),'Leitos: '+sd.leitos,false);
+  const dayRows=[];
+  for(let d=1;d<=diasMes;d++){
+    const day=sd.dias[d]||emptyDay();
+    const sai=(day.altas||0)+(day.transf||0)+(day.obit_l||0)+(day.obit_t||0);
+    dayRows.push([d,day.ocup||0,day.ent||0,day.altas||0,day.transf||0,day.obit_l||0,day.obit_t||0,sai,(day.ent||0)-sai]);
+  }
+  dayRows.push(['TOTAL',st.diasDoentes,st.totalEnt,st.totalAltas,st.totalTransf,st.totalObitL,st.totalObitT,st.totalSai,st.totalEnt-st.totalSai]);
+  doc.autoTable({startY:38,head:[['Dia','Existentes','Entradas','Altas','Transf.','Óbitos<48h','Óbitos≥48h','Saídas','Saldo']],body:dayRows,headStyles:{fillColor:[10,44,82],textColor:255,fontSize:8.5},bodyStyles:{fontSize:8.5},alternateRowStyles:{fillColor:[240,244,248]},columnStyles:{0:{halign:'center'},1:{halign:'center',fontStyle:'bold'},5:{textColor:[155,28,28]},6:{textColor:[155,28,28]}},margin:{left:12,right:12}});
+  const fy=doc.lastAutoTable.finalY+7;
+  doc.setFillColor(232,240,251);doc.roundedRect(12,fy,186,32,3,3,'F');
+  const kpis=[['DC',st.dc],['Dias Dtes',st.diasDoentes],['Taxa Ocup.',st.taxaOcup+'%'],['T.M.P.',st.tmp],['Rotativ.',st.rotativ],['Óbitos',st.totalObitos],['TMB',st.tmb+'%'],['TML',st.tml+'%']];
+  doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(10,44,82);
+  kpis.forEach((k,i)=>{const x=14+i*24;doc.text(String(k[1]),x,fy+12);doc.setFontSize(6.5);doc.setFont('helvetica','normal');doc.text(k[0],x,fy+19);doc.setFont('helvetica','bold');doc.setFontSize(9);});
+  doc.save('MovHosp_'+svcId+'_'+ym+'.pdf');
+  showToast('✅ PDF exportado','ok');
+}
+
+// ══ CSV ══
+function exportCSV(){exportCSVForYM(_curYM);}
+function exportCSVModal(){exportCSVForYM(document.getElementById('rpt-csv-month').value);}
+function exportCSVForYM(ym){
+  const monthData=getMonthData(ym);
+  const [y,m]=[parseInt(ym.slice(0,4)),parseInt(ym.slice(4,6))];
+  const diasMes=daysInMonth(y,m);
+  const rows=[['Serviço','Leitos','Dia','Existentes (OCUP)','Entradas','Altas','Transf.Saídas','Óbitos<48h','Óbitos≥48h','Total Óbitos','Total Saídas','Saldo','DC','Dias Doentes','Taxa Ocup.%','T.M.P.','Rotatividade','Interv.Sub.','TMB%','TML%']];
+  SVCS.forEach(s=>{
+    const sd=monthData.svcs[s.id]||{leitos:s.leitos,dias:{}};
+    const st=calcSvcStats(sd,diasMes);
+    for(let d=1;d<=diasMes;d++){
+      const day=sd.dias[d]||emptyDay();
+      const sai=(day.altas||0)+(day.transf||0)+(day.obit_l||0)+(day.obit_t||0);
+      const obitos=(day.obit_l||0)+(day.obit_t||0);
+      rows.push([s.nome,sd.leitos,d,day.ocup||0,day.ent||0,day.altas||0,day.transf||0,day.obit_l||0,day.obit_t||0,obitos,sai,(day.ent||0)-sai,st.dc,st.diasDoentes,st.taxaOcup,st.tmp,st.rotativ,st.interv,st.tmb,st.tml]);
+    }
+  });
+  const csv=rows.map(r=>r.map(c=>'"'+(String(c).replace(/"/g,'""'))+'"').join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,﻿'+encodeURIComponent(csv);
+  a.download='MovimentoHospitalar_'+ym+'.csv';a.click();
+  showToast('✅ CSV exportado','ok');
+}
+
+// ══ CONFIG ══
+function openCfgModal(){
+  document.getElementById('cfg-svc-list').innerHTML=SVCS.map((s,i)=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--bd)">
+      <span style="flex:1;font-size:.84rem;font-weight:500">${s.nome}${s.andar?` <em style="color:var(--mut);font-size:.73rem;font-style:normal">(${s.andar})</em>`:''}</span>
+      <div style="display:flex;align-items:center;gap:6px">
+        <label style="font-size:.73rem;color:var(--mut)">Leitos padrão:</label>
+        <input type="number" min="1" max="500" value="${s.leitos}" style="width:68px;border:1px solid var(--bd);border-radius:5px;padding:5px 7px;font-size:.81rem;text-align:center" onchange="SVCS[${i}].leitos=Number(this.value);saveSvcs()">
+      </div>
+    </div>`).join('');
+  document.getElementById('cfg-modal').classList.add('open');
+}
+
+// ══ DELETE ══
+function delMonthData(){
+  const ym=document.getElementById('rpt-del-month').value;
+  if(!confirm('Tem a certeza que pretende apagar todos os dados de '+ymLabel(ym)+'?'))return;
+  localStorage.removeItem(ymKey(ym));
+  showToast('✅ Dados de '+ymLabel(ym)+' eliminados','ok');
+  buildMonthSelects();renderAll();
+}
+
+// ══ BACKUP ══
+function openBackup(){
+  const allData={};
+  for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&(k.startsWith(DATA_PFX)||k===SVCS_KEY))allData[k]=localStorage.getItem(k);}
+  const now=new Date();
+  const ts=now.getFullYear()+String(now.getMonth()+1).padStart(2,'0')+String(now.getDate()).padStart(2,'0')+'_'+String(now.getHours()).padStart(2,'0')+String(now.getMinutes()).padStart(2,'0');
+  const payload={version:DATA_VERSION,exported:now.toISOString(),app:'Movimento Hospitalar — Hospital do Prenda',data:allData};
+  const a=document.createElement('a');
+  a.href='data:application/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(payload,null,2));
+  a.download='backup_MovHosp_'+ts+'.json';a.click();
+  showToast('⬇️ Backup exportado','ok');
+}
+
+function importBackup(event){
+  const file=event.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{const raw=JSON.parse(e.target.result);_pendingImport=raw.data||raw;document.getElementById('bk-modal').classList.add('open');}
+    catch(err){showToast('❌ Ficheiro inválido','err');}
+  };
+  reader.readAsText(file);event.target.value='';
+}
+
+document.getElementById('merge-btn').onclick=function(){
+  if(!_pendingImport)return;
+  let added=0,updated=0,kept=0;
+  Object.entries(_pendingImport).forEach(([k,v])=>{
+    const local=localStorage.getItem(k);
+    if(!local){localStorage.setItem(k,v);added++;}
+    else{try{const imp=typeof v==='string'?JSON.parse(v):v;const loc=JSON.parse(local);if((imp._ts||0)>(loc._ts||0)){localStorage.setItem(k,JSON.stringify(imp));updated++;}else kept++;}catch(e){localStorage.setItem(k,v);added++;}}
+  });
+  _pendingImport=null;document.getElementById('bk-modal').classList.remove('open');
+  loadSvcs();buildMonthSelects();buildSvcNavItems();renderAll();
+  showToast('✅ Mesclado: '+added+' novos, '+updated+' actualizados, '+kept+' mantidos','ok');
+};
+
+document.getElementById('replace-btn').onclick=function(){
+  if(!_pendingImport)return;
+  const toDelete=[];
+  for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&(k.startsWith(DATA_PFX)||k===SVCS_KEY))toDelete.push(k);}
+  toDelete.forEach(k=>localStorage.removeItem(k));
+  Object.entries(_pendingImport).forEach(([k,v])=>localStorage.setItem(k,v));
+  _pendingImport=null;document.getElementById('bk-modal').classList.remove('open');
+  loadSvcs();buildMonthSelects();buildSvcNavItems();renderAll();
+  showToast('✅ Dados substituídos','ok');
+};
+
+document.querySelectorAll('.modal-ov').forEach(m=>m.addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');}));
+
+// ══ INIT ══
+loadSvcs();
+_curYM=today();
+buildMonthSelects();
+buildSvcNavItems();
+document.getElementById('hdr-month').value=_curYM;
+updateSidebar();
+renderHome();
+</script>
+</body>
+</html>

@@ -1,0 +1,1990 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hospital do Prenda — Laboratório de Análises Clínicas</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js">// ── Multi-toast notification system ──────────────────────
+const _TK={
+  ok:   {icon:'✅',title:'Concluído',   cls:'tk-ok',  dur:3000},
+  save: {icon:'💾',title:'Guardado',    cls:'tk-save',dur:3000},
+  del:  {icon:'🗑️',title:'Eliminado',   cls:'tk-del', dur:3000},
+  edit: {icon:'✏️',title:'Actualizado', cls:'tk-edit',dur:3000},
+  err:  {icon:'❌',title:'Erro',        cls:'tk-err', dur:5000},
+  warn: {icon:'⚠️',title:'Atenção',     cls:'tk-warn',dur:4000},
+  info: {icon:'ℹ️',title:'Info',        cls:'tk-info',dur:3000},
+  pdf:  {icon:'📄',title:'PDF Gerado',  cls:'tk-ok',  dur:3000},
+  sync: {icon:'☁️',title:'Sincronizado',cls:'tk-save',dur:3500},
+};
+function toast(msg,type){
+  if(type===undefined)type='info';
+  const cfg=_TK[type]||_TK.info;
+  let stack=document.getElementById('toast-stack');
+  if(!stack){stack=document.createElement('div');stack.id='toast-stack';document.body.appendChild(stack);}
+  const existing=stack.querySelectorAll('.tk');
+  if(existing.length>=4)existing[existing.length-1].remove();
+  const el=document.createElement('div');
+  el.className='tk '+cfg.cls;
+  el.style.setProperty('--tk-dur',cfg.dur+'ms');
+  el.innerHTML='<span class="tk-icon">'+cfg.icon+'</span><div class="tk-body"><div class="tk-title">'+cfg.title+'</div><div class="tk-msg">'+msg+'</div></div><div class="tk-bar"></div>';
+  el.addEventListener('click',function(){_dismissToast(el);});
+  stack.prepend(el);
+  setTimeout(function(){_dismissToast(el);},cfg.dur+200);
+}
+function showToast(msg,type){toast(msg,type||'info');}
+function _dismissToast(el){
+  if(!el.parentNode)return;
+  el.style.transition='opacity .2s,transform .2s';
+  el.style.opacity='0';el.style.transform='translateX(28px)';
+  setTimeout(function(){el.remove();},220);
+}
+
+// ── Keyboard Navigation ──────────────────────────────────
+function initKeyboardNav(){
+  document.querySelectorAll('input,textarea,select').forEach(function(el){
+    el.style.userSelect='text';el.style.webkitUserSelect='text';
+  });
+  new MutationObserver(function(muts){
+    muts.forEach(function(m){m.addedNodes.forEach(function(n){
+      if(n.nodeType!==1)return;
+      if(n.querySelectorAll)n.querySelectorAll('input,textarea,select').forEach(function(el){
+        el.style.userSelect='text';el.style.webkitUserSelect='text';
+      });
+    });});
+  }).observe(document.body,{childList:true,subtree:true});
+  function applyTabRows(root){
+    (root||document).querySelectorAll('table tbody tr').forEach(function(tr){
+      if(!tr.dataset.kbInit){tr.setAttribute('tabindex','0');tr.dataset.kbInit='1';}
+    });
+  }
+  applyTabRows();
+  new MutationObserver(function(){applyTabRows();}).observe(document.body,{childList:true,subtree:true});
+  document.addEventListener('keydown',function(e){
+    var tag=document.activeElement&&document.activeElement.tagName;
+    var inField=(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT');
+    if((e.ctrlKey||e.metaKey)&&e.key==='s'){
+      e.preventDefault();
+      var modal=document.querySelector('.modal[style*="flex"],.modal[style*="block"]');
+      if(modal){var btn=modal.querySelector('button[onclick*="save"],button[onclick*="Save"],button[onclick*="guardar"],button[onclick*="Guardar"]');if(btn){btn.click();return;}}
+      var sb=document.querySelector('button[onclick*="saveAll"],button[onclick*="savePats"],button[onclick*="guardar"]');
+      if(sb)sb.click();
+      return;
+    }
+    if(e.key==='Escape'){
+      var modals=[].slice.call(document.querySelectorAll('.modal')).filter(function(m){return m.style.display==='flex'||m.style.display==='block';});
+      if(modals.length){e.preventDefault();var last=modals[modals.length-1];var cls=last.querySelector('button[onclick*="close"],button[onclick*="Close"],button[onclick*="fechar"]');if(cls)cls.click();else last.style.display='none';}
+      return;
+    }
+    if(!inField&&(e.key==='ArrowUp'||e.key==='ArrowDown')){
+      var tr=document.activeElement;
+      if(tr&&tr.tagName==='TR'){
+        e.preventDefault();
+        var rows=[].slice.call(tr.closest('tbody').querySelectorAll('tr[tabindex]'));
+        var idx=rows.indexOf(tr);
+        var next=e.key==='ArrowDown'?rows[idx+1]:rows[idx-1];
+        if(next){next.focus();rows.forEach(function(r){r.classList.remove('kb-focus');});next.classList.add('kb-focus');}
+      }
+      return;
+    }
+    if(!inField&&e.key==='Enter'){
+      var tr=document.activeElement;
+      if(tr&&tr.tagName==='TR'){e.preventDefault();tr.dispatchEvent(new MouseEvent('dblclick',{bubbles:true}));tr.click();}
+      return;
+    }
+    if(!inField&&(e.key==='Delete'||e.key==='Backspace')){
+      var tr=document.activeElement;
+      if(tr&&tr.tagName==='TR'){e.preventDefault();var btn=tr.querySelector('button[onclick*="delet"],button[onclick*="remov"],button[title*="Elimin"],button[title*="Apagar"]');if(btn)btn.click();}
+      return;
+    }
+    if((e.ctrlKey||e.metaKey)&&e.key==='c'&&!inField){
+      var tr=document.activeElement;
+      if(tr&&tr.tagName==='TR'){
+        e.preventDefault();
+        var txt=[].slice.call(tr.querySelectorAll('td')).map(function(td){return td.textContent.trim();}).filter(Boolean).join('\t');
+        if(navigator.clipboard)navigator.clipboard.writeText(txt).then(function(){toast('Linha copiada para a área de transferência','info');});
+      }
+      return;
+    }
+  });
+}
+
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="hprenda-db.js"></script>
+<script>
+// Safe fallback if external scripts not loaded
+if(!window._fbReady) window._fbReady = false;
+if(!window._fb) window._fb = {
+  ref:()=>({}),
+  set:()=>Promise.resolve(),
+  get:()=>Promise.resolve({exists:()=>false, val:()=>null}),
+  onValue:()=>()=>{}
+};
+</script>
+<style>
+:root {
+  --bg: #F0F2F5;
+  --surface: #FFFFFF;
+  --surface2: #F8F9FB;
+  --navy: #FFFFFF;
+  --navy2: #F8F9FB;
+  --navy3: #F0F2F5;
+  --blue: #1a56db;
+  --blue2: #1447c0;
+  --blue3: #3b82f6;
+  --cyan: #0891b2;
+  --cyan2: #06b6d4;
+  --green: #059669;
+  --green2: #10b981;
+  --green3: #6ee7b7;
+  --amber: #d97706;
+  --amber2: #f59e0b;
+  --red: #dc2626;
+  --red2: #ef4444;
+  --purple: #7c3aed;
+  --purple2: #a78bfa;
+  --border: rgba(0,0,0,0.08);
+  --border2: rgba(0,0,0,0.14);
+  --text: #1A1A2E;
+  --text-muted: #6B7280;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --shadow: 0 1px 4px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.10);
+  /* Legacy aliases */
+  --accent: #1a56db;
+  --accent2: #1447c0;
+  --accent-d: #1447c0;
+  --urgent: #dc2626;
+  --elective: #0891b2;
+  --anest: #7c3aed;
+  --transfer: #d97706;
+  --obtain: #059669;
+  --deceased: #dc2626;
+  --muted: #6B7280;
+  --sidebar-w: 220px;
+  --header-h: 64px;
+  --fh: 'Inter', sans-serif;
+  --fb: 'Inter', monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;overflow-x:hidden;}
+header{position:fixed;top:0;left:0;right:0;height:var(--header-h);z-index:200;padding:0 20px 0 16px;
+  border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;
+  background:#FFFFFF;gap:12px;box-shadow:0 1px 4px rgba(0,0,0,0.08);}
+.logo-area{display:flex;align-items:center;gap:12px;}
+.logo-badge{width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,#1447c0,#1a56db);
+  display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.logo-text h1{font-family:'Inter',sans-serif;font-size:1rem;font-weight:800;color:#0f172a;}
+.logo-text p{font-size:.52rem;color:#64748b;text-transform:uppercase;letter-spacing:1.5px;}
+.header-right{display:flex;align-items:center;gap:10px;flex-wrap:nowrap;}
+.date-badge{display:flex;align-items:center;gap:8px;}
+.date-badge label{font-size:.52rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);}
+.date-badge input[type=date]{background:var(--surface2);border:1px solid var(--border);color:var(--text);
+  font-family:'Inter',sans-serif;font-size:.72rem;padding:5px 9px;border-radius:6px;outline:none;cursor:pointer;}
+.date-badge input:focus{border-color:var(--accent);}
+.clock-b{font-family:'Inter',monospace;font-size:.66rem;color:var(--accent);
+  background:rgba(26,86,219,.08);border:1px solid rgba(26,86,219,.2);padding:5px 10px;border-radius:6px;}
+.sync-b{display:flex;align-items:center;gap:5px;font-size:.56rem;color:var(--muted);
+  background:var(--surface2);border:1px solid var(--border);padding:4px 9px;border-radius:6px;}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:var(--obtain);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.btn-hdr{padding:6px 13px;background:transparent;border:1px solid var(--border);color:#64748b;
+  border-radius:6px;font-family:'Inter',sans-serif;font-size:.6rem;font-weight:600;letter-spacing:.5px;cursor:pointer;text-transform:uppercase;transition:all .2s;white-space:nowrap;}
+.btn-hdr:hover{border-color:var(--accent);color:var(--accent);}
+.btn-hdr.accent{border-color:var(--accent);color:var(--accent);background:#eff6ff;}
+.btn-hdr.accent:hover{background:var(--accent);color:#fff;}
+.app-layout{display:flex;padding-top:var(--header-h);min-height:100vh;}
+.sidebar{position:fixed;top:var(--header-h);left:0;width:var(--sidebar-w);height:calc(100vh - var(--header-h));
+  background:#FFFFFF;border-right:1px solid rgba(0,0,0,0.08);overflow-y:auto;z-index:100;
+  display:flex;flex-direction:column;padding-bottom:80px;}
+.sidebar::-webkit-scrollbar{width:4px;}
+.sidebar::-webkit-scrollbar-thumb{background:var(--border);}
+.sb-lbl{font-size:.5rem;text-transform:uppercase;letter-spacing:2px;color:#6B7280;
+  padding:18px 18px 6px;font-family:'Inter',sans-serif;font-weight:700;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 18px;cursor:pointer;
+  font-family:'Inter',sans-serif;font-size:.72rem;font-weight:500;letter-spacing:.2px;color:#6B7280;
+  transition:all .18s;user-select:none;border-left:2px solid transparent;border:none;background:none;width:100%;text-align:left;}
+.nav-item:hover{color:var(--accent);background:rgba(26,86,219,.05);}
+.nav-item.active{color:var(--accent);background:rgba(26,86,219,.07);border-left:2px solid var(--accent);}
+.nav-dot{width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.4;flex-shrink:0;}
+.nav-item.active .nav-dot{opacity:1;}
+.sb-divider{height:1px;background:rgba(0,0,0,0.08);margin:8px 18px;}
+.save-btn{margin:10px 14px;padding:10px;background:var(--accent);border:none;border-radius:8px;
+  color:#fff;font-family:'Inter',sans-serif;font-size:.68rem;font-weight:700;letter-spacing:.5px;cursor:pointer;
+  text-transform:uppercase;display:flex;align-items:center;justify-content:center;gap:7px;
+  box-shadow:0 0 16px rgba(26,86,219,.25);transition:all .2s;width:calc(100% - 28px);}
+.save-btn:hover{background:var(--accent-d);}
+.main-content{margin-left:var(--sidebar-w);flex:1;min-height:calc(100vh - var(--header-h));
+  padding:32px 40px 100px;position:relative;z-index:1;}
+.section{display:none;animation:fadeIn .25s ease;}
+.section.active{display:block;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.page-hdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:28px;gap:16px;flex-wrap:wrap;}
+.page-hdr h2{font-family:'Inter',sans-serif;font-size:1.3rem;font-weight:800;color:var(--accent);}
+.page-hdr p{font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-top:3px;}
+.sec-badge{display:inline-flex;align-items:center;gap:8px;padding:5px 13px;border-radius:4px;
+  font-size:.58rem;font-weight:700;text-transform:uppercase;letter-spacing:2px;font-family:'Inter',sans-serif;margin-bottom:6px;}
+.badge-green{background:rgba(26,86,219,.1);color:var(--accent);border:1px solid rgba(26,86,219,.25);}
+.badge-blue{background:rgba(26,86,219,.1);color:var(--accent);border:1px solid rgba(26,86,219,.25);}
+.badge-stats{background:rgba(26,86,219,.1);color:var(--accent);border:1px solid rgba(26,86,219,.25);}
+.badge-amber{background:rgba(245,158,11,.12);color:var(--transfer);border:1px solid rgba(245,158,11,.3);}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:14px;margin-bottom:26px;}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;position:relative;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.06),0 4px 16px rgba(0,0,0,0.04);transition:transform .15s;}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--accent);}
+.kpi.red::before{background:var(--urgent);}
+.kpi.blue::before{background:var(--accent);}
+.kpi.amber::before{background:var(--transfer);}
+.kpi.purple::before{background:var(--anest);}
+.kpi.cyan::before{background:var(--elective);}
+.kpi-icon{font-size:20px;margin-bottom:8px;display:block;}
+.kpi-label{font-size:.52rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px;}
+.kpi-val{font-size:2rem;font-weight:500;color:var(--accent);line-height:1;}
+.kpi.red .kpi-val{color:var(--urgent);}
+.kpi.blue .kpi-val{color:var(--accent);}
+.kpi.amber .kpi-val{color:var(--transfer);}
+.kpi.purple .kpi-val{color:var(--anest);}
+.kpi.cyan .kpi-val{color:var(--elective);}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:20px;position:relative;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.06),0 4px 16px rgba(0,0,0,0.04);}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--accent);}
+.card.red::before{background:var(--urgent);}
+.card-title{font-family:'Inter',sans-serif;font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--muted);margin-bottom:18px;}
+.card-hdr{background:#f0f4f8;border-bottom:1px solid rgba(0,0,0,0.08);padding:14px 22px;
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;border-radius:12px 12px 0 0;}
+.card-hdr h3{font-family:'Inter',sans-serif;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#1A1A2E;}
+.card-hdr.red{background:#fef2f2;border-bottom-color:rgba(220,38,38,0.15);}
+.card-hdr.red h3{color:#dc2626;}
+.tech-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-bottom:12px;}
+.tech-item{display:flex;align-items:center;gap:8px;}
+.tech-num{font-family:'Inter',sans-serif;font-size:.6rem;font-weight:700;color:var(--accent);
+  background:rgba(26,86,219,.1);width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.tech-input{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:7px 10px;
+  font-family:'Inter',sans-serif;font-size:.72rem;color:var(--text);width:100%;outline:none;}
+.tech-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(26,86,219,0.1);}
+.table-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;}
+.exam-table{min-width:500px;}
+.exam-table thead tr{background:#F0F2F5;border-bottom:1px solid rgba(0,0,0,0.1);}
+.exam-table thead th{color:#6B7280;font-size:.52rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;
+  padding:11px 14px;text-align:center;white-space:nowrap;font-family:'Inter',sans-serif;}
+.exam-table thead th:first-child{text-align:left;padding-left:18px;}
+.exam-table tbody tr{border-bottom:1px solid rgba(0,0,0,0.05);transition:background .15s;}
+.exam-table tbody tr:hover{background:rgba(26,86,219,0.04);}
+.exam-table tbody td{padding:8px 14px;text-align:center;font-size:.74rem;vertical-align:middle;}
+.exam-table tbody td:first-child{text-align:left;padding-left:18px;color:var(--text);font-weight:500;}
+.exam-table .total-row td{font-weight:700;color:var(--accent);background:rgba(26,86,219,.05);border-top:1px solid rgba(26,86,219,.15)!important;}
+.exam-table .subtotal-row td{background:rgba(26,86,219,.03)!important;font-weight:700;font-size:.68rem;}
+.exam-table .section-header td{font-family:'Inter',sans-serif;font-size:.56rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;}
+.num-input{background:var(--surface);border:1px solid var(--border);border-radius:6px;
+  padding:5px 8px;font-family:'Inter',sans-serif;font-size:.78rem;color:var(--text);
+  width:70px;text-align:center;outline:none;-moz-appearance:textfield;transition:border-color .15s;}
+.num-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(26,86,219,0.1);}
+.num-input::-webkit-outer-spin-button,.num-input::-webkit-inner-spin-button{-webkit-appearance:none;}
+.pos-table{min-width:400px;}
+.pos-table thead tr{background:#fef2f2;border-bottom:1px solid rgba(220,38,38,.15);}
+.pos-table thead th{color:#dc2626;font-size:.52rem;font-weight:700;text-transform:uppercase;
+  letter-spacing:.08em;padding:11px 14px;text-align:center;font-family:'Inter',sans-serif;}
+.pos-table thead th:first-child{text-align:left;padding-left:18px;}
+.pos-table tbody tr{border-bottom:1px solid rgba(220,38,38,.07);transition:background .15s;}
+.pos-table tbody tr:hover{background:rgba(220,38,38,.04);}
+.pos-table tbody td{padding:8px 14px;text-align:center;font-size:.74rem;vertical-align:middle;}
+.pos-table tbody td:first-child{text-align:left;font-weight:600;color:var(--urgent);padding-left:18px;}
+.pos-table .total-row td{font-weight:700;color:var(--urgent);background:rgba(220,38,38,.05);border-top:1px solid rgba(220,38,38,.15)!important;}
+.registo-cols{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+@media(max-width:1000px){.registo-cols{grid-template-columns:1fr;}}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:6px;
+  font-family:'Inter',sans-serif;font-size:.62rem;font-weight:700;letter-spacing:1px;cursor:pointer;border:none;transition:all .18s;text-transform:uppercase;white-space:nowrap;}
+.btn-primary{background:var(--accent);color:#fff;}
+.btn-primary:hover{background:var(--accent-d);}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--muted);}
+.btn-outline:hover{border-color:var(--accent);color:var(--accent);}
+.btn-amber{background:var(--transfer);color:#fff;}
+.btn-amber:hover{opacity:.85;}
+.btn-blue{background:var(--accent);color:#fff;}
+.btn-blue:hover{opacity:.85;}
+.btn-refresh{background:rgba(26,86,219,.1);border:1px solid rgba(26,86,219,.3);color:var(--accent);}
+.btn-refresh:hover{background:rgba(26,86,219,.18);}
+.btn-sm{padding:6px 12px;font-size:.56rem;}
+.btn-xs{padding:4px 9px;font-size:.52rem;}
+.btn-group{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+.stats-period-nav{display:flex;gap:4px;margin-bottom:22px;flex-wrap:wrap;}
+.period-btn{padding:8px 18px;background:var(--surface2);border:1px solid var(--border);color:var(--muted);
+  border-radius:6px;font-family:'Inter',sans-serif;font-size:.62rem;font-weight:700;letter-spacing:1.5px;
+  cursor:pointer;text-transform:uppercase;transition:all .2s;}
+.period-btn:hover{border-color:var(--accent);color:var(--accent);}
+.period-btn.active{background:rgba(26,86,219,.1);border-color:var(--accent);color:var(--accent);}
+.period-panel{background:var(--surface);border:1px solid var(--border);border-radius:10px;
+  padding:16px 20px;margin-bottom:20px;box-shadow:0 1px 3px rgba(0,0,0,.06);}
+.period-controls{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:8px;}
+.period-controls label{font-size:.52rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);}
+.pc-input{background:var(--surface);border:1px solid var(--border);color:var(--text);
+  font-family:'Inter',sans-serif;font-size:.72rem;padding:6px 10px;border-radius:6px;outline:none;}
+.pc-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(26,86,219,0.1);}
+.nw{width:82px;}
+.pc-select{background:var(--surface);border:1px solid var(--border);color:var(--text);
+  font-family:'Inter',sans-serif;font-size:.72rem;padding:6px 10px;border-radius:6px;outline:none;}
+/* week-btn removed — semanal now uses free date range */
+.stats-kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:12px;margin-bottom:22px;}
+.stats-kpi{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:16px 18px;}
+.stats-kpi label{font-size:.52rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);display:block;margin-bottom:6px;}
+.stats-kpi .sk-val{font-size:1.9rem;font-weight:500;}
+.no-data-msg{text-align:center;padding:60px;color:var(--muted);font-size:.75rem;letter-spacing:1.5px;text-transform:uppercase;}
+.lsr-bar-row{display:flex;align-items:center;gap:9px;margin-bottom:9px;}
+.lsr-bar-label{font-size:.64rem;color:var(--text);min-width:145px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.lsr-bar-stack-wrap{flex:1;background:#e9ecef;border-radius:3px;height:14px;overflow:hidden;}
+.lsr-bar-stack{display:flex;height:100%;}
+.lsr-bar-seg{height:100%;transition:width .5s;min-width:0;}
+.lsr-seg-bu{background:linear-gradient(90deg,#1d4ed8,#3b82f6);}
+.lsr-seg-int{background:linear-gradient(90deg,#0e7490,#06b6d4);}
+.lsr-bar-val{font-family:'Inter',sans-serif;font-size:.7rem;font-weight:600;color:var(--text);min-width:30px;text-align:right;}
+.lsr-bar-pct{font-family:'Inter',sans-serif;font-size:.58rem;color:var(--muted);min-width:40px;text-align:right;}
+.lsr-bar-legend{display:flex;gap:16px;margin-top:10px;font-size:.56rem;}
+.lsr-swatch{width:10px;height:10px;border-radius:2px;display:inline-block;margin-right:5px;vertical-align:middle;}
+.lsr-total-footer{margin-top:12px;padding-top:10px;border-top:1px solid var(--border);
+  display:flex;justify-content:space-between;font-size:.62rem;color:var(--muted);}
+.lsr-summary-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:12px;margin-bottom:20px;}
+.lsr-card{background:#FFFFFF;border:1px solid var(--border);border-radius:10px;padding:15px;display:flex;flex-direction:column;gap:4px;box-shadow:0 1px 4px rgba(0,0,0,.04);}
+.lsr-card-label{font-size:.5rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);font-family:'Inter',sans-serif;}
+.lsr-card-val{font-size:1.8rem;font-weight:500;color:var(--accent);font-family:'Inter',sans-serif;}
+.lsr-card-sub{font-size:.56rem;color:var(--muted);}
+.lsr-card-blue .lsr-card-val{color:var(--accent);}
+.lsr-card-cyan .lsr-card-val{color:var(--elective);}
+.lsr-card-red .lsr-card-val{color:var(--urgent);}
+.lsr-card-purple .lsr-card-val{color:var(--anest);}
+.lsr-card-amber .lsr-card-val{color:var(--transfer);}
+.lsr-card-accent .lsr-card-val{color:var(--accent);}
+.lsr-period-range{font-size:.6rem;color:var(--muted);margin-bottom:18px;letter-spacing:1px;}
+.stats-exame-table{width:100%;border-collapse:collapse;font-size:.7rem;}
+.stats-exame-table thead tr{background:#F0F2F5;}
+.stats-exame-table th{padding:8px 12px;text-align:left;font-family:'Inter',sans-serif;font-size:.52rem;
+  font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#6B7280;border-bottom:1px solid rgba(0,0,0,0.08);}
+.stats-exame-table td{padding:8px 12px;border-bottom:1px solid rgba(0,0,0,0.05);}
+.stats-exame-table .st-total-row td{font-weight:700;color:var(--accent);background:rgba(26,86,219,.05);}
+.stats-exame-table tbody tr:hover{background:rgba(26,86,219,.04);}
+.history-list{display:flex;flex-direction:column;gap:10px;}
+.history-item{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;
+  border-radius:8px;border:1px solid var(--border);background:var(--surface);transition:all .15s;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+.history-item:hover{border-color:var(--accent);box-shadow:0 4px 12px rgba(26,86,219,.1);}
+.history-date{font-family:'Inter',sans-serif;font-weight:600;color:var(--text);font-size:.72rem;}
+.history-stats{font-size:.58rem;color:var(--muted);margin-top:3px;}
+.history-actions{display:flex;gap:6px;}
+.export-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:16px;}
+.export-card{border:1px solid var(--border);border-radius:12px;padding:20px;background:var(--surface);text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.06);}
+.export-icon{font-size:30px;margin-bottom:10px;}
+.export-title{font-family:'Inter',sans-serif;font-size:.7rem;font-weight:700;color:var(--text);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;}
+.export-desc{font-size:.58rem;color:var(--muted);margin-bottom:14px;line-height:1.5;}
+
+.toast-item{background:var(--surface);color:var(--text);padding:12px 20px;border-radius:8px;font-size:.7rem;
+  box-shadow:0 8px 32px rgba(0,0,0,.15);border-left:4px solid var(--accent);animation:slideIn .3s ease;max-width:340px;}
+.toast-item.success{border-left-color:var(--obtain);}
+.toast-item.error{border-left-color:var(--urgent);}
+@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+.save-bar{position:fixed;bottom:0;left:var(--sidebar-w);right:0;background:rgba(255,255,255,.97);
+  border-top:1px solid var(--border);backdrop-filter:blur(12px);padding:12px 40px;
+  display:flex;align-items:center;justify-content:space-between;z-index:300;gap:12px;box-shadow:0 -2px 12px rgba(0,0,0,.08);}
+.save-status{font-size:.62rem;color:var(--muted);font-family:'Inter',sans-serif;}
+.save-status span{color:var(--accent);font-weight:600;}
+@media(max-width:900px){:root{--sidebar-w:0px;}.sidebar{display:none;}.main-content{margin-left:0;padding:22px 16px 100px;}.save-bar{left:0;}.registo-cols{grid-template-columns:1fr;}}
+/* TOAST STACK */
+#toast-stack{position:fixed;bottom:68px;right:18px;display:flex;flex-direction:column-reverse;
+  gap:8px;z-index:9999;pointer-events:none;max-width:320px;}
+.tk{display:flex;align-items:flex-start;gap:10px;padding:11px 14px 8px;border-radius:10px;
+  background:#fff;border:1px solid rgba(0,0,0,0.08);box-shadow:0 4px 20px rgba(0,0,0,0.12);
+  pointer-events:all;cursor:pointer;overflow:hidden;position:relative;
+  animation:tkIn .22s ease;min-width:220px;}
+@keyframes tkIn{from{opacity:0;transform:translateX(28px)}to{opacity:1;transform:translateX(0)}}
+.tk-icon{font-size:18px;line-height:1;flex-shrink:0;margin-top:1px;}
+.tk-body{flex:1;min-width:0;}
+.tk-title{font-family:inherit;font-size:12px;font-weight:700;line-height:1.2;}
+.tk-msg{font-family:inherit;font-size:11px;font-weight:400;color:#6B7280;margin-top:2px;line-height:1.3;}
+.tk-bar{position:absolute;bottom:0;left:0;height:3px;border-radius:0 0 10px 10px;
+  animation:tkBar var(--tk-dur,3s) linear forwards;}
+@keyframes tkBar{from{width:100%}to{width:0%}}
+.tk-ok{border-color:rgba(5,150,105,.25);}.tk-ok .tk-title{color:#059669;}.tk-ok .tk-bar{background:#059669;}
+.tk-err{border-color:rgba(220,38,38,.25);}.tk-err .tk-title{color:#DC2626;}.tk-err .tk-bar{background:#DC2626;}
+.tk-warn{border-color:rgba(217,119,6,.25);}.tk-warn .tk-title{color:#D97706;}.tk-warn .tk-bar{background:#D97706;}
+.tk-save{border-color:rgba(26,86,219,.25);}.tk-save .tk-title{color:#1a56db;}.tk-save .tk-bar{background:#1a56db;}
+.tk-del{border-color:rgba(124,58,237,.25);}.tk-del .tk-title{color:#7C3AED;}.tk-del .tk-bar{background:#7C3AED;}
+.tk-edit{border-color:rgba(6,182,212,.25);}.tk-edit .tk-title{color:#0891B2;}.tk-edit .tk-bar{background:#0891B2;}
+.tk-info{border-color:rgba(26,86,219,.18);}.tk-info .tk-title{color:#1a56db;}.tk-info .tk-bar{background:#1a56db;}
+tr.kb-focus{outline:2px solid #1a56db;outline-offset:-2px;background:rgba(26,86,219,0.06)!important;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-area">
+    <div class="logo-badge">🧪</div>
+    <div class="logo-text">
+      <h1>Laboratório de Análises Clínicas</h1>
+      <p>Hospital do Prenda · Luanda · Angola</p>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="date-badge"><label>Data</label>
+      <input type="date" id="data-registo" onchange="loadDay(this.value)"></div>
+    <span class="clock-b" id="clock">--:--:--</span>
+    <div class="sync-b"><div class="sync-dot"></div><span id="sync-label">A ligar…</span></div>
+    <button class="btn-hdr accent" onclick="saveAllData()">💾 Guardar</button>
+    <button class="btn-hdr" onclick="exportPDF()">📄 PDF</button>
+  </div>
+</header>
+
+<div class="app-layout">
+<aside class="sidebar">
+  <div class="sb-lbl" style="padding-top:24px">Registos</div>
+  <button class="nav-item active" onclick="showSection('registo',this)"><span class="nav-dot"></span>🧪 Registo Diário</button>
+  <div class="sb-divider"></div>
+  <div class="sb-lbl">Análise</div>
+  <button class="nav-item" onclick="showSection('estatisticas',this)"><span class="nav-dot"></span>📊 Estatísticas</button>
+  <button class="nav-item" onclick="showSection('historico',this)"><span class="nav-dot"></span>📅 Histórico</button>
+  <button class="nav-item" onclick="showSection('exportar',this)"><span class="nav-dot"></span>📤 Exportar</button>
+  <div class="sb-divider"></div>
+  <button class="save-btn" onclick="saveAllData()">💾 Guardar Registo</button>
+  <div style="padding:6px 14px;">
+    <button class="btn btn-outline btn-sm" style="width:100%;justify-content:center;" onclick="exportPDF()">📄 PDF Diário</button>
+  </div>
+</aside>
+
+<main class="main-content">
+
+<!-- ══ REGISTO ══ -->
+<div class="section active" id="sec-registo">
+  <div class="page-hdr">
+    <div>
+      <span class="sec-badge badge-green">🧪 Registo</span>
+      <h2>Laboratório — Registo Diário</h2>
+      <p>Exames realizados por área clínica · B. Urgência + Internamento</p>
+    </div>
+    <button class="btn btn-primary" onclick="saveAllData()">💾 Guardar</button>
+  </div>
+  <div class="kpi-grid">
+    <div class="kpi"><span class="kpi-icon">🔬</span><div class="kpi-label">Total Exames</div><div class="kpi-val" id="kpi-total">0</div></div>
+    <div class="kpi blue"><span class="kpi-icon">🚨</span><div class="kpi-label">B. Urgência</div><div class="kpi-val" id="kpi-urgencia">0</div></div>
+    <div class="kpi cyan"><span class="kpi-icon">🏥</span><div class="kpi-label">Internamento</div><div class="kpi-val" id="kpi-internamento">0</div></div>
+    <div class="kpi red"><span class="kpi-icon">⚠️</span><div class="kpi-label">Positivos</div><div class="kpi-val" id="kpi-positivos">0</div></div>
+    <div class="kpi purple"><span class="kpi-icon">🦟</span><div class="kpi-label">P. Plasmódio+</div><div class="kpi-val" id="kpi-plasmodio">0</div></div>
+    <div class="kpi amber"><span class="kpi-icon">🩸</span><div class="kpi-label">HIV+</div><div class="kpi-val" id="kpi-hiv">0</div></div>
+  </div>
+  <div class="card">
+    <div class="card-title">👷 Técnicos de Serviço</div>
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;flex-wrap:wrap;">
+      <label style="font-size:.52rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);">Turno:</label>
+      <select id="turno-select" class="pc-select">
+        <option value="24h">24 Horas</option>
+      </select>
+    </div>
+    <div class="tech-grid" id="tech-grid"></div>
+    <div style="margin-top:10px;display:flex;gap:8px;">
+      <button class="btn btn-outline btn-sm" onclick="addTech()">➕ Técnico</button>
+      <button class="btn btn-outline btn-sm" onclick="removeTech()">➖ Remover</button>
+    </div>
+  </div>
+  <div class="registo-cols">
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div class="card-hdr">
+        <h3>🔬 Exames Realizados <span style="font-weight:400;font-size:.48rem;opacity:.5;text-transform:none;">(▼ clique para colapsar secção)</span></h3>
+        <span style="font-size:.52rem;color:var(--muted);">BU + Internamento</span>
+      </div>
+      <div class="table-wrap">
+        <table class="exam-table">
+          <thead><tr>
+            <th style="text-align:left;padding-left:18px;min-width:200px">Exame</th>
+            <th style="min-width:85px">B. Urgência</th>
+            <th style="min-width:85px">Internamento</th>
+            <th style="min-width:75px">Total</th>
+          </tr></thead>
+          <tbody id="tbody-exames"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div class="card-hdr red"><h3>⚠️ Exames Positivos</h3>
+        <span style="font-size:.52rem;color:rgba(252,165,165,.7);">Resultados positivos</span>
+      </div>
+      <div class="table-wrap">
+        <table class="pos-table">
+          <thead><tr>
+            <th style="text-align:left;padding-left:18px;min-width:145px">Exame</th>
+            <th style="min-width:85px">B. Urgência</th>
+            <th style="min-width:85px">Internamento</th>
+            <th style="min-width:68px">Total</th>
+          </tr></thead>
+          <tbody id="tbody-positivos"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ESTATÍSTICAS ══ -->
+<div class="section" id="sec-estatisticas">
+  <div class="page-hdr">
+    <div>
+      <span class="sec-badge badge-stats">📊 Estatísticas</span>
+      <h2>Análise Estatística</h2>
+      <p>Semanal = semanas fixas do mês: S1(1-7) · S2(8-14) · S3(15-21) · S4(22-28) · S5(29-fim)</p>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-refresh" onclick="loadLabStats()">🔄 Atualizar</button>
+      <button class="btn btn-amber" onclick="exportLabStatsPDF()">📄 PDF</button>
+    </div>
+  </div>
+
+  <div class="stats-period-nav">
+    <button class="period-btn active" onclick="selectLabPeriod('diario',this)">📅 Diário</button>
+    <button class="period-btn" onclick="selectLabPeriod('semanal',this)">📆 Semanal</button>
+    <button class="period-btn" onclick="selectLabPeriod('mensal',this)">🗓 Mensal</button>
+    <button class="period-btn" onclick="selectLabPeriod('trimestral',this)">📁 Trimestral</button>
+    <button class="period-btn" onclick="selectLabPeriod('semestral',this)">📂 Semestral</button>
+    <button class="period-btn" onclick="selectLabPeriod('anual',this)">📅 Anual</button>
+  </div>
+
+  <div class="period-panel">
+    <div class="lab-period-panel active" id="lab-panel-diario">
+      <div class="period-controls">
+        <label>Data</label>
+        <input type="date" id="lab-stat-date" class="pc-input">
+        <button class="btn btn-blue btn-sm" onclick="loadLabStats()">Carregar</button>
+        <button class="btn btn-refresh btn-sm" onclick="loadLabStats()">🔄 Atualizar</button>
+      </div>
+    </div>
+    <div class="lab-period-panel" id="lab-panel-semanal" style="display:none;">
+      <div class="period-controls">
+        <label>De</label>
+        <input type="date" id="lab-stat-sem-start" class="pc-input">
+        <label>até</label>
+        <input type="date" id="lab-stat-sem-end" class="pc-input">
+        <button class="btn btn-blue btn-sm" onclick="loadLabStats()">Carregar</button>
+        <button class="btn btn-refresh btn-sm" onclick="loadLabStats()">🔄 Atualizar</button>
+      </div>
+      <div style="font-size:.58rem;color:var(--muted);margin-top:4px;">O intervalo pode ser 1-10, 3-15, ou qualquer período personalizado.</div>
+    </div>
+    <div class="lab-period-panel" id="lab-panel-mensal" style="display:none;">
+      <div class="period-controls">
+        <label>Mês</label>
+        <input type="month" id="lab-stat-month" class="pc-input">
+        <button class="btn btn-blue btn-sm" onclick="loadLabStats()">Carregar</button>
+        <button class="btn btn-refresh btn-sm" onclick="loadLabStats()">🔄 Atualizar</button>
+      </div>
+    </div>
+    <div class="lab-period-panel" id="lab-panel-trimestral" style="display:none;">
+      <div class="period-controls">
+        <label>Trimestre</label>
+        <select id="lab-stat-q" class="pc-select"><option value="1">1º T</option><option value="2">2º T</option><option value="3">3º T</option><option value="4">4º T</option></select>
+        <label>Ano</label>
+        <input type="number" id="lab-stat-q-year" class="pc-input nw" min="2020" max="2099">
+        <button class="btn btn-blue btn-sm" onclick="loadLabStats()">Carregar</button>
+        <button class="btn btn-refresh btn-sm" onclick="loadLabStats()">🔄 Atualizar</button>
+      </div>
+    </div>
+    <div class="lab-period-panel" id="lab-panel-semestral" style="display:none;">
+      <div class="period-controls">
+        <label>Semestre</label>
+        <select id="lab-stat-sem-h" class="pc-select"><option value="1">1º S</option><option value="2">2º S</option></select>
+        <label>Ano</label>
+        <input type="number" id="lab-stat-sem-year" class="pc-input nw" min="2020" max="2099">
+        <button class="btn btn-blue btn-sm" onclick="loadLabStats()">Carregar</button>
+        <button class="btn btn-refresh btn-sm" onclick="loadLabStats()">🔄 Atualizar</button>
+      </div>
+    </div>
+    <div class="lab-period-panel" id="lab-panel-anual" style="display:none;">
+      <div class="period-controls">
+        <label>Ano</label>
+        <input type="number" id="lab-stat-year" class="pc-input nw" min="2020" max="2099">
+        <button class="btn btn-blue btn-sm" onclick="loadLabStats()">Carregar</button>
+        <button class="btn btn-refresh btn-sm" onclick="loadLabStats()">🔄 Atualizar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="lab-stats-content">
+    <div class="no-data-msg">Selecione um período e clique em <strong style="color:var(--accent)">🔄 Atualizar</strong></div>
+  </div>
+</div>
+
+<!-- ══ HISTÓRICO ══ -->
+<div class="section" id="sec-historico">
+  <div class="page-hdr">
+    <div><span class="sec-badge badge-blue">📅 Histórico</span><h2>Registos Anteriores</h2></div>
+    <button class="btn btn-outline btn-sm" onclick="clearHistory()">🗑 Apagar tudo</button>
+  </div>
+  <div class="card">
+    <div class="history-list" id="history-list"></div>
+  </div>
+</div>
+
+<!-- ══ EXPORTAR ══ -->
+<div class="section" id="sec-exportar">
+  <div class="page-hdr">
+    <div><span class="sec-badge badge-amber">📤 Exportar</span><h2>Relatórios PDF</h2></div>
+  </div>
+  <div class="export-grid">
+    <div class="export-card">
+      <div class="export-icon">📄</div><div class="export-title">Diário</div>
+      <div class="export-desc">Exames e positivos do dia</div>
+      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+        <input type="date" id="exp-date" class="pc-input"><button class="btn btn-primary btn-sm" onclick="exportPDF()">PDF</button>
+      </div>
+    </div>
+    <div class="export-card">
+      <div class="export-icon">📆</div><div class="export-title">Semanal / Intervalo</div>
+      <div class="export-desc">Qualquer intervalo personalizado (ex: 1-10, 3-15…)</div>
+      <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap">
+        <input type="date" id="exp-week-start" class="pc-input">
+        <input type="date" id="exp-week-end" class="pc-input">
+        <button class="btn btn-amber btn-sm" onclick="exportPeriodPDFDirect('semanal')">PDF</button>
+      </div>
+    </div>
+    <div class="export-card">
+      <div class="export-icon">🗓</div><div class="export-title">Mensal</div>
+      <div class="export-desc">Estatísticas do mês completo</div>
+      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+        <input type="month" id="exp-month" class="pc-input"><button class="btn btn-amber btn-sm" onclick="exportPeriodPDFDirect('mensal')">PDF</button>
+      </div>
+    </div>
+    <div class="export-card">
+      <div class="export-icon">📁</div><div class="export-title">Trimestral</div>
+      <div class="export-desc">Estatísticas do trimestre</div>
+      <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;align-items:center">
+        <select id="exp-q" class="pc-select"><option value="1">T1</option><option value="2">T2</option><option value="3">T3</option><option value="4">T4</option></select>
+        <input type="number" id="exp-q-year" class="pc-input" style="width:78px;" min="2020" max="2099">
+        <button class="btn btn-amber btn-sm" onclick="exportPeriodPDFDirect('trimestral')">PDF</button>
+      </div>
+    </div>
+    <div class="export-card">
+      <div class="export-icon">📂</div><div class="export-title">Semestral</div>
+      <div class="export-desc">Estatísticas do semestre</div>
+      <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;align-items:center">
+        <select id="exp-sem-h" class="pc-select"><option value="1">S1</option><option value="2">S2</option></select>
+        <input type="number" id="exp-sem-year" class="pc-input" style="width:78px;" min="2020" max="2099">
+        <button class="btn btn-amber btn-sm" onclick="exportPeriodPDFDirect('semestral')">PDF</button>
+      </div>
+    </div>
+    <div class="export-card">
+      <div class="export-icon">📅</div><div class="export-title">Anual</div>
+      <div class="export-desc">Estatísticas completas do ano</div>
+      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;align-items:center">
+        <input type="number" id="exp-year" class="pc-input" style="width:90px;" min="2020" max="2099">
+        <button class="btn btn-amber btn-sm" onclick="exportPeriodPDFDirect('anual')">PDF</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+</main>
+</div>
+
+<div id="toast-stack"></div>
+<div class="save-bar">
+  <div class="save-status">Laboratório · Hospital do Prenda · <span id="save-status-date">—</span></div>
+  <div class="btn-group">
+    <button class="btn btn-refresh btn-sm" onclick="loadLabStats()">🔄 Atualizar Stats</button>
+    <button class="btn btn-primary btn-sm" onclick="saveAllData()">💾 Guardar</button>
+    <button class="btn btn-outline btn-sm" onclick="exportPDF()">📄 PDF</button>
+  </div>
+</div>
+
+<script>
+
+// ─── SAFE STORAGE HELPERS ───
+function safeGet(key){try{return localStorage.getItem(key);}catch(e){return null;}}
+function safeSet(key,val){try{localStorage.setItem(key,val);return true;}catch(e){return false;}}
+function safeRemove(key){try{localStorage.removeItem(key);}catch(e){}}
+
+// ─── STORAGE UTILITIES ───
+function getStorageUsage(){
+  let t=0;try{for(let k in localStorage){if(localStorage.hasOwnProperty(k))t+=((localStorage[k]||'').length*2);}}catch(e){}
+  return(t/1024).toFixed(1)+' KB';
+}
+function exportBackup(prefix, filename){
+  const keys=[], data={};
+  try{for(let k in localStorage){if(k.startsWith(prefix)){keys.push(k);data[k]=localStorage.getItem(k);}}}catch(e){}
+  const blob=new Blob([JSON.stringify({exported:new Date().toISOString(),data},null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;a.click();
+}
+
+// ─── EXAM DEFINITIONS ───
+// ─── EXAM SECTIONS (inspired by Bloco Operatório table structure) ───
+const EXAM_SECTIONS = [
+  {
+    id: 'hematologia',
+    label: 'I. Hematologia',
+    icon: '🔴',
+    headerBg: '#dbeafe',
+    headerColor: '#1447c0',
+    subtotalColor: '#1a56db',
+    exames: ['Hemograma','Pesquisa de Plasmódio','Hemoglobina','VS','Tempo Coagulação','Tempo Hemorragia','Coagulograma']
+  },
+  {
+    id: 'parasitologia',
+    label: 'II. Parasitologia / Infectologia',
+    icon: '🦟',
+    headerBg: '#fee2e2',
+    headerColor: '#b91c1c',
+    subtotalColor: '#dc2626',
+    exames: ['Ag Malária','Chicungunya','Dengue']
+  },
+  {
+    id: 'serologia',
+    label: 'III. Serologia / Imunologia',
+    icon: '🧬',
+    headerBg: '#d1fae5',
+    headerColor: '#047857',
+    subtotalColor: '#059669',
+    exames: ['HIV','Ag HBS','Ac HVB','Ac HCV','VDRL','TASO','Factor Reumatoide','PCR','Vidal']
+  },
+  {
+    id: 'bioquimica',
+    label: 'IV. Bioquímica',
+    icon: '⚗️',
+    headerBg: '#fef3c7',
+    headerColor: '#92400e',
+    subtotalColor: '#d97706',
+    exames: ['Glicemia','Ureia','Creatinina','TGO','TGP','Bilirrubina Total','Bilirrubina Directa','Colesterol','Triglicéridos','Albumina','Albumina LCR']
+  },
+  {
+    id: 'microbiologia',
+    label: 'V. Microbiologia / Urinária',
+    icon: '🔬',
+    headerBg: '#ede9fe',
+    headerColor: '#5b21b6',
+    subtotalColor: '#7c3aed',
+    exames: ['Urinologia','Urina II']
+  }
+];
+
+// Flat list (keeps backward-compat with saved data)
+const EXAMES = EXAM_SECTIONS.flatMap(s => s.exames);
+const POSITIVOS = ['Pesquisa de Plasmódio','Hemograma','HIV','Ag HBS','Ac HVB','Ac HCV','VDRL','Chicungunya','Dengue'];
+
+// ─── STATE ───
+let numTechs = 3;
+let currentData = {
+  date: '', turno: 'manha', techs: [],
+  exames: {}, positivos: {}
+};
+
+// ─── HELPERS ───
+function todayKey(){ return new Date().toISOString().slice(0,10); }
+function sk(d){ return 'lab_'+d; }
+function fbRef(p){ return window._fb.ref(window._fb.db, p); }
+function formatDate(d){ if(!d) return '—'; const [y,m,day]=d.split('-'); return `${day}/${m}/${y}`; }
+function _fmtDateStr(d){ if(!d) return '—'; const [y,m,day]=d.split('-'); return `${day}/${m}/${y}`; }
+
+
+
+function getSavedDates(){
+  return JSON.parse(safeGet('lab_saved_dates')||'[]');
+}
+function addSavedDate(d){
+  const arr=getSavedDates();
+  if(!arr.includes(d)){ arr.push(d); arr.sort(); safeSet('lab_saved_dates',JSON.stringify(arr)); }
+}
+
+// ─── CLOCK ───
+setInterval(()=>{
+  document.getElementById('clock').textContent=new Date().toLocaleTimeString('pt-PT');
+},1000);
+
+// ─── SECTION NAV ───
+function showSection(name, btn){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('sec-'+name).classList.add('active');
+  if(btn) btn.classList.add('active');
+  if(name==='historico') renderHistory();
+}
+
+// ─── TECH GRID ───
+function renderTechGrid(){
+  const grid = document.getElementById('tech-grid');
+  grid.innerHTML = '';
+  for(let i=0;i<numTechs;i++){
+    const val = currentData.techs[i]||'';
+    grid.innerHTML += `
+      <div class="tech-item">
+        <div class="tech-num">${i+1}</div>
+        <input class="tech-input" type="text" placeholder="Nome do técnico ${i+1}"
+          value="${val}" oninput="currentData.techs[${i}]=this.value" id="tech-${i}">
+      </div>`;
+  }
+}
+function addTech(){ numTechs++; renderTechGrid(); }
+function removeTech(){ if(numTechs>1){ numTechs--; currentData.techs=currentData.techs.slice(0,numTechs); renderTechGrid(); } }
+
+// ─── EXAMES TABLE (sectioned, inspired by Bloco Operatório) ───
+const _collapsed = {};  // section collapse state
+
+function toggleSection(id) {
+  _collapsed[id] = !_collapsed[id];
+  renderExamesTable();
+}
+
+function renderExamesTable(){
+  const tbody = document.getElementById('tbody-exames');
+  let rows = '';
+
+  EXAM_SECTIONS.forEach(sec => {
+    const isCollapsed = _collapsed[sec.id];
+    // Section header row
+    rows += `<tr class="section-header" style="background:${sec.headerBg};cursor:pointer;" onclick="toggleSection('${sec.id}')">
+      <td colspan="4" style="color:${sec.headerColor};font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:0.07em;padding:9px 18px;user-select:none;">
+        <span style="margin-right:8px;">${sec.icon}</span>${sec.label}
+        <span style="float:right;font-size:13px;opacity:.7">${isCollapsed ? '▶' : '▼'}</span>
+      </td>
+    </tr>`;
+
+    if (!isCollapsed) {
+      let secBu = 0, secInt = 0;
+      sec.exames.forEach(e => {
+        const bu  = currentData.exames[e]?.bu  || 0;
+        const int = currentData.exames[e]?.int || 0;
+        const tot = bu + int;
+        secBu  += bu;
+        secInt += int;
+        rows += `<tr>
+          <td style="padding-left:28px;">${e}</td>
+          <td><input type="number" class="num-input" min="0" value="${bu||''}" placeholder="0"
+            oninput="setExame('${e}','bu',this.value)"></td>
+          <td><input type="number" class="num-input" min="0" value="${int||''}" placeholder="0"
+            oninput="setExame('${e}','int',this.value)"></td>
+          <td id="tot-${e.replace(/[^a-z0-9]/gi,'_')}" style="font-family:'IBM Plex Mono',monospace;font-weight:700;color:var(--text)">${tot||0}</td>
+        </tr>`;
+      });
+      // Subtotal row for section
+      rows += `<tr class="subtotal-row" id="sub-${sec.id}">
+        <td style="padding-left:18px;font-weight:700;font-size:12px;color:${sec.subtotalColor};">
+          Subtotal — ${sec.label.replace(/^[IVX]+\.\s*/,'')}
+        </td>
+        <td style="font-family:'IBM Plex Mono',monospace;font-weight:700;color:${sec.subtotalColor};" id="sub-${sec.id}-bu">${secBu}</td>
+        <td style="font-family:'IBM Plex Mono',monospace;font-weight:700;color:${sec.subtotalColor};" id="sub-${sec.id}-int">${secInt}</td>
+        <td style="font-family:'IBM Plex Mono',monospace;font-weight:700;color:${sec.subtotalColor};" id="sub-${sec.id}-tot">${secBu+secInt}</td>
+      </tr>`;
+    }
+  });
+
+  // "Outro" row
+  const outroBu  = currentData.exames['_outro']?.bu   || 0;
+  const outroInt = currentData.exames['_outro']?.int  || 0;
+  const outroNome= currentData.exames['_outro']?.nome || '';
+  rows += `<tr class="outro-row">
+    <td><input type="text" class="outro-text" placeholder="Outro exame..." value="${outroNome}"
+      oninput="setExameOutroNome(this.value)"></td>
+    <td><input type="number" class="num-input" min="0" value="${outroBu||''}" placeholder="0"
+      oninput="setExame('_outro','bu',this.value)"></td>
+    <td><input type="number" class="num-input" min="0" value="${outroInt||''}" placeholder="0"
+      oninput="setExame('_outro','int',this.value)"></td>
+    <td id="tot-_outro" style="font-family:'IBM Plex Mono',monospace;font-weight:700;color:var(--amber)">${(outroBu+outroInt)||0}</td>
+  </tr>`;
+
+  tbody.innerHTML = rows;
+  appendExamesTotals();
+}
+
+function appendExamesTotals(){
+  const tbody = document.getElementById('tbody-exames');
+  let buTotal=0,intTotal=0;
+  EXAMES.forEach(e=>{
+    buTotal += Number(currentData.exames[e]?.bu||0);
+    intTotal += Number(currentData.exames[e]?.int||0);
+  });
+  buTotal += Number(currentData.exames['_outro']?.bu||0);
+  intTotal += Number(currentData.exames['_outro']?.int||0);
+  const grandTotal = buTotal + intTotal;
+  const tr = document.createElement('tr');
+  tr.className = 'total-row';
+  tr.innerHTML = `<td style="text-align:left;padding-left:18px;font-weight:700">TOTAL</td>
+    <td style="font-family:'IBM Plex Mono',monospace">${buTotal}</td>
+    <td style="font-family:'IBM Plex Mono',monospace">${intTotal}</td>
+    <td style="font-family:'IBM Plex Mono',monospace">${grandTotal}</td>`;
+  tbody.appendChild(tr);
+}
+
+function setExame(exame, col, val){
+  if(!currentData.exames[exame]) currentData.exames[exame]={bu:0,int:0};
+  currentData.exames[exame][col] = Number(val)||0;
+  updateExameTotals();
+  updateKPIs();
+}
+function setExameOutroNome(val){
+  if(!currentData.exames['_outro']) currentData.exames['_outro']={bu:0,int:0,nome:''};
+  currentData.exames['_outro'].nome = val;
+}
+function updateExameTotals(){
+  EXAMES.forEach(e=>{
+    const key = e.replace(/[^a-z0-9]/gi,'_');
+    const cell = document.getElementById('tot-'+key);
+    if(cell){ cell.textContent = (Number(currentData.exames[e]?.bu||0)+Number(currentData.exames[e]?.int||0)); }
+  });
+  const outroCell = document.getElementById('tot-_outro');
+  if(outroCell){ outroCell.textContent = (Number(currentData.exames['_outro']?.bu||0)+Number(currentData.exames['_outro']?.int||0)); }
+
+  // Update section subtotals
+  EXAM_SECTIONS.forEach(sec => {
+    let secBu=0, secInt=0;
+    sec.exames.forEach(e=>{ secBu+=Number(currentData.exames[e]?.bu||0); secInt+=Number(currentData.exames[e]?.int||0); });
+    const buCell = document.getElementById('sub-'+sec.id+'-bu');
+    const intCell = document.getElementById('sub-'+sec.id+'-int');
+    const totCell = document.getElementById('sub-'+sec.id+'-tot');
+    if(buCell) buCell.textContent=secBu;
+    if(intCell) intCell.textContent=secInt;
+    if(totCell) totCell.textContent=secBu+secInt;
+  });
+
+  const tbody = document.getElementById('tbody-exames');
+  const totalRow = tbody.querySelector('.total-row');
+  if(totalRow){
+    let buT=0,inT=0;
+    EXAMES.forEach(e=>{buT+=Number(currentData.exames[e]?.bu||0);inT+=Number(currentData.exames[e]?.int||0);});
+    buT+=Number(currentData.exames['_outro']?.bu||0);
+    inT+=Number(currentData.exames['_outro']?.int||0);
+    const cells = totalRow.querySelectorAll('td');
+    cells[1].textContent=buT; cells[2].textContent=inT; cells[3].textContent=buT+inT;
+  }
+}
+
+// ─── POSITIVOS TABLE ───
+function renderPositivosTable(){
+  const tbody = document.getElementById('tbody-positivos');
+  tbody.innerHTML = '';
+  let rows = '';
+  POSITIVOS.forEach(e=>{
+    const bu=currentData.positivos[e]?.bu||0;
+    const in_=currentData.positivos[e]?.int||0;
+    rows += `<tr>
+      <td>${e}</td>
+      <td><input type="number" class="num-input" min="0" value="${bu||''}" placeholder="0"
+        oninput="setPositivo('${e}','bu',this.value)" style="border-color:#fca5a5;"></td>
+      <td><input type="number" class="num-input" min="0" value="${in_||''}" placeholder="0"
+        oninput="setPositivo('${e}','int',this.value)" style="border-color:#fca5a5;"></td>
+      <td id="posT-${e.replace(/[^a-z0-9]/gi,'_')}" style="font-family:'IBM Plex Mono',monospace;font-weight:700;color:#b91c1c">${(bu+in_)||0}</td>
+    </tr>`;
+  });
+  tbody.innerHTML = rows;
+  appendPositivosTotal();
+}
+
+function appendPositivosTotal(){
+  const tbody = document.getElementById('tbody-positivos');
+  let buT=0,inT=0;
+  POSITIVOS.forEach(e=>{ buT+=Number(currentData.positivos[e]?.bu||0); inT+=Number(currentData.positivos[e]?.int||0); });
+  const tr=document.createElement('tr');
+  tr.className='total-row';
+  tr.innerHTML=`<td style="text-align:left;padding-left:18px;font-weight:700">TOTAL POSITIVOS</td>
+    <td style="font-family:'IBM Plex Mono',monospace">${buT}</td>
+    <td style="font-family:'IBM Plex Mono',monospace">${inT}</td>
+    <td style="font-family:'IBM Plex Mono',monospace">${buT+inT}</td>`;
+  tbody.appendChild(tr);
+}
+
+function setPositivo(exame,col,val){
+  if(!currentData.positivos[exame]) currentData.positivos[exame]={bu:0,int:0};
+  currentData.positivos[exame][col]=Number(val)||0;
+  const key=exame.replace(/[^a-z0-9]/gi,'_');
+  const cell=document.getElementById('posT-'+key);
+  if(cell) cell.textContent=Number(currentData.positivos[exame].bu||0)+Number(currentData.positivos[exame].int||0);
+  const tbody=document.getElementById('tbody-positivos');
+  const totalRow=tbody.querySelector('.total-row');
+  if(totalRow){
+    let buT=0,inT=0;
+    POSITIVOS.forEach(e=>{buT+=Number(currentData.positivos[e]?.bu||0);inT+=Number(currentData.positivos[e]?.int||0);});
+    const cells=totalRow.querySelectorAll('td');
+    cells[1].textContent=buT;cells[2].textContent=inT;cells[3].textContent=buT+inT;
+  }
+  updateKPIs();
+}
+
+// ─── KPIs ───
+function updateKPIs(){
+  let buTotal=0,inTotal=0;
+  EXAMES.forEach(e=>{buTotal+=Number(currentData.exames[e]?.bu||0);inTotal+=Number(currentData.exames[e]?.int||0);});
+  buTotal+=Number(currentData.exames['_outro']?.bu||0);
+  inTotal+=Number(currentData.exames['_outro']?.int||0);
+  let posTotal=0;
+  POSITIVOS.forEach(e=>{ posTotal+=Number(currentData.positivos[e]?.bu||0)+Number(currentData.positivos[e]?.int||0); });
+  document.getElementById('kpi-total').textContent = buTotal+inTotal;
+  document.getElementById('kpi-urgencia').textContent = buTotal;
+  document.getElementById('kpi-internamento').textContent = inTotal;
+  document.getElementById('kpi-positivos').textContent = posTotal;
+  const plasm=(Number(currentData.positivos['Pesquisa de Plasmódio']?.bu||0)+Number(currentData.positivos['Pesquisa de Plasmódio']?.int||0));
+  document.getElementById('kpi-plasmodio').textContent = plasm;
+  const hiv=(Number(currentData.positivos['HIV']?.bu||0)+Number(currentData.positivos['HIV']?.int||0));
+  document.getElementById('kpi-hiv').textContent = hiv;
+}
+
+// ─── SAVE & LOAD ───
+function collectCurrentData(){
+  currentData.techs = [];
+  for(let i=0;i<numTechs;i++){
+    const el=document.getElementById('tech-'+i);
+    if(el) currentData.techs.push(el.value||'');
+  }
+  currentData.turno = document.getElementById('turno-select').value;
+  currentData.date = document.getElementById('data-registo').value;
+}
+
+async function saveAllData(){
+  collectCurrentData();
+  const date = currentData.date || todayKey();
+  const payload = JSON.parse(JSON.stringify(currentData));
+  safeSet(sk(date), JSON.stringify(payload));
+  addSavedDate(date);
+  try{
+    await window._fb.set(fbRef('lab/'+date), payload);
+    await window._fb.set(fbRef('lab_dates'), getSavedDates());
+    await window._fb.set(fbRef('lab_sync'), {ts:Date.now(), date});
+    const sl=document.getElementById('sync-label');
+    if(sl) sl.textContent='Guardado às '+new Date().toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'});
+    toast('Dados guardados com sucesso ✓','success');
+  }catch(e){
+    toast('Guardado localmente (sem Firebase)');
+  }
+  renderHistory();
+}
+
+function loadDay(date){
+  const raw = safeGet(sk(date));
+  if(raw){
+    const d=JSON.parse(raw);
+    currentData = { date, turno:'manha', techs:[], exames:{}, positivos:{}, ...d };
+  } else {
+    currentData = { date, turno:'manha', techs:[], exames:{}, positivos:{} };
+  }
+  numTechs = Math.max(3, currentData.techs.length);
+  document.getElementById('turno-select').value = currentData.turno||'manha';
+  document.getElementById('save-status-date').textContent = _fmtDateStr(date);
+  renderTechGrid();
+  renderExamesTable();
+  renderPositivosTable();
+  updateKPIs();
+}
+
+// ════════════════════════════════════════════════════════════════════
+// STATISTICS ENGINE — Full port from Bloco Operatório
+// ════════════════════════════════════════════════════════════════════
+
+let _labStatsCache = null;
+let _labCurrentPeriod = 'diario';
+
+// ── Switch period tab ──
+function selectLabPeriod(period, btn) {
+  _labCurrentPeriod = period;
+  document.querySelectorAll('.lab-period-panel').forEach(p => p.style.display='none');
+  document.getElementById('lab-panel-'+period).style.display='block';
+  document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('lab-stats-content').innerHTML =
+    '<div class="no-data-msg">Clique em <strong style="color:var(--accent)">🔄 Atualizar</strong> para processar.</div>';
+  _labStatsCache = null;
+}
+
+// ── Collect all lab data from localStorage ──
+function _getAllLabData() {
+  const data = {};
+  Object.keys(localStorage).forEach(k => {
+    if (k.startsWith('lab_') && k !== 'lab_saved_dates') {
+      const date = k.replace('lab_', '');
+      if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        try { data[date] = JSON.parse(safeGet(k)); } catch(e) {}
+      }
+    }
+  });
+  return data;
+}
+
+// ── Load and render stats ──
+function loadLabStats() {
+  const container = document.getElementById('lab-stats-content');
+  container.innerHTML = '<div class="no-data-msg">🔄 A processar registos…</div>';
+  _labStatsCache = _getAllLabData();
+  renderLabStats(_labStatsCache, _labCurrentPeriod);
+}
+
+// ── Get dates array for the selected period ──
+
+function _getLabDatesForPeriod(period) {
+  const now = new Date();
+  const yr  = now.getFullYear();
+  const mo  = now.getMonth() + 1;
+  const todayStr = now.toISOString().slice(0,10);
+
+  if (period === 'diario') {
+    const d = document.getElementById('lab-stat-date').value || todayStr;
+    return [d];
+
+  } else if (period === 'semanal') {
+    const s = document.getElementById('lab-stat-sem-start').value;
+    const e = document.getElementById('lab-stat-sem-end').value;
+    if (!s || !e) return [];
+    return _labDatesInRange(s, e);
+
+  } else if (period === 'mensal') {
+    const ym = document.getElementById('lab-stat-month').value;
+    if (!ym) return [];
+    return _getMonthDates(ym);
+
+  } else if (period === 'trimestral') {
+    const q = parseInt(document.getElementById('lab-stat-q').value, 10);
+    const y = document.getElementById('lab-stat-q-year').value;
+    if (!y) return [];
+    const ss = ['01','04','07','10'], es = ['03','06','09','12'], ed = ['31','30','30','31'];
+    return _labDatesInRange(`${y}-${ss[q-1]}-01`, `${y}-${es[q-1]}-${ed[q-1]}`);
+
+  } else if (period === 'semestral') {
+    const h = parseInt(document.getElementById('lab-stat-sem-h').value, 10);
+    const y = document.getElementById('lab-stat-sem-year').value;
+    if (!y) return [];
+    const s = h === 1 ? `${y}-01-01` : `${y}-07-01`;
+    const e = h === 1 ? `${y}-06-30` : `${y}-12-31`;
+    return _labDatesInRange(s, e);
+
+  } else if (period === 'anual') {
+    const y = document.getElementById('lab-stat-year').value;
+    if (!y) return [];
+    return _labDatesInRange(`${y}-01-01`, `${y}-12-31`);
+  }
+  return [];
+}
+
+function _labDatesInRange(s, e) {
+  const dates = [];
+  let cur = new Date(s+'T00:00:00');
+  const end = new Date(e+'T00:00:00');
+  while (cur <= end) {
+    dates.push(cur.toISOString().slice(0,10));
+    cur.setDate(cur.getDate() + 1);
+  }
+  return dates;
+}
+
+function _getMonthDates(ym) {
+  const [y,m] = ym.split('-').map(Number);
+  const days = new Date(y,m,0).getDate();
+  const arr = [];
+  for(let i=1;i<=days;i++) arr.push(`${ym}-${String(i).padStart(2,'0')}`);
+  return arr;
+}
+
+// ── Aggregate data for a set of dates ──
+function _aggregateLabDates(dates, allData) {
+  const agg = {};
+  [...EXAMES, '_outro'].forEach(e => { agg[e] = {bu:0, int:0}; });
+  POSITIVOS.forEach(e => { agg['pos_'+e] = {bu:0, int:0}; });
+  agg._grandBu = 0; agg._grandInt = 0; agg._posTotal = 0;
+
+  dates.forEach(d => {
+    const data = allData[d];
+    if (!data) return;
+    EXAMES.forEach(e => {
+      agg[e].bu  += Number(data.exames?.[e]?.bu  || 0);
+      agg[e].int += Number(data.exames?.[e]?.int || 0);
+    });
+    if (data.exames?.['_outro']) {
+      agg['_outro'].bu  += Number(data.exames['_outro'].bu  || 0);
+      agg['_outro'].int += Number(data.exames['_outro'].int || 0);
+    }
+    POSITIVOS.forEach(e => {
+      agg['pos_'+e].bu  += Number(data.positivos?.[e]?.bu  || 0);
+      agg['pos_'+e].int += Number(data.positivos?.[e]?.int || 0);
+    });
+  });
+
+  [...EXAMES, '_outro'].forEach(e => { agg._grandBu += agg[e].bu; agg._grandInt += agg[e].int; });
+  POSITIVOS.forEach(e => { agg._posTotal += agg['pos_'+e].bu + agg['pos_'+e].int; });
+  return agg;
+}
+
+// ── Group dates into chart buckets ──
+function _labGroupByLabel(period, dates, allData) {
+  const groups = new Map();
+  for (const d of dates) {
+    const dt = new Date(d+'T00:00:00');
+    let label;
+    if (period === 'diario') {
+      label = _fmtDateStr(d);
+    } else if (period === 'semanal') {
+      label = String(dt.getDate()).padStart(2,'0')+'/'+String(dt.getMonth()+1).padStart(2,'0');
+    } else if (period === 'mensal') {
+      const day=dt.getDate();
+      if(day<=7) label='S1 (1-7)';
+      else if(day<=14) label='S2 (8-14)';
+      else if(day<=21) label='S3 (15-21)';
+      else if(day<=28) label='S4 (22-28)';
+      else label='S5 (29-fim)';
+    } else if (period === 'trimestral') {
+      const s = new Date(dt.getFullYear(), 0, 1);
+      label = 'Sem ' + Math.ceil(((dt - s) / 86400000 + s.getDay() + 1) / 7);
+    } else {
+      const mn = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][dt.getMonth()];
+      label = mn + (period === 'anual' ? ' ' + dt.getFullYear() : '');
+    }
+    if (!groups.has(label)) groups.set(label, []);
+    groups.get(label).push(d);
+  }
+  return Array.from(groups.entries()).map(([label, ds]) => {
+    let bu = 0, int = 0;
+    ds.forEach(d => {
+      if (!allData[d]) return;
+      EXAMES.forEach(e => {
+        bu  += Number(allData[d].exames?.[e]?.bu  || 0);
+        int += Number(allData[d].exames?.[e]?.int || 0);
+      });
+      bu  += Number(allData[d].exames?.['_outro']?.bu  || 0);
+      int += Number(allData[d].exames?.['_outro']?.int || 0);
+    });
+    return { label, bu, int, total: bu + int };
+  });
+}
+
+// ── Period label ──
+function _labPeriodLabel(p) {
+  return { diario:'Dia', semanal:'Semana', mensal:'Mês', trimestral:'Trimestre', semestral:'Semestre', anual:'Ano' }[p] || p;
+}
+
+// ── Main render function ──
+function renderLabStats(allData, period) {
+  const container = document.getElementById('lab-stats-content');
+  const dates = _getLabDatesForPeriod(period);
+
+  if (!dates.length) {
+    container.innerHTML = '<div class="no-data-msg">⚠ Selecione um período válido antes de carregar.</div>';
+    return;
+  }
+
+  const filteredDates = dates.filter(d => allData && allData[d]);
+
+  if (!allData || Object.keys(allData).length === 0) {
+    container.innerHTML = '<div class="no-data-msg">Nenhum dado encontrado. Guarde registos primeiro na secção <strong>Registo Diário</strong>.</div>';
+    return;
+  }
+
+  const agg = _aggregateLabDates(dates, allData);
+  const grandTotal = agg._grandBu + agg._grandInt;
+
+  // Build section totals for breakdown chart
+  const sectionTotals = EXAM_SECTIONS.map(sec => {
+    let bu=0, int=0;
+    sec.exames.forEach(e=>{ bu+=(agg[e]?.bu||0); int+=(agg[e]?.int||0); });
+    return { ...sec, bu, int, total: bu+int };
+  });
+  const avgDia = filteredDates.length > 0 ? (grandTotal / filteredDates.length).toFixed(1) : '0';
+  const startD = _fmtDateStr(dates[0]);
+  const endD   = _fmtDateStr(dates[dates.length - 1]);
+
+  // Period subtitle for weekly
+  let periodSubtitle = '';
+  if(period==='semanal'){
+    const s=document.getElementById('lab-stat-sem-start')?.value;
+    const e=document.getElementById('lab-stat-sem-end')?.value;
+    if(s&&e) periodSubtitle=` · ${fmtDate(s)} – ${fmtDate(e)}`;
+  }
+
+  const exameRows = [...EXAMES, '_outro'].map(e => ({
+    name: e === '_outro' ? 'Outro' : e,
+    bu: agg[e].bu, int: agg[e].int,
+    total: agg[e].bu + agg[e].int
+  })).filter(r => r.total > 0).sort((a,b) => b.total - a.total);
+  const maxExame = Math.max(...exameRows.map(r => r.total), 1);
+
+  const posRows = POSITIVOS.map(e => ({
+    name: e,
+    bu: agg['pos_'+e].bu, int: agg['pos_'+e].int,
+    total: agg['pos_'+e].bu + agg['pos_'+e].int
+  }));
+  const plasmodio = agg['pos_Pesquisa de Plasmódio'] ? (agg['pos_Pesquisa de Plasmódio'].bu + agg['pos_Pesquisa de Plasmódio'].int) : 0;
+  const hiv       = agg['pos_HIV'] ? (agg['pos_HIV'].bu + agg['pos_HIV'].int) : 0;
+
+  // ── Summary cards (HIV-style) ──
+  const summaryCards = `
+    <div class="lsr-summary-grid">
+      <div class="lsr-card lsr-card-accent">
+        <span class="lsr-card-label">🔬 Total Exames</span>
+        <span class="lsr-card-val">${grandTotal}</span>
+        <div class="lsr-card-sub">${startD} — ${endD}</div>
+      </div>
+      <div class="lsr-card lsr-card-blue">
+        <span class="lsr-card-label">🚨 B. Urgência</span>
+        <span class="lsr-card-val">${agg._grandBu}</span>
+        <div class="lsr-card-sub">${grandTotal > 0 ? (agg._grandBu/grandTotal*100).toFixed(1) : '0.0'}% do total</div>
+      </div>
+      <div class="lsr-card lsr-card-cyan">
+        <span class="lsr-card-label">🏥 Internamento</span>
+        <span class="lsr-card-val">${agg._grandInt}</span>
+        <div class="lsr-card-sub">${grandTotal > 0 ? (agg._grandInt/grandTotal*100).toFixed(1) : '0.0'}% do total</div>
+      </div>
+      <div class="lsr-card">
+        <span class="lsr-card-label">📈 Média / Dia</span>
+        <span class="lsr-card-val">${avgDia}</span>
+        <div class="lsr-card-sub">${filteredDates.length} dia(s) com dados</div>
+      </div>
+      <div class="lsr-card lsr-card-red">
+        <span class="lsr-card-label">⚠️ Positivos</span>
+        <span class="lsr-card-val">${agg._posTotal}</span>
+        <div class="lsr-card-sub">${grandTotal > 0 ? (agg._posTotal/grandTotal*100).toFixed(1) : '0.0'}% taxa positiv.</div>
+      </div>
+      <div class="lsr-card lsr-card-purple">
+        <span class="lsr-card-label">🦟 Plasmodio+</span>
+        <span class="lsr-card-val">${plasmodio}</span>
+        <div class="lsr-card-sub">P. Plasmodio positivos</div>
+      </div>
+      <div class="lsr-card lsr-card-amber">
+        <span class="lsr-card-label">🩸 HIV+</span>
+        <span class="lsr-card-val">${hiv}</span>
+        <div class="lsr-card-sub">HIV positivos</div>
+      </div>
+      <div class="lsr-card">
+        <span class="lsr-card-label">📅 Cobertura</span>
+        <span class="lsr-card-val" style="font-size:1.5rem;">${filteredDates.length}<span style="font-size:1rem;opacity:.5">/${dates.length}</span></span>
+        <div class="lsr-card-sub">dias com registos</div>
+      </div>
+    </div>`;
+
+  // ── Exames horizontal bar chart (HIV-style) ──
+  const exameBarChart = exameRows.length > 0 ? `
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">🔬 Exames por Tipo</div>
+        <div class="card-subtitle">${grandTotal} exames · ${filteredDates.length} dia(s)</div>
+      </div>
+      <div style="padding:18px 22px;">
+        ${exameRows.map(r => {
+          const pctBu  = grandTotal > 0 ? Math.round(r.bu/maxExame*100) : 0;
+          const pctInt = grandTotal > 0 ? Math.round(r.int/maxExame*100) : 0;
+          return `<div class="lsr-bar-row">
+            <span class="lsr-bar-label" title="${r.name}">${r.name}</span>
+            <div class="lsr-bar-stack-wrap">
+              <div class="lsr-bar-stack">
+                <div class="lsr-bar-seg lsr-seg-bu" style="width:${pctBu}%" title="B. Urgência: ${r.bu}"></div>
+                <div class="lsr-bar-seg lsr-seg-int" style="width:${pctInt}%" title="Internamento: ${r.int}"></div>
+              </div>
+            </div>
+            <span class="lsr-bar-val">${r.total}</span>
+            <span class="lsr-bar-pct">${grandTotal > 0 ? (r.total/grandTotal*100).toFixed(1) : '0.0'}%</span>
+          </div>`;
+        }).join('')}
+        <div class="lsr-bar-legend">
+          <span><span class="lsr-swatch" style="background:var(--blue2)"></span>B. Urgência</span>
+          <span><span class="lsr-swatch" style="background:var(--cyan)"></span>Internamento</span>
+        </div>
+        <div class="lsr-total-footer">
+          <span>TOTAL</span>
+          <span style="font-family:'IBM Plex Mono',monospace;font-weight:700;color:var(--text);">${agg._grandBu} BU + ${agg._grandInt} INT = <strong>${grandTotal}</strong></span>
+        </div>
+      </div>
+    </div>` : '';
+
+  // ── Positivos bar chart ──
+  const posFiltered = posRows.filter(r => r.total > 0);
+  const maxPos = Math.max(...posRows.map(r => r.total), 1);
+  const posBarChart = `
+    <div class="card">
+      <div class="card-header" style="background:#fef2f2;border-bottom:1px solid rgba(220,38,38,.15);">
+        <div class="card-title" style="color:#dc2626;">⚠️ Exames Positivos</div>
+        <div class="card-subtitle" style="color:rgba(185,28,28,.8)">${agg._posTotal} positivos no período</div>
+      </div>
+      <div style="padding:18px 22px;">
+        ${posFiltered.length === 0
+          ? '<div style="text-align:center;padding:20px;color:var(--muted);">Sem positivos registados neste período.</div>'
+          : posFiltered.map(r => `
+            <div class="lsr-bar-row">
+              <span class="lsr-bar-label" title="${r.name}">${r.name}</span>
+              <div class="lsr-bar-stack-wrap">
+                <div class="lsr-bar-stack">
+                  <div class="lsr-bar-seg" style="width:${Math.round(r.bu/maxPos*100)}%;background:linear-gradient(90deg,#b91c1c,#dc2626);" title="B. Urgência: ${r.bu}"></div>
+                  <div class="lsr-bar-seg" style="width:${Math.round(r.int/maxPos*100)}%;background:linear-gradient(90deg,#7f1d1d,#991b1b);" title="Internamento: ${r.int}"></div>
+                </div>
+              </div>
+              <span class="lsr-bar-val" style="color:#dc2626;">${r.total}</span>
+              <span class="lsr-bar-pct">${agg._posTotal > 0 ? (r.total/agg._posTotal*100).toFixed(1) : '0.0'}%</span>
+            </div>`).join('')
+        }
+        ${posFiltered.length > 0 ? `<div class="lsr-total-footer" style="border-top-color:rgba(220,38,38,.2);">
+          <span>TOTAL POSITIVOS</span>
+          <span style="font-family:'IBM Plex Mono',monospace;font-weight:700;color:#dc2626;">${POSITIVOS.reduce((s,e)=>s+(agg['pos_'+e]?.bu||0),0)} BU + ${POSITIVOS.reduce((s,e)=>s+(agg['pos_'+e]?.int||0),0)} INT = <strong>${agg._posTotal}</strong></span>
+        </div>` : ''}
+      </div>
+    </div>`;
+
+  // ── Annual special view: month-by-month ──
+  let annualMonthChart = '';
+  if (period === 'anual') {
+    const MONTHS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    const y = document.getElementById('lab-stat-year').value;
+    const monthData = MONTHS.map((mn, mi) => {
+      const moStr = String(mi+1).padStart(2,'0');
+      const mDates = _getMonthDates(`${y}-${moStr}`);
+      const mAgg = _aggregateLabDates(mDates, allData);
+      const mTotal = mAgg._grandBu + mAgg._grandInt;
+      const mFiltered = mDates.filter(d => allData && allData[d]).length;
+      return { mn, moStr, bu: mAgg._grandBu, int: mAgg._grandInt, total: mTotal, pos: mAgg._posTotal, hiv: mAgg['pos_HIV'] ? mAgg['pos_HIV'].bu + mAgg['pos_HIV'].int : 0, plas: mAgg['pos_P.Plasmodio'] ? mAgg['pos_P.Plasmodio'].bu + mAgg['pos_P.Plasmodio'].int : 0, days: mFiltered };
+    });
+    const maxM = Math.max(...monthData.map(m => m.total), 1);
+
+    annualMonthChart = `
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">📅 Evolução Mensal — ${y}</div>
+          <div class="card-subtitle">Exames por mês</div>
+        </div>
+        <div style="padding:18px 22px;">
+          ${monthData.map(m => `
+            <div class="lsr-bar-row">
+              <span class="lsr-bar-label" style="min-width:36px;">${m.mn}</span>
+              <div class="lsr-bar-stack-wrap">
+                <div class="lsr-bar-stack">
+                  <div class="lsr-bar-seg lsr-seg-bu" style="width:${Math.round(m.bu/maxM*100)}%"></div>
+                  <div class="lsr-bar-seg lsr-seg-int" style="width:${Math.round(m.int/maxM*100)}%"></div>
+                </div>
+              </div>
+              <span class="lsr-bar-val">${m.total || '—'}</span>
+              <span class="lsr-bar-pct" style="color:${m.total === 0 ? 'var(--text-muted)' : 'var(--green)'};">${grandTotal > 0 && m.total > 0 ? (m.total/grandTotal*100).toFixed(1)+'%' : '—'}</span>
+            </div>`).join('')}
+          <div class="lsr-bar-legend">
+            <span><span class="lsr-swatch" style="background:var(--blue2)"></span>B. Urgência</span>
+            <span><span class="lsr-swatch" style="background:var(--cyan)"></span>Internamento</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">📋 Resumo Mensal Detalhado — ${y}</div>
+          <div class="card-subtitle">Total · Urgência · Internamento · Positivos · HIV · Plasmodio por mês</div>
+        </div>
+        <div class="table-wrap">
+          <table class="stats-exame-table">
+            <thead><tr>
+              <th style="text-align:left;padding-left:18px;">Mês</th>
+              <th>Dias c/Dados</th>
+              <th>B. Urgência</th>
+              <th>Internamento</th>
+              <th>Total Exames</th>
+              <th>%</th>
+              <th>Positivos</th>
+              <th>HIV+</th>
+              <th>Plasmodio+</th>
+            </tr></thead>
+            <tbody>
+              ${monthData.map(m => `<tr>
+                <td style="padding-left:18px;font-weight:600;">${m.mn}</td>
+                <td style="color:var(--muted);font-family:'IBM Plex Mono',monospace;">${m.days}</td>
+                <td style="color:var(--blue2);font-family:'IBM Plex Mono',monospace;">${m.bu || '—'}</td>
+                <td style="color:var(--cyan);font-family:'IBM Plex Mono',monospace;">${m.int || '—'}</td>
+                <td style="font-weight:700;color:var(--text);font-family:'IBM Plex Mono',monospace;">${m.total || '—'}</td>
+                <td style="color:var(--muted);font-family:'IBM Plex Mono',monospace;">${grandTotal > 0 && m.total > 0 ? (m.total/grandTotal*100).toFixed(1)+'%' : '—'}</td>
+                <td style="color:var(--red);font-family:'IBM Plex Mono',monospace;">${m.pos || '—'}</td>
+                <td style="color:var(--amber);font-family:'IBM Plex Mono',monospace;">${m.hiv || '—'}</td>
+                <td style="color:var(--purple);font-family:'IBM Plex Mono',monospace;">${m.plas || '—'}</td>
+              </tr>`).join('')}
+              <tr class="st-total-row">
+                <td style="padding-left:18px;">TOTAL ${y}</td>
+                <td style="font-family:'IBM Plex Mono',monospace;">${filteredDates.length}</td>
+                <td style="font-family:'IBM Plex Mono',monospace;">${agg._grandBu}</td>
+                <td style="font-family:'IBM Plex Mono',monospace;">${agg._grandInt}</td>
+                <td style="font-family:'IBM Plex Mono',monospace;">${grandTotal}</td>
+                <td>100%</td>
+                <td style="font-family:'IBM Plex Mono',monospace;">${agg._posTotal}</td>
+                <td style="font-family:'IBM Plex Mono',monospace;">${hiv}</td>
+                <td style="font-family:'IBM Plex Mono',monospace;">${plasmodio}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>`;
+  }
+
+  // ── Period time-evolution chart (for non-annual) ──
+  let timeChart = '';
+  if (period !== 'anual') {
+    const groups = _labGroupByLabel(period, dates, allData);
+    const maxVal = Math.max(...groups.map(g => g.total), 1);
+    const CHART_H = 120;
+    timeChart = `
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">📊 Evolução — ${_labPeriodLabel(period)}</div>
+          <div class="lab-chart-legend" style="margin:0;">
+            <span><span class="lab-chart-swatch" style="background:var(--blue2)"></span>B. Urgência</span>
+            <span><span class="lab-chart-swatch" style="background:var(--cyan)"></span>Internamento</span>
+          </div>
+        </div>
+        <div class="lab-chart-wrap">
+          ${groups.length === 0
+            ? '<div style="padding:20px;text-align:center;color:var(--muted);">Sem dados para este período.</div>'
+            : `<div style="display:flex;align-items:flex-end;gap:${groups.length > 20 ? '2' : '4'}px;height:${CHART_H + 34}px;padding:0 4px;overflow-x:auto;">
+                ${groups.map(g => `
+                  <div style="flex:1;min-width:${groups.length > 20 ? '22' : '28'}px;display:flex;flex-direction:column;align-items:center;gap:3px;">
+                    <div style="font-size:9px;color:var(--text);font-weight:600;">${g.total || ''}</div>
+                    <div style="display:flex;flex-direction:column;justify-content:flex-end;height:${CHART_H}px;width:100%;">
+                      <div style="height:${Math.round(g.int/maxVal*CHART_H)}px;width:100%;background:linear-gradient(180deg,var(--cyan),#0e7490);border-radius:2px 2px 0 0;min-height:${g.int?2:0}px;"></div>
+                      <div style="height:${Math.round(g.bu/maxVal*CHART_H)}px;width:100%;background:linear-gradient(180deg,var(--blue2),var(--blue));min-height:${g.bu?2:0}px;"></div>
+                    </div>
+                    <div style="font-size:8px;color:var(--muted);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;">${g.label}</div>
+                  </div>`).join('')}
+              </div>`
+          }
+        </div>
+      </div>`;
+  }
+
+  // ── Period badge ──
+  const periodBadge = `
+    <div class="lsr-period-range">
+      📅 <strong>${_labPeriodLabel(period)}</strong> &nbsp;·&nbsp;
+      ${startD} — ${endD} &nbsp;·&nbsp;
+      <strong>${filteredDates.length}</strong> dia(s) com dados de <strong>${dates.length}</strong> total
+    </div>`;
+
+  // ── Grand total footer ──
+  const grandFooter = `
+    <div class="card" style="border-color:rgba(26,86,219,.2);">
+      <div class="card-header" style="background:linear-gradient(90deg,#1447c0,#1a56db);">
+        <div class="card-title" style="color:#fff;">∑ Total Geral do Período</div>
+        <div class="card-subtitle" style="color:rgba(255,255,255,.7);">Resumo consolidado</div>
+      </div>
+      <div style="padding:20px;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;">
+        <div class="lsr-card lsr-card-blue"><span class="lsr-card-label">🚨 B. Urgência</span><span class="lsr-card-val">${agg._grandBu}</span><div class="lsr-card-sub">${grandTotal > 0 ? (agg._grandBu/grandTotal*100).toFixed(1) : '0.0'}% do total</div></div>
+        <div class="lsr-card lsr-card-cyan"><span class="lsr-card-label">🏥 Internamento</span><span class="lsr-card-val">${agg._grandInt}</span><div class="lsr-card-sub">${grandTotal > 0 ? (agg._grandInt/grandTotal*100).toFixed(1) : '0.0'}% do total</div></div>
+        <div class="lsr-card lsr-card-accent"><span class="lsr-card-label">∑ Total Geral</span><span class="lsr-card-val" style="font-size:2rem;">${grandTotal}</span><div class="lsr-card-sub">Média ${avgDia} / dia</div></div>
+      </div>
+    </div>`;
+
+  // Section breakdown card
+  const maxSec = Math.max(...sectionTotals.map(s=>s.total),1);
+  const sectionBreakdown = `
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">📊 Exames por Área Clínica</div>
+        <div class="card-subtitle">${grandTotal} exames · ${filteredDates.length} dia(s)</div>
+      </div>
+      <div style="padding:18px 22px;">
+        ${sectionTotals.map(sec => sec.total===0 ? '' : `
+          <div style="margin-bottom:14px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">
+              <span style="font-size:12px;font-weight:600;color:var(--text);">${sec.icon} ${sec.label}</span>
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;color:${sec.subtotalColor}">${sec.total}</span>
+            </div>
+            <div style="display:flex;height:10px;border-radius:5px;overflow:hidden;background:#e9ecef;gap:2px;">
+              <div style="height:100%;background:${sec.headerBg};border:1px solid ${sec.headerColor};border-radius:4px 0 0 4px;width:${Math.round(sec.bu/maxSec*100)}%;transition:width .5s;" title="B.Urgência: ${sec.bu}"></div>
+              <div style="height:100%;background:${sec.subtotalColor};opacity:.5;border-radius:0 4px 4px 0;width:${Math.round(sec.int/maxSec*100)}%;transition:width .5s;" title="Internamento: ${sec.int}"></div>
+            </div>
+            <div style="display:flex;gap:12px;margin-top:3px;font-size:10px;color:var(--muted);">
+              <span>BU: ${sec.bu}</span><span>INT: ${sec.int}</span>
+              <span style="margin-left:auto;">${grandTotal>0?(sec.total/grandTotal*100).toFixed(1):0}% do total</span>
+            </div>
+          </div>`).join('')}
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid rgba(0,0,0,0.08);">
+          ${sectionTotals.map(sec => `
+            <div style="background:${sec.headerBg}18;border:1px solid ${sec.subtotalColor}40;border-radius:8px;padding:10px;text-align:center;">
+              <div style="font-size:11px;color:${sec.subtotalColor};font-weight:700;margin-bottom:2px;">${sec.icon} ${sec.label.replace(/^[IVX]+\.\s*/,'')}</div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:1.4rem;font-weight:700;color:var(--text);">${sec.total||'—'}</div>
+            </div>`).join('')}
+        </div>
+      </div>
+    </div>`;
+
+  container.innerHTML = periodBadge + summaryCards + timeChart + annualMonthChart + sectionBreakdown + exameBarChart + posBarChart + grandFooter;
+}
+
+// ════════════════════════════════════════════════════════════════════
+// PDF EXPORTS
+// ════════════════════════════════════════════════════════════════════
+
+// ── Build and save period PDF ──
+function _buildLabPeriodPDF(dates, titleLabel, allData) {
+  if (!allData) allData = _getAllLabData();
+  const agg = _aggregateLabDates(dates, allData);
+  const grandTotal = agg._grandBu + agg._grandInt;
+  const filteredDates = dates.filter(d => allData[d]);
+  const geradoEm = new Date().toLocaleString('pt-PT');
+  const avgDia = filteredDates.length > 0 ? (grandTotal / filteredDates.length).toFixed(1) : '0';
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait' });
+
+  // Blue professional header
+  doc.setFillColor(26, 86, 219);
+  doc.rect(0, 0, 210, 30, 'F');
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.setTextColor(255,255,255);
+  doc.text('HOSPITAL DO PRENDA', 14, 11);
+  doc.setFontSize(9); doc.setFont('helvetica', 'normal');
+  doc.text('Laboratório de Análises Clínicas', 14, 18);
+  doc.setFontSize(8);
+  doc.text(`Gerado: ${geradoEm}`, 14, 25);
+  doc.setTextColor(0,0,0);
+
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(10);
+  doc.text(titleLabel, 14, 38);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
+  doc.text(`Dias com dados: ${filteredDates.length}/${dates.length}     Total: ${grandTotal}     Média/dia: ${avgDia}`, 14, 44);
+
+  // Summary table
+  doc.autoTable({
+    startY: 50,
+    head: [['Total Exames', 'B. Urgência', 'Internamento', 'Média/Dia', 'Positivos']],
+    body: [[grandTotal, agg._grandBu, agg._grandInt, avgDia, agg._posTotal]],
+    styles: { fontSize: 9, cellPadding: 3, halign: 'center' },
+    headStyles: { fillColor: [26, 86, 219], textColor: 255, fontStyle: 'bold' },
+    bodyStyles: { fontStyle: 'bold' },
+    alternateRowStyles: { fillColor: [240, 242, 245] },
+  });
+
+  // Exames table
+  const exameRows = [...EXAMES, '_outro'].map(e => {
+    const bu = agg[e].bu, in_ = agg[e].int, tot = bu + in_;
+    const pct = grandTotal > 0 ? (tot/grandTotal*100).toFixed(1) : '0.0';
+    return [e === '_outro' ? 'Outro' : e, bu, in_, tot, pct + '%'];
+  }).filter(r => Number(r[3]) > 0);
+  exameRows.push(['TOTAL EXAMES', agg._grandBu, agg._grandInt, grandTotal, '100%']);
+
+  doc.autoTable({
+    startY: doc.lastAutoTable.finalY + 8,
+    head: [['Exame', 'B. Urgência', 'Internamento', 'Total', '%']],
+    body: exameRows,
+    styles: { fontSize: 9, cellPadding: 3 },
+    headStyles: { fillColor: [26, 86, 219], textColor: 255, fontStyle: 'bold' },
+    columnStyles: { 0:{halign:'left'}, 1:{halign:'center'}, 2:{halign:'center'}, 3:{halign:'center',fontStyle:'bold'}, 4:{halign:'center'} },
+    alternateRowStyles: { fillColor: [248, 250, 252] },
+  });
+
+  // Positivos table
+  const posRows = POSITIVOS.map(e => {
+    const bu = agg['pos_'+e].bu, in_ = agg['pos_'+e].int, tot = bu + in_;
+    return [e, bu, in_, tot];
+  });
+  posRows.push(['TOTAL POSITIVOS', POSITIVOS.reduce((s,e)=>s+(agg['pos_'+e]?.bu||0),0), POSITIVOS.reduce((s,e)=>s+(agg['pos_'+e]?.int||0),0), agg._posTotal]);
+
+  doc.autoTable({
+    startY: doc.lastAutoTable.finalY + 8,
+    head: [['Exame Positivo', 'B. Urgência', 'Internamento', 'Total']],
+    body: posRows,
+    styles: { fontSize: 9, cellPadding: 3 },
+    headStyles: { fillColor: [127, 29, 29], textColor: 255, fontStyle: 'bold' },
+    columnStyles: { 0:{halign:'left',textColor:[153,27,27]}, 1:{halign:'center'}, 2:{halign:'center'}, 3:{halign:'center',fontStyle:'bold',textColor:[185,28,28]} },
+    alternateRowStyles: { fillColor: [255, 245, 245] },
+  });
+
+  // Footer with page numbers
+  const pageCount = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.setFontSize(7); doc.setTextColor(150);
+    doc.text(`Hospital do Prenda · Laboratório de Análises Clínicas · Gerado: ${geradoEm}`, 14, doc.internal.pageSize.height - 8);
+    doc.text('Página ' + doc.internal.getCurrentPageInfo().pageNumber, 195, doc.internal.pageSize.height - 8, {align:'right'});
+    doc.setTextColor(0);
+  }
+
+  const safeName = titleLabel.replace(/[\s·]+/g,'_').replace(/[^a-zA-Z0-9À-ú_-]/g,'');
+  doc.save(`Lab_${safeName}.pdf`);
+  toast('✅ PDF exportado com sucesso!', 'success');
+}
+
+// ── Export from statistics page (uses current stats cache) ──
+function exportLabStatsPDF() {
+  const dates = _getLabDatesForPeriod(_labCurrentPeriod);
+  if (!dates.length) { toast('⚠ Selecione um período válido antes de exportar!', 'error'); return; }
+  const allData = _labStatsCache || _getAllLabData();
+  const periodLabels = { diario:'Diário', semanal:'Semanal', mensal:'Mensal', trimestral:'Trimestral', semestral:'Semestral', anual:'Anual' };
+  const label = periodLabels[_labCurrentPeriod] || _labCurrentPeriod;
+  const startD = _fmtDateStr(dates[0]);
+  const endD   = _fmtDateStr(dates[dates.length - 1]);
+  _buildLabPeriodPDF(dates, `Relatório ${label} · ${startD} – ${endD}`, allData);
+}
+
+// ── Export from Exportar page ──
+function exportPeriodPDFDirect(period) {
+  const allData = _getAllLabData();
+  const today = todayKey();
+  let dates = [], label = '';
+
+  if (period === 'semanal') {
+    const s = document.getElementById('exp-week-start').value;
+    const e = document.getElementById('exp-week-end').value;
+    if (!s || !e) { toast('⚠ Indique o intervalo de datas!', 'error'); return; }
+    dates = _labDatesInRange(s, e);
+    label = `Intervalo · ${_fmtDateStr(s)} – ${_fmtDateStr(e)}`;
+
+  } else if (period === 'mensal') {
+    const ym = document.getElementById('exp-month').value || today.slice(0,7);
+    dates = _getMonthDates(ym);
+    const [y,m] = ym.split('-');
+    const MONTHS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+    label = `Mensal · ${MONTHS[parseInt(m,10)-1]} ${y}`;
+
+  } else if (period === 'trimestral') {
+    const q = parseInt(document.getElementById('exp-q').value, 10);
+    const y = document.getElementById('exp-q-year').value;
+    if (!y) { toast('⚠ Indique o ano!', 'error'); return; }
+    const ss = ['01','04','07','10'], es = ['03','06','09','12'], ed = ['31','30','30','31'];
+    dates = _labDatesInRange(`${y}-${ss[q-1]}-01`, `${y}-${es[q-1]}-${ed[q-1]}`);
+    label = `Trimestral · ${q}º Trimestre ${y}`;
+
+  } else if (period === 'semestral') {
+    const h = parseInt(document.getElementById('exp-sem-h').value, 10);
+    const y = document.getElementById('exp-sem-year').value;
+    if (!y) { toast('⚠ Indique o ano!', 'error'); return; }
+    const s = h===1 ? `${y}-01-01` : `${y}-07-01`;
+    const e = h===1 ? `${y}-06-30` : `${y}-12-31`;
+    dates = _labDatesInRange(s, e);
+    label = `Semestral · ${h}º Semestre ${y}`;
+
+  } else if (period === 'anual') {
+    const y = document.getElementById('exp-year').value;
+    if (!y) { toast('⚠ Indique o ano!', 'error'); return; }
+    dates = _labDatesInRange(`${y}-01-01`, `${y}-12-31`);
+    label = `Anual · Ano ${y}`;
+  }
+
+  if (!dates.length) { toast('⚠ Período inválido!', 'error'); return; }
+  _buildLabPeriodPDF(dates, `Relatório ${label}`, allData);
+}
+
+// ── Daily PDF export (original function) ──
+function exportPDF(){
+  const date=document.getElementById('exp-date').value||todayKey();
+  exportPDFDate(date);
+}
+
+function exportPDFDate(date){
+  const raw=safeGet(sk(date));
+  const data=raw?JSON.parse(raw):{date,turno:'—',techs:[],exames:{},positivos:{}};
+  const techs=data.techs?.filter(Boolean)||[];
+
+  let buTotal=0,intTotal=0;
+  EXAMES.forEach(e=>{buTotal+=Number(data.exames?.[e]?.bu||0);intTotal+=Number(data.exames?.[e]?.int||0);});
+  buTotal+=Number(data.exames?.['_outro']?.bu||0);
+  intTotal+=Number(data.exames?.['_outro']?.int||0);
+  const grandTotal=buTotal+intTotal;
+  let posB=0,posI=0;
+  POSITIVOS.forEach(e=>{posB+=Number(data.positivos?.[e]?.bu||0);posI+=Number(data.positivos?.[e]?.int||0);});
+
+  const geradoEm2=new Date().toLocaleString('pt-PT');
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'portrait'});
+
+  // Blue professional header
+  doc.setFillColor(26,86,219);
+  doc.rect(0,0,210,30,'F');
+  doc.setFont('helvetica','bold');doc.setFontSize(13);doc.setTextColor(255,255,255);
+  doc.text('HOSPITAL DO PRENDA',14,11);
+  doc.setFontSize(9);doc.setFont('helvetica','normal');
+  doc.text('Laboratório de Análises Clínicas',14,18);
+  doc.setFontSize(8);
+  doc.text(`Gerado: ${geradoEm2}`,14,25);
+  doc.setTextColor(0,0,0);
+
+  doc.setFont('helvetica','bold');doc.setFontSize(10);
+  doc.text(`Registo Diário — ${formatDate(date)}`,14,38);
+  doc.setFont('helvetica','normal');doc.setFontSize(8);
+  doc.text(`Turno: ${data.turno||'—'}    Técnicos: ${techs.join(', ')||'—'}`,14,44);
+  doc.text(`Total: ${grandTotal}    Urgência: ${buTotal}    Internamento: ${intTotal}    Positivos: ${posB+posI}`,14,50);
+
+  const exameRows=EXAMES.map(e=>{
+    const bu=Number(data.exames?.[e]?.bu||0);
+    const in_=Number(data.exames?.[e]?.int||0);
+    return [e,bu,in_,bu+in_];
+  }).filter(r=>r[3]>0);
+
+  const outroBu=Number(data.exames?.['_outro']?.bu||0);
+  const outroInt=Number(data.exames?.['_outro']?.int||0);
+  if(outroBu+outroInt>0) exameRows.push(['Outro',outroBu,outroInt,outroBu+outroInt]);
+  exameRows.push(['TOTAL',buTotal,intTotal,grandTotal]);
+
+  doc.autoTable({
+    startY:56,
+    head:[['Exame','B. Urgência','Internamento','Total']],
+    body:exameRows,
+    styles:{fontSize:9,cellPadding:3},
+    headStyles:{fillColor:[26,86,219],textColor:255,fontStyle:'bold'},
+    columnStyles:{0:{halign:'left'},1:{halign:'center'},2:{halign:'center'},3:{halign:'center',fontStyle:'bold'}},
+    alternateRowStyles:{fillColor:[248,250,252]},
+  });
+
+  const posRows=POSITIVOS.map(e=>{
+    const bu=Number(data.positivos?.[e]?.bu||0);
+    const in_=Number(data.positivos?.[e]?.int||0);
+    return [e,bu,in_,bu+in_];
+  }).filter(r=>r[3]>0);
+
+  if(posRows.length){
+    let posB2=0,posI2=0;
+    posRows.forEach(r=>{posB2+=r[1];posI2+=r[2];});
+    posRows.push(['TOTAL POSITIVOS',posB2,posI2,posB2+posI2]);
+
+    doc.autoTable({
+      startY:doc.lastAutoTable.finalY+10,
+      head:[['Exame Positivo','B. Urgência','Internamento','Total']],
+      body:posRows,
+      styles:{fontSize:9,cellPadding:3},
+      headStyles:{fillColor:[127,29,29],textColor:255,fontStyle:'bold'},
+      columnStyles:{0:{halign:'left',textColor:[153,27,27]},1:{halign:'center'},2:{halign:'center'},3:{halign:'center',fontStyle:'bold',textColor:[185,28,28]}},
+      alternateRowStyles:{fillColor:[255,245,245]},
+    });
+  }
+
+  // Page number footer
+  const pc2=doc.internal.getNumberOfPages();
+  for(let i=1;i<=pc2;i++){
+    doc.setPage(i);
+    doc.setFontSize(7);doc.setTextColor(150);
+    doc.text(`Hospital do Prenda · Laboratório de Análises Clínicas`,14,doc.internal.pageSize.height-8);
+    doc.text('Página '+doc.internal.getCurrentPageInfo().pageNumber,195,doc.internal.pageSize.height-8,{align:'right'});
+    doc.setTextColor(0);
+  }
+
+  doc.save(`laboratorio_${date}.pdf`);
+  toast('✅ PDF diário exportado!', 'success');
+}
+
+// ─── HISTORY ───
+function renderHistory(){
+  const dates=getSavedDates().slice().reverse();
+  const list=document.getElementById('history-list');
+  if(!dates.length){ list.innerHTML='<div style="padding:20px;color:var(--muted);font-size:13px;">Nenhum registo guardado.</div>'; return; }
+  list.innerHTML=dates.map(d=>{
+    const raw=safeGet(sk(d));
+    let totalExames=0, totalPos=0;
+    if(raw){
+      const data=JSON.parse(raw);
+      EXAMES.forEach(e=>{totalExames+=Number(data.exames?.[e]?.bu||0)+Number(data.exames?.[e]?.int||0);});
+      totalExames+=Number(data.exames?.['_outro']?.bu||0)+Number(data.exames?.['_outro']?.int||0);
+      POSITIVOS.forEach(e=>{totalPos+=Number(data.positivos?.[e]?.bu||0)+Number(data.positivos?.[e]?.int||0);});
+    }
+    return `<div class="history-item">
+      <div>
+        <div class="history-date">📅 ${formatDate(d)}</div>
+        <div class="history-stats">🔬 ${totalExames} exames · ⚠️ ${totalPos} positivos</div>
+      </div>
+      <div class="history-actions">
+        <button class="btn btn-outline btn-xs" onclick="loadHistoryDay('${d}')">📂 Abrir</button>
+        <button class="btn btn-outline btn-xs" onclick="exportPDFDate('${d}')">📄 PDF</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function loadHistoryDay(d){
+  document.getElementById('data-registo').value=d;
+  loadDay(d);
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('sec-registo').classList.add('active');
+  document.querySelectorAll('.nav-item')[0].classList.add('active');
+  toast('Registo de '+formatDate(d)+' carregado');
+}
+
+function clearHistory(){
+  if(!confirm('Apagar todo o histórico local?')) return;
+  getSavedDates().forEach(d=>safeRemove(sk(d)));
+  safeRemove('lab_saved_dates');
+  renderHistory();
+  toast('Histórico apagado');
+}
+
+// ─── FIREBASE ───
+async function initFirebase(){
+  if(!window._fbReady) return;
+  try{
+    const s=await window._fb.get(fbRef('lab_dates'));
+    if(s.exists()){
+      const fd=s.val();
+      const ld=JSON.parse(safeGet('lab_saved_dates')||'[]');
+      const merged=[...new Set([...ld,...fd])].sort();
+      safeSet('lab_saved_dates',JSON.stringify(merged));
+    }
+  }catch(e){}
+  try{
+    const s=await window._fb.get(fbRef('lab'));
+    if(s.exists()){
+      const all=s.val();
+      Object.entries(all).forEach(([date,val])=>{ safeSet(sk(date),JSON.stringify(val)); });
+    }
+  }catch(e){}
+  const today=todayKey();
+  const todayRaw=safeGet(sk(today));
+  if(todayRaw){ loadDay(today); }
+
+  window._fb.onValue(fbRef('lab_sync'),(snap)=>{
+    if(!snap.exists()) return;
+    const sig=snap.val(); if(!sig) return;
+    const sl=document.getElementById('sync-label');
+    if(sl) sl.textContent='Sincronizado às '+new Date(sig.ts).toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'});
+  });
+  const sl=document.getElementById('sync-label');
+  if(sl) sl.textContent='Firebase activo';
+}
+
+// ─── INIT DEFAULT DATES ───
+(function initDates(){
+  const now = new Date();
+  const yr  = now.getFullYear();
+  const mo  = now.getMonth() + 1;
+  const todayStr = now.toISOString().slice(0,10);
+  const moS = String(mo).padStart(2,'0');
+
+  // Week start (Monday)
+  const dow = now.getDay();
+  const diff = dow === 0 ? -6 : 1 - dow;
+  const wkStart = new Date(now); wkStart.setDate(now.getDate() + diff);
+  const wkS = wkStart.toISOString().slice(0,10);
+
+  document.getElementById('data-registo').value = todayStr;
+  document.getElementById('exp-date').value = todayStr;
+
+  // Stats section defaults
+  const labStatDate = document.getElementById('lab-stat-date');
+  if(labStatDate) labStatDate.value = todayStr;
+
+  const labSemStart = document.getElementById('lab-stat-sem-start');
+  const labSemEnd = document.getElementById('lab-stat-sem-end');
+  if(labSemStart) labSemStart.value = `${yr}-${moS}-01`;
+  if(labSemEnd) labSemEnd.value = todayStr;
+
+  const labMonth = document.getElementById('lab-stat-month');
+  if(labMonth) labMonth.value = `${yr}-${moS}`;
+
+  const labQ    = document.getElementById('lab-stat-q');
+  const labQYr  = document.getElementById('lab-stat-q-year');
+  if(labQ)   labQ.value   = Math.ceil(mo/3);
+  if(labQYr) labQYr.value = yr;
+
+  const labSemH   = document.getElementById('lab-stat-sem-h');
+  const labSemYr  = document.getElementById('lab-stat-sem-year');
+  if(labSemH)  labSemH.value  = mo <= 6 ? 1 : 2;
+  if(labSemYr) labSemYr.value = yr;
+
+  const labYear = document.getElementById('lab-stat-year');
+  if(labYear) labYear.value = yr;
+
+  // Export section defaults
+  const expWeek = document.getElementById('exp-week-date');
+  if(expWeek) expWeek.value = todayStr;
+  const expMonth = document.getElementById('exp-month');
+  if(expMonth) expMonth.value = `${yr}-${moS}`;
+  const expQ    = document.getElementById('exp-q');
+  const expQYr  = document.getElementById('exp-q-year');
+  if(expQ)   expQ.value   = Math.ceil(mo/3);
+  if(expQYr) expQYr.value = yr;
+  const expSemH  = document.getElementById('exp-sem-h');
+  const expSemYr = document.getElementById('exp-sem-year');
+  if(expSemH)  expSemH.value  = mo <= 6 ? 1 : 2;
+  if(expSemYr) expSemYr.value = yr;
+  const expYear = document.getElementById('exp-year');
+  if(expYear) expYear.value = yr;
+})();
+
+// ─── INIT ───
+numTechs = 3;
+renderTechGrid();
+renderExamesTable();
+renderPositivosTable();
+updateKPIs();
+
+if(window._fbReady){ initFirebase(); }
+else{ window.addEventListener('firebaseReady', initFirebase, {once:true}); }
+
+</script>
+</body>
+</html>
