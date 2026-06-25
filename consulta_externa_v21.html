@@ -222,6 +222,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <div style="font-size:1.45rem;font-weight:800;color:#fff;letter-spacing:-.02em;line-height:1.15;margin-bottom:4px;opacity:0;animation:splashSlideUp .55s cubic-bezier(.34,1.1,.64,1) .95s forwards;">Consulta <em style="font-style:normal;background:linear-gradient(90deg,#60A5FA,#34D399);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">Externa</em></div>
     <div style="font-size:.72rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#60A5FA;opacity:0;animation:splashSlideUp .5s ease 1.25s forwards;">GEPE · Registo Diário de Atendimentos</div>
   </div>
+  <div style="opacity:0;animation:splashFadeIn .6s ease 1.5s forwards;margin-top:20px;display:flex;justify-content:center;width:100%;"><img id="spl-big-logo" src="" alt="Hospital do Prenda" style="width:200px;max-width:70vw;height:auto;display:block;border-radius:12px;filter:drop-shadow(0 6px 24px rgba(26,86,219,0.4));"/></div>
   </div>
   <div id="splash-msg" style="display:none;max-width:420px;width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:22px 22px 18px;backdrop-filter:blur(8px);text-align:center;">
     <p style="font-size:1.05rem;font-weight:700;color:#fff;margin-bottom:12px;line-height:1.35;">Bem-vindo ao Registo Diário</p>
@@ -240,8 +241,10 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 (function(){
   document.addEventListener('DOMContentLoaded', function(){
     const splLogo = document.getElementById('spl-logo');
+    const splBigLogo = document.getElementById('spl-big-logo');
     const headerImg = document.querySelector('header .ld img');
     if(splLogo && headerImg) splLogo.src = headerImg.src;
+    if(splBigLogo && headerImg) splBigLogo.src = headerImg.src;
   });
   const arc = document.getElementById('splash-arc');
   const pct = document.getElementById('splash-pct');
@@ -973,7 +976,7 @@ async function gerarPDF(){
     try{pdf.addImage(LOGO_B64,'JPEG',ML,3,22,22,'','FAST');}catch(e){}
     setT('#FFFFFF');pdf.setFont('helvetica','bold');pdf.setFontSize(16);
     pdf.text('Consulta Externa',ML+27,12);
-    pdf.setFontSize(9);pdf.setFont('helvetica','normal');setT('rgba(255,255,255,.6)');
+    pdf.setFontSize(9);pdf.setFont('helvetica','normal');setT('#BFDBFE');
     pdf.text('Hospital do Prenda — GEPE',ML+27,18);
     pdf.text(pdfDateFmt(),ML+27,24);
     setF('#059669');pdf.rect(0,30,PW,1.5,'F');
@@ -1059,7 +1062,11 @@ async function acaoEmail(){
     setTimeout(()=>window.open(`mailto:estatisticahp@gmail.com?subject=${s}&body=${b}`,'_blank'),400);
   }
 }
-async function acaoPDF(){await gerarPDF();}
+async function acaoPDF(){
+  const{totPac}=calcTotais();
+  if(!totPac){toast('⚠ Registe pelo menos uma consulta antes de gerar o PDF.');return;}
+  await gerarPDF();
+}
 
 // ═══════════════════════════════════════════════════════════════
 // BOOT
