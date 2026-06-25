@@ -1220,7 +1220,42 @@ var _lf=false;
 function limparFormulario(){if(_lf)return;_lf=true;try{document.querySelectorAll('input[type=number]').forEach(function(el){el.value='';});document.querySelectorAll('textarea').forEach(function(el){el.value='';});}finally{_lf=false;}}
 function onDataChange(){var d=document.getElementById('data').value;atualizarDataFim(d);limparFormulario();try{var hist=JSON.parse(localStorage.getItem('fisio_v1_hist')||'[]');var existe=d&&hist.some(function(h){return(h.snapshot||h).data===d;});var av=document.getElementById('data-aviso');if(av)av.style.display=existe?'block':'none';}catch(e){}if(typeof ss==='function')ss();}
 function carregarDoDia(){var d=document.getElementById('data').value;if(!d)return;try{var hist=JSON.parse(localStorage.getItem('fisio_v1_hist')||'[]');var entry=hist.find(function(h){return(h.snapshot||h).data===d;});if(!entry){if(typeof toast==='function')toast('Nenhum registo.');return;}if(!confirm('Carregar registo de '+d+'?'))return;if(typeof applySnapshot==='function')applySnapshot(entry.snapshot||entry);var av=document.getElementById('data-aviso');if(av)av.style.display='none';if(typeof toast==='function')toast('\u2713 Carregado.');}catch(e){}}
-function visualizar(){const s=buildSnapshot();let html='';const sec=function(t,b){return '<div style="margin-bottom:12px;"><div style="font-size:.7rem;font-weight:700;text-transform:uppercase;color:#0891B2;margin-bottom:5px;">'+t+'</div>'+b+'</div>';};const row=function(l,v){return '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #F1F5F9;"><span style="color:#64748B;">'+l+'</span><span style="font-weight:600;">'+(v||'---')+'</span></div>';};html+=sec('Data',row('Início',s.data)+row('Responsável',s.resp));const iR=(s.intV||[]).filter(function(x){return x.v>0;}).map(function(x){return row(x.t,x.v);}).join('');if(iR)html+=sec('Internamentos',iR);const eR=(s.extV||[]).filter(function(x){return x.v>0;}).map(function(x){return row(x.t,x.v);}).join('');if(eR)html+=sec('Externos',eR);const mR=(s.modV||[]).filter(function(x){return x.v>0;}).map(function(x){return row(x.t,x.v);}).join('');if(mR)html+=sec('Modalidades',mR);document.getElementById('vis-body').innerHTML=html||'<p style="color:#94A3B8;text-align:center;">Sem dados.</p>';document.getElementById('ov-vis').style.display='flex';}
+function visualizar(){
+  const s=buildSnapshot();
+  let html='';
+  const intTot=(s.intV||[]).reduce(function(a,x){return a+(parseInt(x.v)||0);},0)+(s.intOutros||[]).reduce(function(a,o){return a+(parseInt(o.v)||0);},0)+(parseInt(s.uci)||0);
+  const extTot=(s.extV||[]).reduce(function(a,x){return a+(parseInt(x.v)||0);},0)+(s.extOutros||[]).reduce(function(a,o){return a+(parseInt(o.v)||0);},0)+(parseInt(s.consulta)||0);
+  const modTot=(s.modV||[]).reduce(function(a,x){return a+(parseInt(x.v)||0);},0)+(s.modOutros||[]).reduce(function(a,o){return a+(parseInt(o.v)||0);},0);
+  const totalGeral=intTot+extTot;
+  const L=function(k,v){return '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #F1F5F9;"><span style="color:#64748B;font-size:.87rem;">'+k+'</span><span style="font-weight:700;color:#0F172A;">'+v+'</span></div>';};
+  const S=function(t){return '<div style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#0891B2;margin-bottom:6px;">'+t+'</div>';};
+  const card=function(val,label,col,bg){return '<div style="background:'+bg+';border-radius:10px;padding:13px 10px;text-align:center;flex:1;min-width:70px;"><div style="font-family:'DM Mono',monospace;font-size:1.9rem;font-weight:700;color:'+col+';line-height:1;">'+val+'</div><div style="font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:'+col+';opacity:.75;margin-top:4px;">'+label+'</div></div>';};
+  html+='<div style="background:linear-gradient(135deg,#0D1B3E,#1A3A7A);border-radius:14px;padding:16px;margin-bottom:14px;">';
+  html+='<div style="font-size:.62rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.45);margin-bottom:10px;">Resumo · '+(s.data||'—')+'</div>';
+  html+='<div style="display:flex;gap:8px;flex-wrap:wrap;">';
+  html+=card(intTot,'Internamentos','#F9A8D4','rgba(219,39,119,.22)');
+  html+=card(extTot,'Externos','#34D399','rgba(5,150,105,.22)');
+  html+=card(totalGeral,'Total','#60A5FA','rgba(37,99,235,.22)');
+  if(modTot>0)html+=card(modTot,'Modalidades','#A78BFA','rgba(124,58,237,.22)');
+  html+='</div>';
+  html+='<div style="margin-top:10px;text-align:center;"><span style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:8px;padding:5px 18px;color:#fff;font-size:.8rem;font-weight:700;">Responsável: '+(s.resp||'—')+'</span></div>';
+  html+='</div>';
+  const intRows=(s.intV||[]).filter(function(x){return parseInt(x.v)>0;}).map(function(x){return L(x.t,x.v);}).join('');
+  const intOutRows=(s.intOutros||[]).filter(function(o){return parseInt(o.v)>0;}).map(function(o){return L(o.label,o.v);}).join('');
+  const uciRow=parseInt(s.uci)>0?L('UCI',s.uci):'';
+  if(intRows||intOutRows||uciRow){html+='<div style="background:#FFF1F2;border:1px solid #FECDD3;border-radius:10px;padding:12px;margin-bottom:10px;">';html+=S('Internamentos');html+=intRows+uciRow+intOutRows;html+=L('TOTAL',intTot);html+='</div>';}
+  const extRows=(s.extV||[]).filter(function(x){return parseInt(x.v)>0;}).map(function(x){return L(x.t,x.v);}).join('');
+  const extOutRows=(s.extOutros||[]).filter(function(o){return parseInt(o.v)>0;}).map(function(o){return L(o.label,o.v);}).join('');
+  const consRow=parseInt(s.consulta)>0?L('Consultas',s.consulta):'';
+  if(extRows||extOutRows||consRow){html+='<div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;padding:12px;margin-bottom:10px;">';html+=S('Externos');html+=extRows+consRow+extOutRows;html+=L('TOTAL',extTot);html+='</div>';}
+  const modRows=(s.modV||[]).filter(function(x){return parseInt(x.v)>0;}).map(function(x){return L(x.t,x.v);}).join('');
+  const modOutRows=(s.modOutros||[]).filter(function(o){return parseInt(o.v)>0;}).map(function(o){return L(o.label,o.v);}).join('');
+  if(modRows||modOutRows){html+='<div style="background:#F5F3FF;border:1px solid #DDD6FE;border-radius:10px;padding:12px;margin-bottom:10px;">';html+=S('Modalidades');html+=modRows+modOutRows;if(modTot>0)html+=L('TOTAL',modTot);html+='</div>';}
+  if(s.equipaFis||s.equipaTec||(s.equipaData&&s.equipaData.length)){html+='<div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:10px;padding:12px;margin-bottom:10px;">';html+=S('Equipa');if(s.equipaFis)html+=L('Fisioterapeuta',s.equipaFis);if(s.equipaTec)html+=L('Técnico',s.equipaTec);if(s.equipaData)s.equipaData.forEach(function(e){if(e&&e.nome)html+=L(e.cargo||'Elemento',e.nome);});html+='</div>';}
+  if(s.obs){html+='<div style="background:#FEFCE8;border:1px solid #FDE68A;border-radius:10px;padding:12px;margin-bottom:10px;">';html+=S('Observações');html+='<div style="font-size:.87rem;color:#334155;line-height:1.6;">'+s.obs+'</div>';html+='</div>';}
+  document.getElementById('vis-body').innerHTML=html||'<p style="color:#94A3B8;text-align:center;">Sem dados.</p>';
+  document.getElementById('ov-vis').style.display='flex';
+}
 function closeVis(){document.getElementById('ov-vis').style.display='none';}
 (function(){var hoje=new Date();var ontem=new Date(hoje);ontem.setDate(ontem.getDate()-1);var iO=ontem.toISOString().slice(0,10),iH=hoje.toISOString().slice(0,10);var de=document.getElementById('data'),df=document.getElementById('data-fim');if(de)de.value=iO;if(df)df.value=iH;atualizarLabels(iO,iH);try{var hist=JSON.parse(localStorage.getItem('fisio_v1_hist')||'[]');var av=document.getElementById('data-aviso');if(av)av.style.display=hist.some(function(h){return(h.snapshot||h).data===iO;})?'block':'none';}catch(e){}})();
 </script>
