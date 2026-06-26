@@ -510,17 +510,29 @@ function buildEspList(){
       </div>
       <div class="esp-body" id="esp-body-${esp.id}">
         <div class="sl">Adicionar Médico</div>
-        <div class="g2 f" style="margin-bottom:8px;">
+        <div class="f" style="margin-bottom:8px;">
+          <label>Nome do Médico</label>
+          <input type="text" id="esp-med-nome-${esp.id}" placeholder="Nome completo..."
+            onkeydown="if(event.key==='Enter')document.getElementById('esp-med-hom-${esp.id}').focus()"/>
+        </div>
+        <div class="g2 f" style="margin-bottom:6px;">
           <div class="f" style="margin:0;">
-            <label>Nome do Médico</label>
-            <input type="text" id="esp-med-nome-${esp.id}" placeholder="Nome completo..."
-              onkeydown="if(event.key==='Enter')document.getElementById('esp-med-pac-${esp.id}').focus()"/>
+            <label>Homens</label>
+            <input type="number" min="0" id="esp-med-hom-${esp.id}" placeholder="0"
+              oninput="calcPacTotal('${esp.id}')"
+              onkeydown="if(event.key==='Enter')document.getElementById('esp-med-mul-${esp.id}').focus()"/>
           </div>
           <div class="f" style="margin:0;">
-            <label>Nº Pacientes</label>
-            <input type="number" min="0" id="esp-med-pac-${esp.id}" placeholder="0"
+            <label>Mulheres</label>
+            <input type="number" min="0" id="esp-med-mul-${esp.id}" placeholder="0"
+              oninput="calcPacTotal('${esp.id}')"
               onkeydown="if(event.key==='Enter')addEspMed('${esp.id}')"/>
           </div>
+        </div>
+        <div class="f" style="margin-bottom:8px;">
+          <label>Total (automático)</label>
+          <input type="number" id="esp-med-pac-${esp.id}" placeholder="0" readonly
+            style="background:var(--bg2);font-weight:700;color:var(--bl);cursor:default;"/>
         </div>
         <button class="ba" onclick="addEspMed('${esp.id}')" style="margin-bottom:12px;width:100%;">Guardar Médico</button>
         <div class="sl">Médicos e Totais</div>
@@ -543,24 +555,36 @@ function toggleEsp(id){
 }
 
 // ─── Médicos da especialidade ───────────────────────────────────
+function calcPacTotal(espId){
+  const h=parseInt(document.getElementById('esp-med-hom-'+espId)?.value)||0;
+  const m=parseInt(document.getElementById('esp-med-mul-'+espId)?.value)||0;
+  const pac=document.getElementById('esp-med-pac-'+espId);
+  if(pac)pac.value=(h+m)||'';
+}
 function addEspMed(espId){
   const nomeInp=document.getElementById('esp-med-nome-'+espId);
+  const homInp=document.getElementById('esp-med-hom-'+espId);
+  const mulInp=document.getElementById('esp-med-mul-'+espId);
   const pacInp=document.getElementById('esp-med-pac-'+espId);
   const nome=(nomeInp?nomeInp.value.trim():'');
-  const pac=parseInt(pacInp?pacInp.value:0)||0;
+  const hom=parseInt(homInp?homInp.value:0)||0;
+  const mul=parseInt(mulInp?mulInp.value:0)||0;
+  const pac=hom+mul;
   if(!nome){
     if(nomeInp){nomeInp.style.borderColor='var(--rd)';setTimeout(()=>nomeInp.style.borderColor='',1500);}
     toast('\u26a0 Preencha o nome do m\u00e9dico.');
     return;
   }
   if(!pac){
-    if(pacInp){pacInp.style.borderColor='var(--rd)';setTimeout(()=>pacInp.style.borderColor='',1500);}
-    toast('\u26a0 O n\u00famero de atendidos \u00e9 obrigat\u00f3rio.');
+    if(homInp){homInp.style.borderColor='var(--rd)';setTimeout(()=>homInp.style.borderColor='',1500);}
+    toast('\u26a0 Preencha o n\u00famero de Homens e/ou Mulheres.');
     return;
   }
-  const med={id:Date.now(),nome:nome,total:pac};
+  const med={id:Date.now(),nome:nome,homens:hom,mulheres:mul,total:pac};
   espData[espId].medicos.push(med);
   if(nomeInp)nomeInp.value='';
+  if(homInp)homInp.value='';
+  if(mulInp)mulInp.value='';
   if(pacInp)pacInp.value='';
   if(nomeInp)nomeInp.focus();
   renderEspMedList(espId);
@@ -589,6 +613,7 @@ function renderEspMedList(espId){
     <div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:${i%2?'#F8FAFF':'#fff'};border-radius:8px;margin-bottom:4px;border:1px solid var(--br);">
       <span style="font-size:.75rem;color:var(--tx3);min-width:18px;">${i+1}.</span>
       <span style="flex:1;font-size:.88rem;font-weight:600;color:var(--tx);">Dr(a). ${m.nome}</span>
+      <span style="font-size:.75rem;color:var(--tx3);white-space:nowrap;">H:${m.homens||0} M:${m.mulheres||0}</span>
       <span style="font-size:.82rem;font-weight:700;color:var(--bl);white-space:nowrap;">${m.total||0} pac.</span>
       <button onclick="delEspMed('${espId}',${m.id})" class="cons-med-del" title="Remover" style="background:none;border:none;color:var(--rd);cursor:pointer;padding:4px;border-radius:4px;flex-shrink:0;">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -826,7 +851,7 @@ function applySnapshot(snap){
       espData[e.id].medicos=sd.medicos||[];
       espData[e.id].total=sd.total||0;
       const set=(pfx,v)=>{const el=document.getElementById(pfx+e.id);if(el&&v)el.value=v;};
-      set('esp-tot-',sd.total||'');renderEspMedList(e.id);
+      set('esp-tot-',sd.total||'');renderEspMedList(e.id);calcEspTotal(e.id);
     }
   });
   renderConsList();upd();updateDataLabel();
@@ -996,15 +1021,17 @@ function gerarPDF(){
       pdf.text(safe(String(val==null?0:val)),ML+CW-2,y+4.5,{align:'right'});
       y+=6.5;
     }
-    function medRow(nome,pac,even){
+    function medRow(nome,hom,mul,tot,even){
       chk(6);
       if(even)sf('#F0FDF4');else sf('#E8F5E9');
       pdf.rect(ML,y,CW,6,'F');
       sf('#059669');pdf.rect(ML,y,2.5,6,'F');
       st('#065F46');pdf.setFontSize(8);pdf.setFont('helvetica','normal');
       pdf.text(safe('Dr(a). '+nome),ML+5,y+4);
-      st('#047857');pdf.setFont('helvetica','bold');
-      pdf.text(safe(String(pac||0)),ML+CW-2,y+4,{align:'right'});
+      st('#047857');pdf.setFontSize(7.5);
+      pdf.text('H:'+safe(String(hom||0))+' M:'+safe(String(mul||0)),ML+CW-40,y+4);
+      pdf.setFont('helvetica','bold');pdf.setFontSize(8);
+      pdf.text(safe(String(tot||0)),ML+CW-2,y+4,{align:'right'});
       y+=6;
     }
     function numCards(items){
@@ -1059,7 +1086,7 @@ function gerarPDF(){
       if(!d.total&&!d.medicos.length)return;
       tableRow(e.nome,d.total||0,alt%2===0,d.total?'#1A56DB':'#94A3B8');
       if(d.medicos.length){
-        d.medicos.forEach((m,mi)=>medRow(m.nome,m.total,mi%2===0));
+        d.medicos.forEach((m,mi)=>medRow(m.nome,m.homens||0,m.mulheres||0,m.total,mi%2===0));
       }
       alt++;
     });
