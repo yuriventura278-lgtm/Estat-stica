@@ -1124,7 +1124,7 @@ function gerarPDF(){
     const sd=h=>pdf.setDrawColor(hR(h),hG(h),hB(h));
     const st=h=>pdf.setTextColor(hR(h),hG(h),hB(h));
     function hdrS(){
-      sf('#0D1B3E');pdf.rect(0,0,PW,10,'F');sf('#0891B2');pdf.rect(0,9,PW,1,'F');
+      sf('#0C2340');pdf.rect(0,0,PW,10,'F');sf('#0891B2');pdf.rect(0,9,PW,1,'F');
       st('#93C5FD');pdf.setFontSize(6);pdf.setFont('helvetica','bold');
       pdf.text('FISIOTERAPIA E REABILITACAO - HOSPITAL DO PRENDA - GEPE',ML,7);
       st('#ffffff');pdf.setFont('helvetica','normal');pdf.setFontSize(6);
@@ -1164,10 +1164,10 @@ function gerarPDF(){
       });
       y+=19;
     }
-    // CABECALHO com logo
-    const HDR=46;
-    sf('#0D1B3E');pdf.rect(0,0,PW,HDR,'F');
-    sf('#0891B2');pdf.rect(0,HDR-1,PW,1.5,'F');
+    // CABECALHO
+    const HDR=42;
+    sf('#0C2340');pdf.rect(0,0,PW,HDR,'F');
+    sf('#0891B2');pdf.rect(0,HDR-1,PW,1,'F');
     try{
       const lc=document.createElement('canvas');lc.width=120;lc.height=120;
       const ctx=lc.getContext('2d');
@@ -1175,32 +1175,35 @@ function gerarPDF(){
       const img=new Image();img.src='data:image/jpeg;base64,'+LOGO_B64;
       ctx.save();ctx.beginPath();ctx.arc(60,60,59,0,Math.PI*2);ctx.clip();
       ctx.drawImage(img,0,0,120,120);ctx.restore();
-      pdf.addImage(lc.toDataURL('image/jpeg',0.85),'JPEG',ML,6,30,30);
+      pdf.addImage(lc.toDataURL('image/jpeg',0.85),'JPEG',ML,5,28,28);
     }catch(e){}
-    const TX=ML+36;
+    const TX=ML+34;
     st('#93C5FD');pdf.setFontSize(6.5);pdf.setFont('helvetica','normal');
-    pdf.text('RELATORIO DIARIO - Servico de Admissao e Arquivo Medico Estatistico',TX,11);
-    st('#FFFFFF');pdf.setFontSize(14);pdf.setFont('helvetica','bold');
-    pdf.text('Fisioterapia e Reabilitacao',TX,21);
-    st('#60A5FA');pdf.setFontSize(9);pdf.setFont('helvetica','normal');
-    pdf.text('Hospital do Prenda  -  GEPE',TX,29);
-    st('#A7F3D0');pdf.setFontSize(8);pdf.setFont('helvetica','normal');
-    pdf.text(safe(pdfDateFmt()),TX,37);
-    y=HDR+6;
+    pdf.text('RELATORIO DIARIO - Servico de Admissao e Arquivo Medico Estatistico',TX,10);
+    st('#FFFFFF');pdf.setFontSize(13);pdf.setFont('helvetica','bold');
+    pdf.text('Fisioterapia e Reabilitacao',TX,20);
+    st('#86EFAC');pdf.setFontSize(9);pdf.setFont('helvetica','normal');
+    pdf.text('Hospital do Prenda',TX,27);
+    st('#A7F3D0');pdf.setFontSize(8);
+    pdf.text(safe(pdfDateFmt()),TX,34);
+    y=HDR+5;
     // RESPONSAVEL
+    const resp=safe(gv('resp')||'---');
     secTitle('Responsavel pelo Turno','#1A56DB');
-    tableRow('Fisioterapeuta Responsavel',safe(gv('resp')||'---'),true,'#1A56DB');
+    tableRow('Fisioterapeuta Responsavel',resp,true,'#1A56DB');
     sep(4);
     // SUMARIO
     const intTot=parseInt(document.getElementById('int-tot').textContent)||0;
     const extTot=parseInt(document.getElementById('ext-tot').textContent)||0;
+    const uciTot=parseInt(gv('uci'))||0;
+    const consTot=parseInt(gv('consulta'))||0;
     numCards([
       {label:'INTERNOS',val:intTot,bg:'#EFF6FF',lc:'#1E40AF',vc:'#1A56DB'},
       {label:'EXTERNOS',val:extTot,bg:'#F0FDF4',lc:'#065F46',vc:'#059669'},
-      {label:'TOTAL',val:intTot+extTot,bg:'#F8FAFF',lc:'#334155',vc:'#0D1B3E'},
+      {label:'TOTAL',val:intTot+extTot+uciTot+consTot,bg:'#F8FAFF',lc:'#334155',vc:'#0C2340'},
     ]);
     sep(4);
-    // INTERNAMENTOS - corrigido: .value lido do elemento, nao de parseInt(elemento)
+    // INTERNAMENTOS
     const intVals=INT_TIPOS.map(function(t){return{t:t,v:(document.getElementById('int-'+sid(t))||{value:'0'}).value||0};}).filter(function(x){return parseInt(x.v)>0;});
     if(intVals.length){
       secTitle('Internamentos por Especialidade','#0891B2');
@@ -1211,7 +1214,7 @@ function gerarPDF(){
       pdf.text(String(intTot),ML+CW-2,y+5,{align:'right'});
       y+=9;sep(4);
     }
-    // EXTERNOS - corrigido
+    // EXTERNOS
     const extVals=EXT_TIPOS.map(function(t){return{t:t,v:(document.getElementById('ext-'+sid(t))||{value:'0'}).value||0};}).filter(function(x){return parseInt(x.v)>0;});
     if(extVals.length){
       secTitle('Atendimentos Externos','#059669');
@@ -1221,6 +1224,13 @@ function gerarPDF(){
       pdf.text('TOTAL EXTERNOS',ML+3,y+5);
       pdf.text(String(extTot),ML+CW-2,y+5,{align:'right'});
       y+=9;sep(4);
+    }
+    // UCI / CONSULTA EXTERNA
+    if(uciTot||consTot){
+      secTitle('Atendimentos Adicionais','#7C3AED');
+      if(uciTot)tableRow('UCI / UTI',uciTot,true,'#7C3AED');
+      if(consTot)tableRow('Consulta Externa',consTot,false,'#0891B2');
+      sep(4);
     }
     // EQUIPA
     const nFis=parseInt(gv('eq-fis'))||0;
@@ -1247,27 +1257,16 @@ function gerarPDF(){
     const nPg=pdf.internal.getNumberOfPages();
     for(let p=1;p<=nPg;p++){
       pdf.setPage(p);
-      sf('#F1F5F9');pdf.rect(0,PH-13,PW,13,'F');
-      sf('#0891B2');pdf.rect(0,PH-13,PW,1,'F');
-      st('#475569');pdf.setFont('helvetica','normal');pdf.setFontSize(7.5);
+      sf('#F1F5F9');pdf.rect(0,PH-12,PW,12,'F');
+      sf('#0891B2');pdf.rect(0,PH-12,PW,.7,'F');
+      st('#64748B');pdf.setFont('helvetica','normal');pdf.setFontSize(7.5);
       pdf.text('Fisioterapia e Reabilitacao - Hospital do Prenda - GEPE',ML,PH-4.5);
-      st('#0891B2');pdf.setFont('helvetica','bold');pdf.setFontSize(7.5);
       pdf.text(safe(pdfDateFmt()),PW/2,PH-4.5,{align:'center'});
-      st('#475569');pdf.setFont('helvetica','bold');
+      st('#334155');pdf.setFont('helvetica','bold');
       pdf.text('Pag. '+p+' / '+nPg,PW-MR,PH-4.5,{align:'right'});
     }
-    const fname='FISIOTERAPIA_'+(gv('data')||new Date().toISOString().slice(0,10)).replace(/-/g,'_')+'.pdf';
-    try{
-      const blob=pdf.output('blob');
-      const url=URL.createObjectURL(blob);
-      const a=document.createElement('a');a.href=url;a.download=fname;
-      document.body.appendChild(a);a.click();
-      setTimeout(function(){document.body.removeChild(a);URL.revokeObjectURL(url);},3000);
-    }catch(e2){
-      const uri=pdf.output('datauristring');
-      window.open(uri,'_blank');
-    }
-    toast('PDF gerado! Guarda o ficheiro na caixa de notificacoes.');return pdf;
+    pdf.save('FISIOTERAPIA_'+(gv('data')||new Date().toISOString().slice(0,10)).replace(/-/g,'_')+'.pdf');
+    toast('\u2713 PDF gerado com sucesso!');return pdf;
   }catch(err){console.error(err);toast('Erro ao gerar PDF: '+err.message);return null;}
 }
 function partilharWA(){
