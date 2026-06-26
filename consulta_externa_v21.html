@@ -958,7 +958,6 @@ function pdfDateFmt(){
 function pdfFileName(){return(gv('data')||new Date().toISOString().slice(0,10)).replace(/-/g,'_');}
 
 function gerarPDF(){
-  toast('A gerar PDF...');
   try{
     const {jsPDF}=window.jspdf;
     const pdf=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
@@ -1104,10 +1103,11 @@ async function acaoEmail(){
     setTimeout(()=>window.open(`mailto:estatisticahp@gmail.com?subject=${s}&body=${b}`,'_blank'),400);
   }
 }
-async function acaoPDF(){
+function acaoPDF(){
   const{totPac}=calcTotais();
   if(!totPac){toast('⚠ Registe pelo menos uma consulta antes de gerar o PDF.');return;}
-  gerarPDF();
+  toast('A gerar PDF…');
+  setTimeout(gerarPDF,50);
 }
 
 // ═══════════════════════════════════════════════════════════════
