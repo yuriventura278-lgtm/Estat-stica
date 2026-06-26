@@ -1114,7 +1114,7 @@ function apagRegistoData(d,btn){
 // ── PDF ───────────────────────────────────────────────────────────
 function gerarPDF(){
   try{
-    const {jsPDF}=window.jspdf;
+    const {jsPDF}=(window.jspdf||window);
     const pdf=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
     const PW=210,PH=297,ML=12,MR=12,MB=18,CW=PW-ML-MR;
     let y=12;
