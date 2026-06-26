@@ -958,6 +958,7 @@ function pdfDateFmt(){
 function pdfFileName(){return(gv('data')||new Date().toISOString().slice(0,10)).replace(/-/g,'_');}
 
 async function gerarPDF(){
+  toast('A gerar PDF...');
   try{
     const {jsPDF}=window.jspdf;
     const pdf=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
@@ -1025,14 +1026,14 @@ async function gerarPDF(){
     sf('#0C2340');pdf.rect(0,0,PW,HDR,'F');
     sf('#059669');pdf.rect(0,HDR-1,PW,1,'F');
     try{
-      const lc=document.createElement('canvas');lc.width=300;lc.height=300;
+      const lc=document.createElement('canvas');lc.width=120;lc.height=120;
       const ctx=lc.getContext('2d');
-      ctx.fillStyle='#043B2D';ctx.beginPath();ctx.arc(150,150,150,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#043B2D';ctx.beginPath();ctx.arc(60,60,60,0,Math.PI*2);ctx.fill();
       const img=new Image();
-      await new Promise(function(res){img.onload=res;img.onerror=res;setTimeout(res,2000);img.src=LOGO_B64;});
-      ctx.save();ctx.beginPath();ctx.arc(150,150,148,0,Math.PI*2);ctx.clip();
-      ctx.drawImage(img,0,0,300,300);ctx.restore();
-      pdf.addImage(lc.toDataURL('image/png'),'PNG',ML,5,28,28);
+      await new Promise(function(res){img.onload=res;img.onerror=res;setTimeout(res,300);img.src=LOGO_B64;});
+      ctx.save();ctx.beginPath();ctx.arc(60,60,59,0,Math.PI*2);ctx.clip();
+      ctx.drawImage(img,0,0,120,120);ctx.restore();
+      pdf.addImage(lc.toDataURL('image/jpeg',0.85),'JPEG',ML,5,28,28);
     }catch(e){}
     const TX=ML+34;
     st('#6EE7B7');pdf.setFontSize(6.5);pdf.setFont('helvetica','normal');
