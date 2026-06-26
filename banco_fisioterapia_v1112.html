@@ -1312,82 +1312,151 @@ function exportarPDF(btn){
     toast('⚠️ Sem ligação à internet para carregar o motor de PDF.');
     return;
   }
+
+  // Lê todos os dados actuais do formulário
   const dateFmt=pdfDateFmt();
   const resp=gv('resp')||'---';
+  const dataVal=gv('data')||new Date().toISOString().slice(0,10);
   const intTot=parseInt(document.getElementById('int-tot').textContent)||0;
   const extTot=parseInt(document.getElementById('ext-tot').textContent)||0;
   const total=intTot+extTot;
 
-  function getVals(ids,arr){
-    const r=ids.map(function(t){const el=document.getElementById(arr+t.toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,''));return{t:t,v:parseInt(el?el.value:0)||0};}).filter(function(x){return x.v>0;});
-    return r;
-  }
-  const intVals=INT_TIPOS.map(function(t){const el=document.getElementById('int-'+sid(t));return{t:t,v:parseInt(el?el.value:0)||0};}).filter(function(x){return x.v>0;});
-  const extVals=EXT_TIPOS.map(function(t){const el=document.getElementById('ext-'+sid(t));return{t:t,v:parseInt(el?el.value:0)||0};}).filter(function(x){return x.v>0;});
-  const intOutrosVals=intOutros.map(function(o){const inp=o.el?o.el.querySelector('input[type=number]'):null;return{t:o.label,v:parseInt(inp?inp.value:0)||0};}).filter(function(x){return x.v>0;});
-  const extOutrosVals=extOutros.map(function(o){const inp=o.el?o.el.querySelector('input[type=number]'):null;return{t:o.label,v:parseInt(inp?inp.value:0)||0};}).filter(function(x){return x.v>0;});
-  const nFis=parseInt(gv('eq-fis'))||0;
-  const obs=gv('obs');
+  // Especialidades fixas — lê .value directamente do input
+  const intVals=INT_TIPOS.map(function(t){
+    const el=document.getElementById('int-'+sid(t));
+    const v=el?parseInt(el.value)||0:0;
+    return{t:t,v:v};
+  }).filter(function(x){return x.v>0;});
 
-  function rows(arr,cor){return arr.map(function(x,i){return'<tr style="background:'+(i%2===0?'#f0f9ff':'#fff')+'"><td style="padding:6px 10px;border-bottom:1px solid #e2e8f0;font-size:11px;color:#475569;">'+x.t+'</td><td style="padding:6px 10px;border-bottom:1px solid #e2e8f0;text-align:right;font-weight:700;font-size:11px;color:'+cor+';">'+x.v+'</td></tr>';}).join('');}
+  const extVals=EXT_TIPOS.map(function(t){
+    const el=document.getElementById('ext-'+sid(t));
+    const v=el?parseInt(el.value)||0:0;
+    return{t:t,v:v};
+  }).filter(function(x){return x.v>0;});
+
+  // Campos "Outros" — lê label DO INPUT DE TEXTO, não do array (pode ter sido editado)
+  const intOutrosVals=intOutros.map(function(o){
+    if(!o.el)return null;
+    const nameEl=o.el.querySelector('input[type=text]');
+    const numEl=o.el.querySelector('input[type=number]');
+    const label=(nameEl&&nameEl.value.trim())||o.label||'Outro';
+    const v=numEl?parseInt(numEl.value)||0:0;
+    return{t:label,v:v};
+  }).filter(function(x){return x&&x.v>0;});
+
+  const extOutrosVals=extOutros.map(function(o){
+    if(!o.el)return null;
+    const nameEl=o.el.querySelector('input[type=text]');
+    const numEl=o.el.querySelector('input[type=number]');
+    const label=(nameEl&&nameEl.value.trim())||o.label||'Outro';
+    const v=numEl?parseInt(numEl.value)||0:0;
+    return{t:label,v:v};
+  }).filter(function(x){return x&&x.v>0;});
 
   const allInt=intVals.concat(intOutrosVals);
   const allExt=extVals.concat(extOutrosVals);
+  const nFis=parseInt(gv('eq-fis'))||0;
+  const obs=gv('obs');
 
-  const intSec=allInt.length?'<div style="background:#0891B2;color:#fff;font-size:10px;font-weight:700;padding:6px 10px;letter-spacing:.5px;margin-top:14px;">INTERNAMENTOS POR ESPECIALIDADE</div><table style="width:100%;border-collapse:collapse;"><thead><tr><th style="background:#f8fafc;padding:6px 10px;text-align:left;font-size:10px;color:#475569;border-bottom:2px solid #e2e8f0;">Especialidade</th><th style="background:#f8fafc;padding:6px 10px;text-align:right;font-size:10px;color:#475569;border-bottom:2px solid #e2e8f0;">Doentes</th></tr></thead><tbody>'+rows(allInt,'#0891B2')+'</tbody></table><div style="background:#ECFEFF;display:flex;justify-content:space-between;padding:6px 10px;font-weight:700;font-size:11px;color:#0E7490;">TOTAL INTERNOS<span>'+intTot+'</span></div>':'';
+  // Helper: gera linhas de tabela
+  function rows(arr,cor){
+    return arr.map(function(x,i){
+      return'<tr style="background:'+(i%2===0?'#EEF6FF':'#fff')+'">'
+        +'<td style="padding:7px 10px;border-bottom:1px solid #e2e8f0;font-size:11px;color:#334155;">'+x.t+'</td>'
+        +'<td style="padding:7px 10px;border-bottom:1px solid #e2e8f0;text-align:right;font-weight:700;font-size:12px;color:'+cor+';">'+x.v+'</td>'
+        +'</tr>';
+    }).join('');
+  }
 
-  const extSec=allExt.length?'<div style="background:#059669;color:#fff;font-size:10px;font-weight:700;padding:6px 10px;letter-spacing:.5px;margin-top:14px;">ATENDIMENTOS EXTERNOS</div><table style="width:100%;border-collapse:collapse;"><thead><tr><th style="background:#f8fafc;padding:6px 10px;text-align:left;font-size:10px;color:#475569;border-bottom:2px solid #e2e8f0;">Categoria</th><th style="background:#f8fafc;padding:6px 10px;text-align:right;font-size:10px;color:#475569;border-bottom:2px solid #e2e8f0;">Doentes</th></tr></thead><tbody>'+rows(allExt,'#059669')+'</tbody></table><div style="background:#F0FDF4;display:flex;justify-content:space-between;padding:6px 10px;font-weight:700;font-size:11px;color:#065F46;">TOTAL EXTERNOS<span>'+extTot+'</span></div>':'';
+  const tdH='<th style="background:#f1f5f9;padding:7px 10px;text-align:left;font-size:10px;font-weight:700;color:#475569;border-bottom:2px solid #cbd5e1;">';
+  const tdHR='<th style="background:#f1f5f9;padding:7px 10px;text-align:right;font-size:10px;font-weight:700;color:#475569;border-bottom:2px solid #cbd5e1;">';
+  const tblWrap='<table style="width:100%;border-collapse:collapse;margin-bottom:4px;"><thead><tr>'+tdH+'Especialidade</th>'+tdHR+'Doentes</th></tr></thead><tbody>';
+  const tblWrapExt='<table style="width:100%;border-collapse:collapse;margin-bottom:4px;"><thead><tr>'+tdH+'Categoria</th>'+tdHR+'Doentes</th></tr></thead><tbody>';
 
-  const eqSec=(nFis||equipaData.length)?'<div style="background:#064E3B;color:#fff;font-size:10px;font-weight:700;padding:6px 10px;letter-spacing:.5px;margin-top:14px;">EQUIPA DE FISIOTERAPIA</div><table style="width:100%;border-collapse:collapse;"><tbody>'+(nFis?'<tr style="background:#f0fdf4"><td style="padding:6px 10px;border-bottom:1px solid #e2e8f0;font-size:11px;color:#475569;">Profissionais presentes</td><td style="padding:6px 10px;border-bottom:1px solid #e2e8f0;text-align:right;font-weight:700;font-size:11px;color:#065F46;">'+nFis+'</td></tr>':'')+equipaData.map(function(e,i){return'<tr style="background:'+(i%2===0?'#f8fafc':'#fff')+'"><td style="padding:6px 10px;border-bottom:1px solid #e2e8f0;font-size:11px;color:#334155;">'+e.nome+' <span style="color:#94a3b8;">('+e.func+')</span></td><td style="padding:6px 10px;border-bottom:1px solid #e2e8f0;text-align:right;font-size:11px;">—</td></tr>';}).join('')+'</tbody></table>':'';
+  const secHdr=function(txt,bg){return'<div style="background:'+bg+';color:#fff;font-size:10px;font-weight:700;letter-spacing:.6px;padding:7px 12px;margin-top:16px;border-radius:4px 4px 0 0;">'+txt+'</div>';};
+  const subTot=function(lbl,v,bg,cor){return'<div style="background:'+bg+';display:flex;justify-content:space-between;padding:7px 10px;font-weight:700;font-size:11px;color:'+cor+';border-radius:0 0 4px 4px;">'+lbl+'<span>'+v+'</span></div>';};
 
-  const obsSec=obs?'<div style="background:#334155;color:#fff;font-size:10px;font-weight:700;padding:6px 10px;letter-spacing:.5px;margin-top:14px;">OBSERVAÇÕES GERAIS</div><div style="background:#f8fafc;border-left:4px solid #334155;padding:12px 14px;font-size:11px;color:#334155;line-height:1.6;white-space:pre-wrap;">'+obs.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div>':'';
+  const intSec=allInt.length
+    ?secHdr('INTERNAMENTOS POR ESPECIALIDADE','#0891B2')+tblWrap+rows(allInt,'#0891B2')+'</tbody></table>'+subTot('TOTAL INTERNOS',intTot,'#ECFEFF','#0E7490')
+    :'';
 
-  const logoSrc='data:image/jpeg;base64,'+LOGO_B64;
+  const extSec=allExt.length
+    ?secHdr('ATENDIMENTOS EXTERNOS','#059669')+tblWrapExt+rows(allExt,'#059669')+'</tbody></table>'+subTot('TOTAL EXTERNOS',extTot,'#F0FDF4','#065F46')
+    :'';
 
-  const html='<div style="font-family:Arial,Helvetica,sans-serif;background:#fff;">'
-    +'<div style="background:#0D1B3E;padding:16px 20px 12px;border-bottom:3px solid #0891B2;display:flex;align-items:center;gap:16px;">'
-    +'<img src="'+logoSrc+'" style="width:50px;height:50px;border-radius:50%;border:2px solid #0891B2;" />'
-    +'<div><p style="color:#93C5FD;font-size:9px;margin:0 0 2px;">RELATÓRIO DIÁRIO — Serviço de Admissão e Arquivo Médico Estatístico</p>'
-    +'<h1 style="color:#fff;font-size:15px;font-weight:700;margin:0 0 2px;">Fisioterapia e Reabilitação</h1>'
+  const eqRows=(nFis?'<tr style="background:#F0FDF4"><td style="padding:7px 10px;border-bottom:1px solid #e2e8f0;font-size:11px;color:#475569;">Profissionais presentes</td><td style="padding:7px 10px;border-bottom:1px solid #e2e8f0;text-align:right;font-weight:700;font-size:12px;color:#065F46;">'+nFis+'</td></tr>':'')
+    +equipaData.map(function(e,i){return'<tr style="background:'+(i%2===0?'#f8fafc':'#fff')+'"><td style="padding:7px 10px;border-bottom:1px solid #e2e8f0;font-size:11px;color:#334155;">'+e.nome+' ('+e.func+')</td><td style="padding:7px 10px;border-bottom:1px solid #e2e8f0;text-align:right;font-size:11px;color:#94a3b8;">—</td></tr>';}).join('');
+
+  const eqSec=(nFis||equipaData.length)
+    ?secHdr('EQUIPA DE FISIOTERAPIA','#064E3B')+'<table style="width:100%;border-collapse:collapse;"><tbody>'+eqRows+'</tbody></table>'
+    :'';
+
+  const obsSec=obs
+    ?secHdr('OBSERVAÇÕES GERAIS','#334155')+'<div style="background:#f8fafc;border-left:4px solid #334155;padding:12px 14px;font-size:11px;color:#334155;line-height:1.7;white-space:pre-wrap;word-break:break-word;">'+obs.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div>'
+    :'';
+
+  const html=
+    '<div style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#0F172A;background:#fff;width:190mm;">'
+    // cabeçalho
+    +'<div style="background:#0D1B3E;padding:14px 16px 12px;border-bottom:3px solid #0891B2;display:table;width:100%;box-sizing:border-box;">'
+    +'<div style="display:table-cell;vertical-align:middle;width:60px;">'
+    +'<img src="data:image/jpeg;base64,'+LOGO_B64+'" style="width:52px;height:52px;border-radius:50%;border:2px solid #0891B2;display:block;" /></div>'
+    +'<div style="display:table-cell;vertical-align:middle;padding-left:12px;">'
+    +'<p style="color:#93C5FD;font-size:8px;margin:0 0 3px;letter-spacing:.3px;">RELATÓRIO DIÁRIO — Serviço de Admissão e Arquivo Médico Estatístico</p>'
+    +'<p style="color:#fff;font-size:14px;font-weight:700;margin:0 0 2px;">Fisioterapia e Reabilitação</p>'
     +'<p style="color:#60A5FA;font-size:10px;margin:0 0 2px;">Hospital do Prenda — GEPE</p>'
-    +'<p style="color:#A7F3D0;font-size:10px;margin:0;">'+dateFmt+'</p></div></div>'
-    +'<div style="padding:0 20px 20px;">'
-    +'<div style="background:#EFF6FF;border-left:4px solid #1A56DB;padding:8px 12px;margin:12px 0;">'
-    +'<div style="font-size:9px;color:#64748b;text-transform:uppercase;font-weight:700;">Fisioterapeuta Responsável</div>'
-    +'<div style="font-size:13px;font-weight:700;color:#1A56DB;margin-top:2px;">'+resp+'</div></div>'
-    +'<div style="display:flex;gap:10px;margin:12px 0;">'
-    +'<div style="flex:1;background:#EFF6FF;border-radius:8px;padding:10px;text-align:center;"><div style="font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;">Internos</div><div style="font-size:26px;font-weight:800;color:#1A56DB;">'+intTot+'</div></div>'
-    +'<div style="flex:1;background:#F0FDF4;border-radius:8px;padding:10px;text-align:center;"><div style="font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;">Externos</div><div style="font-size:26px;font-weight:800;color:#059669;">'+extTot+'</div></div>'
-    +'<div style="flex:1;background:#F8FAFF;border-radius:8px;padding:10px;text-align:center;"><div style="font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;">Total</div><div style="font-size:26px;font-weight:800;color:#0D1B3E;">'+total+'</div></div>'
+    +'<p style="color:#A7F3D0;font-size:10px;margin:0;">'+dateFmt+'</p>'
+    +'</div></div>'
+    // responsável
+    +'<div style="padding:0 16px;">'
+    +'<div style="background:#EFF6FF;border-left:4px solid #1A56DB;padding:9px 12px;margin:14px 0 10px;">'
+    +'<div style="font-size:8px;color:#64748b;text-transform:uppercase;font-weight:700;letter-spacing:.4px;">Fisioterapeuta Responsável</div>'
+    +'<div style="font-size:13px;font-weight:700;color:#1A56DB;margin-top:3px;">'+resp+'</div>'
+    +'</div>'
+    // cartões resumo
+    +'<div style="display:table;width:100%;border-spacing:8px;margin-bottom:4px;">'
+    +'<div style="display:table-cell;background:#EFF6FF;border-radius:8px;padding:10px;text-align:center;width:33%;">'
+    +'<div style="font-size:8px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.4px;">Internos</div>'
+    +'<div style="font-size:28px;font-weight:800;color:#1A56DB;line-height:1.1;margin-top:4px;">'+intTot+'</div></div>'
+    +'<div style="display:table-cell;background:#F0FDF4;border-radius:8px;padding:10px;text-align:center;width:33%;">'
+    +'<div style="font-size:8px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.4px;">Externos</div>'
+    +'<div style="font-size:28px;font-weight:800;color:#059669;line-height:1.1;margin-top:4px;">'+extTot+'</div></div>'
+    +'<div style="display:table-cell;background:#F8FAFF;border-radius:8px;padding:10px;text-align:center;width:33%;">'
+    +'<div style="font-size:8px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.4px;">Total Geral</div>'
+    +'<div style="font-size:28px;font-weight:800;color:#0D1B3E;line-height:1.1;margin-top:4px;">'+total+'</div></div>'
     +'</div>'
     +intSec+extSec+eqSec+obsSec
     +'</div>'
-    +'<div style="border-top:2px solid #0891B2;padding:8px 20px;display:flex;justify-content:space-between;font-size:9px;color:#475569;">'
-    +'<span>Fisioterapia e Reabilitação — Hospital do Prenda — GEPE</span><span>'+dateFmt+'</span></div>'
-    +'</div>';
+    // rodapé
+    +'<div style="border-top:2px solid #0891B2;padding:7px 16px;margin-top:16px;display:table;width:100%;box-sizing:border-box;">'
+    +'<span style="display:table-cell;font-size:8px;color:#475569;">Fisioterapia e Reabilitação — Hospital do Prenda — GEPE</span>'
+    +'<span style="display:table-cell;font-size:8px;color:#475569;text-align:right;">'+dateFmt+'</span>'
+    +'</div></div>';
 
   const el=document.createElement('div');
+  el.style.cssText='position:fixed;left:-9999px;top:0;width:210mm;';
   el.innerHTML=html;
   document.body.appendChild(el);
 
-  const fname='FISIOTERAPIA_'+(gv('data')||new Date().toISOString().slice(0,10)).replace(/-/g,'_')+'.pdf';
-  if(btn)btn.disabled=true;
+  const fname='FISIOTERAPIA_'+dataVal.replace(/-/g,'_')+'.pdf';
+  if(btn){btn.disabled=true;btn.querySelector('span').textContent='A gerar...';}
   toast('A gerar PDF...');
 
   html2pdf().set({
-    margin:[8,8,8,8],
+    margin:0,
     filename:fname,
     image:{type:'jpeg',quality:0.98},
-    html2canvas:{scale:2,useCORS:true,logging:false},
+    html2canvas:{scale:2,useCORS:true,logging:false,allowTaint:true},
     jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}
   }).from(el).save().then(function(){
     document.body.removeChild(el);
-    if(btn)btn.disabled=false;
+    if(btn){btn.disabled=false;btn.querySelector('span').textContent='Guardar PDF';}
     toast('✓ PDF guardado com sucesso!');
   }).catch(function(err){
     document.body.removeChild(el);
-    if(btn)btn.disabled=false;
-    toast('Erro: '+err.message);
+    if(btn){btn.disabled=false;btn.querySelector('span').textContent='Guardar PDF';}
+    console.error(err);
+    toast('Erro ao gerar PDF: '+(err.message||err));
   });
 }
 function guardarNoHistorico(){
