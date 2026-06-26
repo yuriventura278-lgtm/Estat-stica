@@ -899,6 +899,8 @@ function visualizar(){
   ${extTot||gv('ext-prim')?`<div class="ms">${S('Doentes Externos')}${L('Total Externos',extTot)}${gv('ext-prim')?L('Primeiras Consultas',gv('ext-prim')):''}</div>`:''}
   ${patRows?`<div class="ms">${S('Patologias Registadas')}${patRows}${L('TOTAL',patTot)}</div>`:''}
   ${gv('ext-obs')?`<div class="ms">${S('Obs. Consultas Externas')}<div style="font-size:.87rem;color:#334155;line-height:1.6;">${gv('ext-obs')}</div></div>`:''}
+
+  ${(function(){const n=parseInt(gv('num-psi-cons'))||0;if(!n)return '';const nomes=[];for(let i=1;i<=n;i++)nomes.push(gv('psi-cons-'+i)||'(sem nome)');return '<div class="ms">'+S('Psicólogas em Consultório')+nomes.map(function(nm,i){return L((i+1)+'. '+nm,'');}).join('')+L('Total em Consultório',n)+'</div>';})()}
   ${gv('obs-geral')?`<div class="ms">${S('Observações e Ocorrências')}<div style="font-size:.87rem;color:#334155;line-height:1.6;">${gv('obs-geral')}</div></div>`:''}
   `;
 

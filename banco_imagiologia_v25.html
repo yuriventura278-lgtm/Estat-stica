@@ -703,8 +703,8 @@ function closeSplash(){
 .eicard-modalities{display:flex;flex-direction:column;gap:14px;}
 .eicard-modality{display:flex;flex-direction:column;gap:6px;}
 .eicard-modality-hdr{font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;padding:4px 8px;border-radius:6px;}
-.eicard-pair{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-.eicard-pair-lbl{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.eicard-pair{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;box-sizing:border-box;}
+.eicard-pair-lbl{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;box-sizing:border-box;}
 .eicard-pair-lbl span{font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;text-align:center;color:var(--tx3);}
 .eicard-tot-row{display:flex;justify-content:flex-end;align-items:center;gap:6px;margin-top:8px;padding-top:8px;border-top:1px solid var(--br);}
 .eicard-tot-lbl{font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);}
@@ -754,7 +754,7 @@ function closeSplash(){
     <div class="st"><h2>Data do Turno</h2><p>Turno de 24 horas — início e fim</p></div>
   </div>
   <div class="sb">
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;box-sizing:border-box;">
       <div>
         <label style="font-size:.65rem;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;display:block;">Início (dia <span id="lbl-inicio"></span>)</label>
         <div class="db">
@@ -1834,7 +1834,17 @@ buildAutTable();
 buildEquipaBody('eq1-body','eq1');
 buildEquipaBody('eq2-body','eq2');
 buildClassGrid();
-ls();calcTotals();upd();
+ls();
+// Auto-preencher datas se ainda vazias após carregar o draft
+(function(){
+  var de=document.getElementById('data');
+  if(de&&!de.value){
+    var ontem=new Date();ontem.setDate(ontem.getDate()-1);
+    var iO=ontem.toISOString().slice(0,10);
+    de.value=iO;atualizarDataFim(iO);
+  }
+})();
+calcTotals();upd();
 
 document.getElementById('ov2').addEventListener('click',e=>{if(e.target===document.getElementById('ov2'))closeValid();});
 document.getElementById('ov3').addEventListener('click',e=>{if(e.target===document.getElementById('ov3'))closePost();});
