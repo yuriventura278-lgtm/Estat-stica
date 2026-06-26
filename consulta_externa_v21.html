@@ -833,18 +833,18 @@ function applySnapshot(snap){
 }
 function saveDraft(){ss();}
 function showDraftBanner(){
-  const raw=localStorage.getItem(DRAFT_KEY);if(!raw){hideDraftBanner();return;}
+  const _dt=gv('data');const raw=_dt?localStorage.getItem('ce_v2_draft_'+_dt):null;if(!raw){hideDraftBanner();return;}
   try{
     const d=JSON.parse(raw);
     document.getElementById('draft-banner').classList.add('show');
     const t=document.getElementById('draft-time');
-    if(t&&d.savedAt){const dt=new Date(d.savedAt);t.textContent='Guardado às '+dt.toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'});}
+    if(t&&d.savedAt){const dtt=new Date(d.savedAt);t.textContent='Guardado às '+dtt.toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'});}
   }catch(e){}
 }
 function hideDraftBanner(){document.getElementById('draft-banner').classList.remove('show');}
 function clearDraft(){
   if(!confirm('Limpar o rascunho apaga todos os dados não guardados. Continuar?'))return;
-  localStorage.removeItem(DRAFT_KEY);hideDraftBanner();
+  const _cd=gv('data');if(_cd)localStorage.removeItem('ce_v2_draft_'+_cd);hideDraftBanner();
   document.getElementById('data').value='';document.getElementById('obs-geral').value='';
   consData=[];
   ESPECIALIDADES.forEach(e=>{
@@ -873,7 +873,7 @@ function salvarRegisto(){
     else hist.unshift({savedAt:new Date().toISOString(),snapshot:snap});
     while(hist.length>30)hist.pop();
     localStorage.setItem(HIST_KEY,JSON.stringify(hist));
-    localStorage.removeItem(DRAFT_KEY);hideDraftBanner();
+    const _cd=gv('data');if(_cd)localStorage.removeItem('ce_v2_draft_'+_cd);hideDraftBanner();
     toast('✓ Registo guardado com sucesso!');
     setTimeout(()=>{if(confirm('Registo guardado!\n\nDeseja gerar o PDF?'))acaoPDF();},800);
   }catch(e){toast('✓ Registo guardado!');}
@@ -961,95 +961,134 @@ async function gerarPDF(){
   try{
     const {jsPDF}=window.jspdf;
     const pdf=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
-    const PW=210,PH=297,ML=14,MR=14,CW=PW-ML-MR;
-    let y=14;
-    const setT=c=>pdf.setTextColor(c);
-    const setF=c=>pdf.setFillColor(c);
-    const setD=c=>pdf.setDrawColor(c);
-    function chk(n=18){if(y+n>PH-18){pdf.addPage();y=14;}}
-    function sep(g=4){y+=g;}
-    function secHd(txt,col){
-      chk(10);setF(col||'#1A56DB');pdf.rect(ML,y,CW,7,'F');
-      setT('#FFFFFF');pdf.setFont('helvetica','bold');pdf.setFontSize(9);
-      pdf.text(txt.toUpperCase(),ML+4,y+5);y+=7;
+    const PW=210,PH=297,ML=12,MR=12,MB=18,CW=PW-ML-MR;
+    let y=12;
+    const safe=s=>String(s==null?'':s).normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^\x00-\x7F]/g,'?');
+    const hR=h=>parseInt(h.slice(1,3),16),hG=h=>parseInt(h.slice(3,5),16),hB=h=>parseInt(h.slice(5,7),16);
+    const sf=h=>pdf.setFillColor(hR(h),hG(h),hB(h));
+    const sd=h=>pdf.setDrawColor(hR(h),hG(h),hB(h));
+    const st=h=>pdf.setTextColor(hR(h),hG(h),hB(h));
+    function hdrS(){
+      sf('#0C2340');pdf.rect(0,0,PW,10,'F');sf('#059669');pdf.rect(0,9,PW,1,'F');
+      st('#6EE7B7');pdf.setFontSize(6);pdf.setFont('helvetica','bold');
+      pdf.text('CONSULTA EXTERNA - HOSPITAL DO PRENDA - GEPE',ML,7);
+      st('#ffffff');pdf.setFont('helvetica','normal');pdf.setFontSize(6);
+      pdf.text(safe(pdfDateFmt()),PW-MR,7,{align:'right'});
+      y=14;
     }
-
-    // Cabeçalho
-    setF('#0D1B3E');pdf.rect(0,0,PW,30,'F');
-    try{pdf.addImage(LOGO_B64,'JPEG',ML,3,22,22,'','FAST');}catch(e){}
-    setT('#FFFFFF');pdf.setFont('helvetica','bold');pdf.setFontSize(16);
-    pdf.text('Consulta Externa',ML+27,12);
-    pdf.setFontSize(9);pdf.setFont('helvetica','normal');setT('#BFDBFE');
-    pdf.text('Hospital do Prenda — GEPE',ML+27,18);
-    pdf.text(pdfDateFmt(),ML+27,24);
-    setF('#059669');pdf.rect(0,30,PW,1.5,'F');
-    y=38;
-
-    // Cards resumo
+    function chk(n){if(y+n>PH-MB){pdf.addPage();hdrS();}}
+    function sep(g){y+=(g||4);}
+    function secTitle(txt,bg){
+      bg=bg||'#1A56DB';chk(10);
+      sf(bg);pdf.rect(ML,y,CW,7,'F');
+      st('#FFFFFF');pdf.setFontSize(7.5);pdf.setFont('helvetica','bold');
+      pdf.text(safe(txt).toUpperCase(),ML+3,y+5);
+      y+=9;
+    }
+    function tableRow(label,val,even,vc){
+      vc=vc||'#0F172A';chk(7);
+      if(even)sf('#F8FAFF');else sf('#FFFFFF');
+      pdf.rect(ML,y,CW,6.5,'F');
+      sd('#E2E8F0');pdf.setLineWidth(0.1);pdf.line(ML,y+6.5,ML+CW,y+6.5);
+      st('#475569');pdf.setFontSize(9.5);pdf.setFont('helvetica','normal');
+      pdf.text(safe(String(label)),ML+3,y+4.5);
+      st(vc);pdf.setFont('helvetica','bold');
+      pdf.text(safe(String(val==null?0:val)),ML+CW-2,y+4.5,{align:'right'});
+      y+=6.5;
+    }
+    function medRow(nome,pac,even){
+      chk(6);
+      if(even)sf('#F0FDF4');else sf('#E8F5E9');
+      pdf.rect(ML,y,CW,6,'F');
+      sf('#059669');pdf.rect(ML,y,2.5,6,'F');
+      st('#065F46');pdf.setFontSize(8);pdf.setFont('helvetica','normal');
+      pdf.text(safe('Dr(a). '+nome),ML+5,y+4);
+      st('#047857');pdf.setFont('helvetica','bold');
+      pdf.text(safe(String(pac||0)),ML+CW-2,y+4,{align:'right'});
+      y+=6;
+    }
+    function numCards(items){
+      chk(18);
+      const n=items.length,cw=(CW-(n-1)*3)/n;
+      items.forEach(function(it,i){
+        const cx=ML+i*(cw+3);
+        sf(it.bg||'#EFF6FF');pdf.roundedRect(cx,y,cw,16,2,2,'F');
+        st(it.lc||'#1E40AF');pdf.setFontSize(6.5);pdf.setFont('helvetica','bold');
+        pdf.text(safe(it.label),cx+cw/2,y+5.5,{align:'center'});
+        st(it.vc||'#0D1B3E');pdf.setFontSize(16);pdf.setFont('helvetica','bold');
+        pdf.text(String(isNaN(it.val)?0:it.val),cx+cw/2,y+13.5,{align:'center'});
+      });
+      y+=19;
+    }
+    // ── CABECALHO ──────────────────────────────────────────
+    const HDR=42;
+    sf('#0C2340');pdf.rect(0,0,PW,HDR,'F');
+    sf('#059669');pdf.rect(0,HDR-1,PW,1,'F');
+    try{
+      const lc=document.createElement('canvas');lc.width=300;lc.height=300;
+      const ctx=lc.getContext('2d');
+      ctx.fillStyle='#043B2D';ctx.beginPath();ctx.arc(150,150,150,0,Math.PI*2);ctx.fill();
+      const img=new Image();
+      await new Promise(function(res){img.onload=res;img.onerror=res;setTimeout(res,2000);img.src=LOGO_B64;});
+      ctx.save();ctx.beginPath();ctx.arc(150,150,148,0,Math.PI*2);ctx.clip();
+      ctx.drawImage(img,0,0,300,300);ctx.restore();
+      pdf.addImage(lc.toDataURL('image/png'),'PNG',ML,5,28,28);
+    }catch(e){}
+    const TX=ML+34;
+    st('#6EE7B7');pdf.setFontSize(6.5);pdf.setFont('helvetica','normal');
+    pdf.text('RELATORIO DIARIO - Servico de Admissao e Arquivo Medico Estatistico',TX,10);
+    st('#FFFFFF');pdf.setFontSize(13);pdf.setFont('helvetica','bold');
+    pdf.text('CONSULTA EXTERNA',TX,20);
+    st('#86EFAC');pdf.setFontSize(9);pdf.setFont('helvetica','normal');
+    pdf.text('Hospital do Prenda',TX,27);
+    st('#A7F3D0');pdf.setFontSize(8);
+    pdf.text(safe(pdfDateFmt()),TX,34);
+    y=HDR+5;
+    // ── TOTAIS ─────────────────────────────────────────────
     const{totPac}=calcTotais();
-    setF('#EFF6FF');pdf.rect(ML,y,CW,22,'F');
-    setD('#93C5FD');pdf.setLineWidth(0.3);pdf.rect(ML,y,CW,22,'S');
-    setT('#1A56DB');pdf.setFont('helvetica','bold');pdf.setFontSize(20);
-    pdf.text(String(totPac),ML+CW/2,y+14,{align:'center'});
-    pdf.setFont('helvetica','normal');pdf.setFontSize(7);setT('#64748B');
-    pdf.text('TOTAL GERAL',ML+CW/2,y+20,{align:'center'});
-    y+=28;
-
-    // Tabela especialidades
-    secHd('Atendimentos por Especialidade','#1A56DB');
-    chk(10);
-    setF('#DBEAFE');pdf.rect(ML,y,CW,6,'F');
-    setT('#1E40AF');pdf.setFont('helvetica','bold');pdf.setFontSize(7.5);
-    pdf.text('Especialidade',ML+3,y+4.2);
-    pdf.text('Total',ML+95,y+4.2,{align:'center'});
-    y+=6;
+    const espComDados=ESPECIALIDADES.filter(e=>espData[e.id].total||espData[e.id].medicos.length);
+    numCards([
+      {label:'TOTAL CONSULTAS',val:totPac,bg:'#F0FDF4',lc:'#166534',vc:'#059669'},
+      {label:'ESPECIALIDADES',val:espComDados.length,bg:'#EFF6FF',lc:'#1E40AF',vc:'#1D4ED8'}
+    ]);
+    sep(5);
+    // ── ESPECIALIDADES ─────────────────────────────────────
+    secTitle('Atendimentos por Especialidade','#1A56DB');
     let alt=0;
     ESPECIALIDADES.forEach(e=>{
       const d=espData[e.id];
       if(!d.total&&!d.medicos.length)return;
-      chk(7);
-      setF(alt%2===0?'#FAFBFF':'#FFFFFF');pdf.rect(ML,y,CW,6.5,'F');
-      setT('#0F172A');pdf.setFont('helvetica','normal');pdf.setFontSize(9);
-      pdf.text(e.nome,ML+3,y+4.5);
-      setT(d.total?'#1A56DB':'#94A3B8');pdf.setFont('helvetica','bold');
-      pdf.text(d.total?String(d.total):'—',ML+95,y+4.5,{align:'center'});setD('#E2E8F0');pdf.setLineWidth(0.1);pdf.line(ML,y+6.5,ML+CW,y+6.5);
-      y+=6.5;
+      tableRow(e.nome,d.total||0,alt%2===0,d.total?'#1A56DB':'#94A3B8');
       if(d.medicos.length){
-        d.medicos.forEach((m,mi)=>{
-          chk(5);setF(mi%2===0?'#F0FDF4':'#E8F5E9');pdf.rect(ML,y,CW,5.5,'F');
-          setT('#059669');pdf.setFont('helvetica','normal');pdf.setFontSize(7.5);
-          pdf.text('  Dr(a). '+m.nome,ML+5,y+3.8);
-          setT('#1A56DB');pdf.setFont('helvetica','bold');pdf.setFontSize(7.5);
-          pdf.text(String(m.total||0),ML+95,y+3.8,{align:'center'});
-          y+=5.5;
-        });
+        d.medicos.forEach((m,mi)=>medRow(m.nome,m.total,mi%2===0));
       }
       alt++;
     });
-    // Total row
-    chk(8);setF('#0D1B3E');pdf.rect(ML,y,CW,7,'F');
-    setT('#FFFFFF');pdf.setFont('helvetica','bold');pdf.setFontSize(9);
+    chk(8);sf('#0C2340');pdf.rect(ML,y,CW,7,'F');
+    st('#FFFFFF');pdf.setFont('helvetica','bold');pdf.setFontSize(9);
     pdf.text('TOTAL GERAL',ML+3,y+4.8);
-    pdf.text(String(totPac),ML+95,y+4.8,{align:'center'});
-y+=9;sep(3);
-
-    // Obs
+    pdf.text(String(totPac),ML+CW-2,y+4.8,{align:'right'});
+    y+=9;sep(3);
+    // ── OBSERVACOES ────────────────────────────────────────
     const obs=gv('obs-geral');
-    if(obs){chk(14);secHd('Observações','#64748B');setF('#F8FAFF');pdf.rect(ML,y,CW,10,'F');
-      setT('#334155');pdf.setFont('helvetica','normal');pdf.setFontSize(9);
-      pdf.text(pdf.splitTextToSize(obs,CW-6).slice(0,3),ML+3,y+4.5);y+=12;}
-
-    // Rodapé
+    if(obs){
+      secTitle('Observacoes','#64748B');
+      chk(12);sf('#F8FAFC');pdf.rect(ML,y,CW,12,'F');
+      sd('#CBD5E1');pdf.setLineWidth(0.3);pdf.rect(ML,y,CW,12,'S');
+      st('#334155');pdf.setFont('helvetica','normal');pdf.setFontSize(9);
+      pdf.text(pdf.splitTextToSize(safe(obs),CW-6).slice(0,3),ML+3,y+5);y+=14;
+    }
+    // ── RODAPE ─────────────────────────────────────────────
     const nPg=pdf.internal.getNumberOfPages();
     for(let p=1;p<=nPg;p++){
       pdf.setPage(p);
-      setF('#F1F5F9');pdf.rect(0,PH-12,PW,12,'F');
-      setF('#059669');pdf.rect(0,PH-12,PW,.7,'F');
-      setT('#64748B');pdf.setFont('helvetica','normal');pdf.setFontSize(7.5);
-      pdf.text('Consulta Externa · Hospital do Prenda · GEPE',ML,PH-4.5);
-      pdf.text(pdfDateFmt(),PW/2,PH-4.5,{align:'center'});
-      setT('#334155');pdf.setFont('helvetica','bold');
-      pdf.text('Pág. '+p+' / '+nPg,PW-MR,PH-4.5,{align:'right'});
+      sf('#F1F5F9');pdf.rect(0,PH-12,PW,12,'F');
+      sf('#059669');pdf.rect(0,PH-12,PW,.7,'F');
+      st('#64748B');pdf.setFont('helvetica','normal');pdf.setFontSize(7.5);
+      pdf.text('Consulta Externa - Hospital do Prenda - GEPE',ML,PH-4.5);
+      pdf.text(safe(pdfDateFmt()),PW/2,PH-4.5,{align:'center'});
+      st('#334155');pdf.setFont('helvetica','bold');
+      pdf.text('Pag. '+p+' / '+nPg,PW-MR,PH-4.5,{align:'right'});
     }
     pdf.save('CONSULTA_EXTERNA_'+pdfFileName()+'.pdf');
     window._lastPDF=pdf;
@@ -1075,10 +1114,7 @@ async function acaoPDF(){
 // BOOT
 // ═══════════════════════════════════════════════════════════════
 buildEspList();
-(function loadDraft(){
-  const raw=localStorage.getItem(DRAFT_KEY);
-  if(raw){try{const d=JSON.parse(raw);applySnapshot(d.snapshot);showDraftBanner();return;}catch(e){}}
-})();
+/* loadDraft: handled in init IIFE below */
 upd(); updateDataLabel();
 if(!gv('data')){
   document.getElementById('data').value=new Date().toISOString().slice(0,10);
@@ -1092,7 +1128,7 @@ function ss(){
     const d=snap.data||'';
     if(!d)return;
     // Guardar draft por data (não perde histórico)
-    localStorage.setItem('ce_v2_draft_'+d,JSON.stringify(snap));
+    localStorage.setItem('ce_v2_draft_'+d,JSON.stringify(Object.assign({savedAt:new Date().toISOString()},snap)));
   }catch(e){}
   if(typeof upd==='function')upd();
 }
@@ -1117,7 +1153,7 @@ function limparFormulario(){
   // Limpar especialidades
   ESPECIALIDADES.forEach(function(e){
     espData[e.id]={medicos:[],total:0};
-    renderMedList(e.id);
+    renderEspMedList(e.id);
   });
   // Limpar médicos nos consultórios
   consData=[];
@@ -1161,7 +1197,7 @@ function carregarDoDia(){
     if(!confirm('Carregar registo de '+d+'? Os dados actuais serão substituídos.'))return;
     applySnapshot(entry.snapshot||entry);
     var av=document.getElementById('data-aviso');if(av)av.style.display='none';
-    ESPECIALIDADES.forEach(function(e){renderMedList(e.id);calcEspTotal(e.id);});
+    ESPECIALIDADES.forEach(function(e){renderEspMedList(e.id);calcEspTotal(e.id);});
     renderConsList();renderResumo();upd();
     toast('\u2713 Registo de '+d+' carregado.');
   }catch(e){console.warn(e);}
@@ -1181,9 +1217,10 @@ function carregarDoDia(){
     var existe=hist.some(function(h){return(h.snapshot||h).data===isoHoje;})||!!draft;
     var av=document.getElementById('data-aviso');
     if(av)av.style.display=existe?'block':'none';
+    if(draft){try{applySnapshot(JSON.parse(draft));showDraftBanner();}catch(e2){}}
   }catch(e){}
   if(typeof updateDataLabel==='function')updateDataLabel();
-  ESPECIALIDADES.forEach(function(e){renderMedList(e.id);});
+  ESPECIALIDADES.forEach(function(e){renderEspMedList(e.id);});
   upd();
 })();
 
