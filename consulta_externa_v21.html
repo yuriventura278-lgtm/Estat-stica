@@ -957,7 +957,7 @@ function pdfDateFmt(){
 }
 function pdfFileName(){return(gv('data')||new Date().toISOString().slice(0,10)).replace(/-/g,'_');}
 
-async function gerarPDF(){
+function gerarPDF(){
   toast('A gerar PDF...');
   try{
     const {jsPDF}=window.jspdf;
@@ -1029,8 +1029,7 @@ async function gerarPDF(){
       const lc=document.createElement('canvas');lc.width=120;lc.height=120;
       const ctx=lc.getContext('2d');
       ctx.fillStyle='#043B2D';ctx.beginPath();ctx.arc(60,60,60,0,Math.PI*2);ctx.fill();
-      const img=new Image();
-      await new Promise(function(res){img.onload=res;img.onerror=res;setTimeout(res,300);img.src=LOGO_B64;});
+      const img=new Image();img.src=LOGO_B64;
       ctx.save();ctx.beginPath();ctx.arc(60,60,59,0,Math.PI*2);ctx.clip();
       ctx.drawImage(img,0,0,120,120);ctx.restore();
       pdf.addImage(lc.toDataURL('image/jpeg',0.85),'JPEG',ML,5,28,28);
@@ -1096,9 +1095,9 @@ async function gerarPDF(){
     toast('✓ PDF gerado com sucesso!');return pdf;
   }catch(err){console.error(err);toast('Erro ao gerar PDF: '+err.message);return null;}
 }
-async function acaoWA(){const pdf=await gerarPDF();if(pdf)setTimeout(()=>window.open('https://wa.me/','_blank'),500);}
+async function acaoWA(){const pdf=gerarPDF();if(pdf)setTimeout(()=>window.open('https://wa.me/','_blank'),500);}
 async function acaoEmail(){
-  const pdf=await gerarPDF();
+  const pdf=gerarPDF();
   if(pdf){
     const s=encodeURIComponent('Consulta Externa — '+pdfDateFmt());
     const b=encodeURIComponent('Exmo(a) Sr(a),\n\nSegue o relatório diário da Consulta Externa — '+pdfDateFmt()+'.\n\nAtenciosamente,\nGEPE — Hospital do Prenda');
@@ -1108,7 +1107,7 @@ async function acaoEmail(){
 async function acaoPDF(){
   const{totPac}=calcTotais();
   if(!totPac){toast('⚠ Registe pelo menos uma consulta antes de gerar o PDF.');return;}
-  await gerarPDF();
+  gerarPDF();
 }
 
 // ═══════════════════════════════════════════════════════════════
