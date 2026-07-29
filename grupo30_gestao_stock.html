@@ -74,7 +74,7 @@ td.num,th.num{text-align:right;}
 .kpi::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--bl);}
 .kpi.k-in::before{background:var(--gr);}.kpi.k-out::before{background:var(--am);}.kpi.k-stk::before{background:var(--bl);}.kpi.k-bal::before{background:var(--accent);}.kpi.k-warn::before{background:var(--rd);}
 .kpi .lab{font-size:.66rem;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;}
-.kpi .val{font-size:1.35rem;font-weight:800;color:var(--nv);margin-top:5px;font-family:var(--mono);}
+.kpi .val{font-size:1.2rem;font-weight:800;color:var(--nv);margin-top:5px;font-family:var(--mono);line-height:1.22;word-break:break-word;}
 .kpi .sub{font-size:.68rem;color:var(--tx3);margin-top:3px;}
 
 .pill{display:inline-block;font-size:.68rem;font-weight:700;padding:3px 9px;border-radius:100px;}
@@ -150,11 +150,13 @@ body,.card,.kpi,.tab,.crow,input,select,.chtrack{transition:background .2s,borde
 .fab-item{display:flex;align-items:center;gap:9px;background:var(--card);color:var(--tx);border:1px solid var(--br);border-radius:100px;padding:9px 15px;font-family:inherit;font-size:.8rem;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(13,27,62,.22);white-space:nowrap;transition:.12s;}
 .fab-item:hover{border-color:var(--bl);color:var(--bl);}
 .fab-item span{font-size:1rem;}
+svg.ic{width:1.05em;height:1.05em;vertical-align:-.15em;stroke:currentColor;fill:none;flex:none;}
+.subttl svg.ic{margin-right:4px;}
 </style>
 </head>
 <body>
 <header>
-  <button class="themebtn" id="themebtn" onclick="toggleTheme()" aria-label="Alternar tema" title="Alternar tema claro/escuro">🌙</button>
+  <button class="themebtn" id="themebtn" onclick="toggleTheme()" aria-label="Alternar tema" title="Alternar tema claro/escuro"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button>
   <div class="badge"><img id="logoImg" alt="Logótipo Grupo 30"/></div>
   <div class="tag">Grupo 30</div>
   <h1>Gestão de Stock</h1>
@@ -163,30 +165,30 @@ body,.card,.kpi,.tab,.crow,input,select,.chtrack{transition:background .2s,borde
 
 <div class="wrap">
   <div class="tabs" id="tabs">
-    <button class="tab active" data-p="painel">📈 Painel</button>
-    <button class="tab" data-p="produtos">📦 Produtos <span class="cnt" id="c-prod">0</span></button>
-    <button class="tab" data-p="entradas">⬇️ Entradas <span class="cnt" id="c-ent">0</span></button>
-    <button class="tab" data-p="saidas">⬆️ Saídas <span class="cnt" id="c-sai">0</span></button>
-    <button class="tab" data-p="plano">🛒 Plano <span class="cnt" id="c-pla">0</span></button>
-    <button class="tab" data-p="relatorios">📊 Relatórios</button>
+    <button class="tab active" data-p="painel"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg> Painel</button>
+    <button class="tab" data-p="produtos"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg> Produtos <span class="cnt" id="c-prod">0</span></button>
+    <button class="tab" data-p="entradas"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="8 12 12 16 16 12"/><line x1="12" y1="8" x2="12" y2="16"/></svg> Entradas <span class="cnt" id="c-ent">0</span></button>
+    <button class="tab" data-p="saidas"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="16 12 12 8 8 12"/><line x1="12" y1="16" x2="12" y2="8"/></svg> Saídas <span class="cnt" id="c-sai">0</span></button>
+    <button class="tab" data-p="plano"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg> Plano <span class="cnt" id="c-pla">0</span></button>
+    <button class="tab" data-p="relatorios"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> Relatórios</button>
   </div>
 
   <!-- ================= PAINEL ================= -->
   <section class="panel active" id="p-painel">
     <div class="banner">
-      <span style="font-size:1.1rem;line-height:1;">⚠️</span>
+      <span style="font-size:1.1rem;line-height:1;"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>
       <div>Os dados são guardados <b>apenas neste dispositivo/navegador</b>. O sistema faz uma <b>cópia automática diária</b> local, mas para não perder informação (ao limpar o navegador ou trocar de aparelho) <b>exporte uma cópia</b> com regularidade — no fim da página.</div>
     </div>
     <div class="kpis" id="dash-kpis"></div>
     <div class="card">
-      <div class="subttl" style="margin-top:0;">🔔 A comprar (stock em rutura ou abaixo do mínimo)</div>
+      <div class="subttl" style="margin-top:0;"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg> A comprar (stock em rutura ou abaixo do mínimo)</div>
       <div class="tblwrap"><table>
         <thead><tr><th>Ref.</th><th>Produto</th><th class="num">Stock</th><th class="num">Mínimo</th><th class="num">Sugestão compra</th><th>Estado</th></tr></thead>
         <tbody id="dash-alertas"></tbody>
       </table></div>
     </div>
     <div class="card">
-      <div class="subttl" style="margin-top:0;">🏆 Produtos mais vendidos (mês atual)</div>
+      <div class="subttl" style="margin-top:0;"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg> Produtos mais vendidos (mês atual)</div>
       <div class="tblwrap"><table>
         <thead><tr><th>Ref.</th><th>Produto</th><th class="num">Qtd saída</th><th class="num">Valor saída (Kz)</th><th class="num">Lucro (Kz)</th></tr></thead>
         <tbody id="dash-top"></tbody>
@@ -197,7 +199,7 @@ body,.card,.kpi,.tab,.crow,input,select,.chtrack{transition:background .2s,borde
   <!-- ================= PRODUTOS ================= -->
   <section class="panel" id="p-produtos">
     <div class="card">
-      <h2>📦 Registar produto</h2>
+      <h2><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg> Registar produto</h2>
       <p class="hint">Referências: <b>A1 a A100</b>, <b>O1 a O100</b> e <b>G1 a G100</b>. Defina o <b>stock mínimo</b> para receber alertas de compra.</p>
       <div class="frow">
         <div class="field" style="flex:1 1 120px;"><label>Referência</label><select id="pr-ref"></select></div>
@@ -233,7 +235,7 @@ body,.card,.kpi,.tab,.crow,input,select,.chtrack{transition:background .2s,borde
   <!-- ================= ENTRADAS ================= -->
   <section class="panel" id="p-entradas">
     <div class="card" id="card-ent">
-      <h2>⬇️ Registar entrada <span class="editbadge" id="edit-ent">A editar</span></h2>
+      <h2><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="8 12 12 16 16 12"/><line x1="12" y1="8" x2="12" y2="16"/></svg> Registar entrada <span class="editbadge" id="edit-ent">A editar</span></h2>
       <p class="hint">Referência, quantidade, custo unitário, data e (opcional) fornecedor.</p>
       <div class="frow">
         <div class="field" style="flex:1 1 140px;"><label>Referência</label><select id="en-ref" onchange="fillCusto('en')"></select></div>
@@ -270,7 +272,7 @@ body,.card,.kpi,.tab,.crow,input,select,.chtrack{transition:background .2s,borde
   <!-- ================= SAÍDAS ================= -->
   <section class="panel" id="p-saidas">
     <div class="card" id="card-sai">
-      <h2>⬆️ Registar saída <span class="editbadge" id="edit-sai">A editar</span></h2>
+      <h2><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="16 12 12 8 8 12"/><line x1="12" y1="16" x2="12" y2="8"/></svg> Registar saída <span class="editbadge" id="edit-sai">A editar</span></h2>
       <p class="hint">Referência, quantidade, preço unitário, data e (opcional) cliente. Avisa se não houver stock.</p>
       <div class="frow">
         <div class="field" style="flex:1 1 140px;"><label>Referência</label><select id="sa-ref" onchange="fillCusto('sa')"></select></div>
@@ -307,7 +309,7 @@ body,.card,.kpi,.tab,.crow,input,select,.chtrack{transition:background .2s,borde
   <!-- ================= PLANO ================= -->
   <section class="panel" id="p-plano">
     <div class="card" id="card-pla">
-      <h2>🛒 Plano de compra <span class="editbadge" id="edit-pla">A editar</span></h2>
+      <h2><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg> Plano de compra <span class="editbadge" id="edit-pla">A editar</span></h2>
       <p class="hint">Planeie compras futuras. O estado compara a quantidade planeada com o stock atual.</p>
       <div class="frow">
         <div class="field" style="flex:1 1 140px;"><label>Referência</label><select id="pl-ref" onchange="fillCusto('pl')"></select></div>
@@ -330,15 +332,15 @@ body,.card,.kpi,.tab,.crow,input,select,.chtrack{transition:background .2s,borde
   <!-- ================= RELATÓRIOS ================= -->
   <section class="panel" id="p-relatorios">
     <div class="card">
-      <h2>📊 Gerar relatório</h2>
+      <h2><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> Gerar relatório</h2>
       <div class="filterbar">
         <div class="field"><label>Período</label><select id="rp-tipo" onchange="renderRelatorio()">
           <option value="semanal">Semanal</option><option value="mensal" selected>Mensal</option><option value="trimestral">Trimestral</option><option value="semestral">Semestral</option><option value="anual">Anual</option>
         </select></div>
         <div class="field"><label>Data de referência</label><input id="rp-data" type="date" onchange="renderRelatorio()"/></div>
         <div class="field"><label>Categoria</label><select id="rp-cat" onchange="renderRelatorio()"><option value="">Todas</option><option value="A">A</option><option value="O">O</option><option value="G">G</option></select></div>
-        <div class="field"><label>&nbsp;</label><button class="btn btn-o btn-sm" onclick="exportRelCSV()">⬇️ Excel/CSV</button></div>
-        <div class="field"><label>&nbsp;</label><button class="btn btn-o btn-sm" onclick="window.print()">🖨️ Imprimir</button></div>
+        <div class="field"><label>&nbsp;</label><button class="btn btn-o btn-sm" onclick="exportRelCSV()"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Excel/CSV</button></div>
+        <div class="field"><label>&nbsp;</label><button class="btn btn-o btn-sm" onclick="window.print()"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Imprimir</button></div>
       </div>
       <div class="rangebox" id="rp-range"></div>
     </div>
@@ -348,7 +350,7 @@ body,.card,.kpi,.tab,.crow,input,select,.chtrack{transition:background .2s,borde
   <!-- ================= CONTACTOS + DADOS ================= -->
   <div class="card contact">
     <h2>Grupo 30 — Comércio e Serviços</h2>
-    <div class="loc">📍 Belas, Angola · Electrónicos e CCTV</div>
+    <div class="loc"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> Belas, Angola · Electrónicos e CCTV</div>
     <div class="cgrid">
       <div class="crow"><div class="cico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.94.36 1.86.68 2.75a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.89.32 1.81.55 2.75.68A2 2 0 0 1 22 16.92z"/></svg></div><div><div class="cl">Telefone</div><div class="cv"><a href="tel:+244923916907">923 916 907</a></div></div></div>
       <div class="crow"><div class="cico" style="background:var(--grt);color:#166534;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></div><div><div class="cl">WhatsApp</div><div class="cv"><a href="https://wa.me/244941051049" target="_blank" rel="noopener">+244 941 051 049</a></div></div></div>
@@ -361,8 +363,8 @@ body,.card,.kpi,.tab,.crow,input,select,.chtrack{transition:background .2s,borde
     <div class="toolbar">
       <div class="left"><b style="font-size:.82rem;color:var(--nv);">Dados &amp; cópias de segurança</b></div>
       <div class="left">
-        <button class="btn btn-o btn-sm" onclick="exportJSON()">⬇️ Exportar cópia</button>
-        <label class="btn btn-o btn-sm" style="cursor:pointer;">⬆️ Importar<input type="file" accept="application/json" style="display:none;" onchange="importJSON(event)"></label>
+        <button class="btn btn-o btn-sm" onclick="exportJSON()"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Exportar cópia</button>
+        <label class="btn btn-o btn-sm" style="cursor:pointer;"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Importar<input type="file" accept="application/json" style="display:none;" onchange="importJSON(event)"></label>
       </div>
     </div>
     <p class="note" id="bk-info"></p>
@@ -372,14 +374,14 @@ body,.card,.kpi,.tab,.crow,input,select,.chtrack{transition:background .2s,borde
 
 <div class="fab-wrap">
   <div class="fab-menu" id="fabMenu">
-    <button class="fab-item" onclick="goAdd('entradas')"><span>⬇️</span>Nova entrada</button>
-    <button class="fab-item" onclick="goAdd('saidas')"><span>⬆️</span>Nova saída</button>
-    <button class="fab-item" onclick="goAdd('produtos')"><span>📦</span>Novo produto</button>
-    <button class="fab-item" onclick="exportJSON();closeFab();"><span>💾</span>Guardar cópia</button>
-    <button class="fab-item" onclick="toggleTheme()"><span id="fabThemeIco">🌙</span><span id="fabThemeTxt">Tema escuro</span></button>
-    <button class="fab-item" onclick="scrollTopo()"><span>⤴️</span>Ir ao topo</button>
+    <button class="fab-item" onclick="goAdd('entradas')"><span><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="8 12 12 16 16 12"/><line x1="12" y1="8" x2="12" y2="16"/></svg></span>Nova entrada</button>
+    <button class="fab-item" onclick="goAdd('saidas')"><span><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="16 12 12 8 8 12"/><line x1="12" y1="16" x2="12" y2="8"/></svg></span>Nova saída</button>
+    <button class="fab-item" onclick="goAdd('produtos')"><span><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></span>Novo produto</button>
+    <button class="fab-item" onclick="exportJSON();closeFab();"><span><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg></span>Guardar cópia</button>
+    <button class="fab-item" onclick="toggleTheme()"><span id="fabThemeIco"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></span><span id="fabThemeTxt">Tema escuro</span></button>
+    <button class="fab-item" onclick="scrollTopo()"><span><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg></span>Ir ao topo</button>
   </div>
-  <button class="fab" id="fabBtn" onclick="toggleFab()" aria-label="Menu rápido" title="Menu rápido">+</button>
+  <button class="fab" id="fabBtn" onclick="toggleFab()" aria-label="Menu rápido" title="Menu rápido"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -388,11 +390,13 @@ body,.card,.kpi,.tab,.crow,input,select,.chtrack{transition:background .2s,borde
 const LOGO="data:image/jpeg;base64,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";
 const EMP={nome:'Grupo 30 — Comércio e Serviços',loc:'Belas, Angola · Electrónicos e CCTV',tel:'923 916 907',wpp:'+244 941 051 049',email:'geralgrupo30@gmail.com'};
 const GESTORA='Domingas Rodrigues Cuta';
+const ICONS={cal:'<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',folder:'<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>',file:'<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',check:'<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',moon:'<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>',sun:'<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>'};
 
 /* ---------- Estado ---------- */
 const KEYS={prod:'g30_produtos',ent:'g30_entradas',sai:'g30_saidas',pla:'g30_plano',bk:'g30_backups'};
 const money=n=>new Intl.NumberFormat('pt-PT',{minimumFractionDigits:2,maximumFractionDigits:2}).format(n||0);
 const int=n=>new Intl.NumberFormat('pt-PT').format(n||0);
+const money0=n=>new Intl.NumberFormat('pt-PT',{maximumFractionDigits:0}).format(n||0);
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 function load(k){try{return JSON.parse(localStorage.getItem(k))||[]}catch(e){return[]}}
 function saveK(k,v){localStorage.setItem(k,JSON.stringify(v));}
@@ -415,7 +419,7 @@ let tT;function toast(m,e){const t=document.getElementById('toast');t.textConten
 /* ---------- Cálculos ---------- */
 function stock(ref){let s=0;DB.ent.forEach(e=>{if(e.ref===ref)s+=e.qtd;});DB.sai.forEach(e=>{if(e.ref===ref)s-=e.qtd;});return s;}
 function precoMedio(ref){let q=0,v=0;DB.ent.forEach(e=>{if(e.ref===ref){q+=e.qtd;v+=e.qtd*e.custo;}});if(q>0)return v/q;const p=prodByRef(ref);return p?(p.preco||0):0;}
-function estadoStock(ref){const s=stock(ref),m=(prodByRef(ref)||{}).min||0;if(s<=0)return{txt:'Rutura',cls:'pill-bad',crit:2};if(m>0&&s<=m)return{txt:'Abaixo do mínimo',cls:'pill-warn',crit:1};return{txt:'Stock ok',cls:'pill-ok',crit:0};}
+function estadoStock(ref){const s=stock(ref),m=(prodByRef(ref)||{}).min||0;if(s<=0)return{txt:'Rutura',cls:'pill-bad',crit:2};if(m>0&&s<m)return{txt:'Abaixo do mínimo',cls:'pill-warn',crit:1};if(m>0&&s===m)return{txt:'No mínimo',cls:'pill-warn',crit:1};return{txt:'Stock ok',cls:'pill-ok',crit:0};}
 
 /* ---------- Selects ---------- */
 function refOptions(sel,onlyProdutos){const list=onlyProdutos?DB.prod.map(p=>p.ref):REFS;const seen=new Set();let h='<option value="">— escolher —</option>';list.forEach(ref=>{if(seen.has(ref))return;seen.add(ref);const nm=nomeOf(ref);h+=`<option value="${ref}">${ref}${nm!=='—'?' · '+nm:''}</option>`;});sel.innerHTML=h;}
@@ -456,7 +460,7 @@ function renderProdutos(){
       <td class="num" style="font-weight:700;color:${st<0?'var(--rd)':'var(--nv)'}">${int(st)}</td>
       <td><span class="pill ${e.cls}">${e.txt}</span></td>
       <td class="num">${money(vs)}</td>
-      <td><div class="acts"><button class="btn btn-o btn-sm" onclick="editProduto('${p.ref}')">✎</button><button class="btn btn-d btn-sm" onclick="delProduto('${p.ref}')">✕</button></div></td>
+      <td><div class="acts"><button class="btn btn-o btn-sm" onclick="editProduto('${p.ref}')"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button><button class="btn btn-d btn-sm" onclick="delProduto('${p.ref}')"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div></td>
     </tr>`;}).join('');
   updateArrows();
 }
@@ -529,7 +533,7 @@ function renderMov(tipo){
     <td class="num" style="font-weight:700;">${int(e.qtd)}</td>
     <td class="num">${money(e.custo)}</td>
     <td class="num">${money(e.qtd*e.custo)}</td>
-    <td><div class="acts">${isE?'':`<button class="btn btn-o btn-sm" title="Guia de saída" onclick="guia('${e.id}')">🧾</button>`}<button class="btn btn-o btn-sm" onclick="startEdit('${key}','${e.id}')">✎</button><button class="btn btn-d btn-sm" onclick="delMov('${key}','${e.id}')">✕</button></div></td>
+    <td><div class="acts">${isE?'':`<button class="btn btn-o btn-sm" title="Guia de saída" onclick="guia('${e.id}')">${ICONS.file}</button>`}<button class="btn btn-o btn-sm" onclick="startEdit('${key}','${e.id}')"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button><button class="btn btn-d btn-sm" onclick="delMov('${key}','${e.id}')"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div></td>
   </tr>`).join('');
   updateArrows();
 }
@@ -561,7 +565,7 @@ function renderPlano(){
       <td class="num" style="font-weight:700;">${int(p.qtd)}</td>
       <td class="num">${money(p.qtd*p.custo)}</td>
       <td>${est}</td>
-      <td><div class="acts"><button class="btn btn-o btn-sm" onclick="editPlano('${p.id}')">✎</button><button class="btn btn-d btn-sm" onclick="delPlano('${p.id}')">✕</button></div></td>
+      <td><div class="acts"><button class="btn btn-o btn-sm" onclick="editPlano('${p.id}')"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button><button class="btn btn-d btn-sm" onclick="delPlano('${p.id}')"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div></td>
     </tr>`;}).join('');
 }
 
@@ -592,7 +596,7 @@ function guia(id){
   <tfoot><tr><td colspan="4" class="r tot">TOTAL</td><td class="r tot">${money(total)} Kz</td></tr></tfoot></table>
   <div class="ass"><div>A Gestora<br><b>${GESTORA}</b></div><div>O Cliente</div></div>
   <div class="ft">Documento gerado pelo sistema de Gestão de Stock — Grupo 30</div>
-  <div style="text-align:center;margin-top:24px;"><button onclick="window.print()" style="padding:10px 22px;font-size:.9rem;background:#1A56DB;color:#fff;border:none;border-radius:8px;cursor:pointer;">🖨️ Imprimir / Guardar PDF</button></div>
+  <div style="text-align:center;margin-top:24px;"><button onclick="window.print()" style="padding:10px 22px;font-size:.9rem;background:#1A56DB;color:#fff;border:none;border-radius:8px;cursor:pointer;">Imprimir / Guardar PDF</button></div>
   </body></html>`;
   w.document.write(html);w.document.close();
 }
@@ -627,7 +631,7 @@ function agregar(ini,fim,cat){
 function renderRelatorio(){
   const tipo=document.getElementById('rp-tipo').value,dataRef=document.getElementById('rp-data').value,cat=document.getElementById('rp-cat').value;
   const per=periodo(tipo,dataRef);
-  document.getElementById('rp-range').innerHTML=`<span>📅 <b>${cap(per.label)}</b></span><span>Intervalo: <b>${fmtD(per.ini)}</b> — <b>${fmtD(per.fim)}</b></span><span>Categoria: <b>${cat||'Todas'}</b></span>`;
+  document.getElementById('rp-range').innerHTML=`<span>${ICONS.cal} <b>${cap(per.label)}</b></span><span>Intervalo: <b>${fmtD(per.ini)}</b> — <b>${fmtD(per.fim)}</b></span><span>Categoria: <b>${cat||'Todas'}</b></span>`;
   const A=agregar(per.ini,per.fim,cat);const {lista,tot}=A;
   const stkQtd=tot.qIn-tot.qOut,stkVal=tot.vIn-tot.vOut;
   const datas=[...A.ent,...A.sai].map(e=>e.data).sort();
@@ -711,17 +715,17 @@ function renderDash(){
   const abaixo=DB.prod.filter(p=>estadoStock(p.ref).crit===1).length;
   const per=periodo('mensal',iso(new Date()));const A=agregar(per.ini,per.fim,'');
   document.getElementById('dash-kpis').innerHTML=
-    kpi('k-stk','Valor em stock',money(valorStock)+' Kz',DB.prod.length+' produtos registados')+
+    kpi('k-stk','Valor em stock',money0(valorStock)+' Kz',DB.prod.length+' produtos registados')+
     kpi('k-warn','A comprar',int(rutura+abaixo),rutura+' em rutura · '+abaixo+' abaixo do mínimo')+
     kpi('k-in','Entradas do mês',int(A.tot.qIn)+' un.',money(A.tot.vIn)+' Kz')+
     kpi('k-out','Saídas do mês',int(A.tot.qOut)+' un.',money(A.tot.vOut)+' Kz')+
-    kpi('k-bal','Lucro do mês',money(A.tot.lucro)+' Kz',cap(per.label));
+    kpi('k-bal','Lucro do mês',money0(A.tot.lucro)+' Kz',cap(per.label));
   const al=DB.prod.map(p=>({p,s:stock(p.ref),e:estadoStock(p.ref)})).filter(x=>x.e.crit>0).sort((a,b)=>b.e.crit-a.e.crit||a.s-b.s);
-  document.getElementById('dash-alertas').innerHTML=al.length?al.map(x=>{const min=x.p.min||0;const sug=min>0?Math.max(min-x.s,0)||min:'—';return `<tr>
+  document.getElementById('dash-alertas').innerHTML=al.length?al.map(x=>{const min=x.p.min||0;const need=Math.max(min-x.s,0);const sug=min>0?(need||min):(x.s<0?-x.s:'—');return `<tr>
     <td><span class="tag-ref cat-${catOf(x.p.ref)}">${x.p.ref}</span></td><td>${esc(x.p.nome)}</td>
     <td class="num" style="font-weight:700;color:${x.s<0?'var(--rd)':'var(--nv)'}">${int(x.s)}</td><td class="num">${int(min)}</td>
     <td class="num" style="font-weight:700;">${typeof sug==='number'?int(sug):sug}</td><td><span class="pill ${x.e.cls}">${x.e.txt}</span></td></tr>`;}).join('')
-    :'<tr><td colspan="6" class="empty">Tudo com stock suficiente. 👍</td></tr>';
+    :'<tr><td colspan="6" class="empty">Tudo com stock suficiente '+ICONS.check+'</td></tr>';
   const top=A.lista.filter(r=>r.qOut>0).sort((a,b)=>b.qOut-a.qOut).slice(0,5);
   document.getElementById('dash-top').innerHTML=top.length?top.map(r=>`<tr><td><span class="tag-ref cat-${catOf(r.ref)}">${r.ref}</span></td><td>${esc(nomeOf(r.ref))}</td><td class="num" style="font-weight:700;">${int(r.qOut)}</td><td class="num">${money(r.vOut)}</td><td class="num" style="color:${r.lucro<0?'var(--rd)':'var(--gr)'};font-weight:700;">${money(r.lucro)}</td></tr>`).join('')
     :'<tr><td colspan="5" class="empty">Sem saídas este mês.</td></tr>';
@@ -738,7 +742,7 @@ function renderBackups(){
   const bks=load(KEYS.bk).slice().reverse();
   document.getElementById('bk-info').textContent=bks.length?('Última cópia automática: '+new Date(bks[0].ts).toLocaleString('pt-PT')+'. Guardadas as últimas '+bks.length+' cópias locais (uma por dia).'):'Ainda sem cópias automáticas. Serão criadas ao registar dados.';
   const total=load(KEYS.bk).length;
-  document.getElementById('bk-list').innerHTML=bks.map((b,i)=>`<div class="bkrow"><span>📁 ${fmtD(b.dia)} · ${b.data.ent.length} ent. / ${b.data.sai.length} saí. / ${b.data.prod.length} prod.</span><button class="btn btn-o btn-sm" onclick="restoreBackup(${total-1-i})">Restaurar</button></div>`).join('');
+  document.getElementById('bk-list').innerHTML=bks.map((b,i)=>`<div class="bkrow"><span>${ICONS.folder} ${fmtD(b.dia)} · ${b.data.ent.length} ent. / ${b.data.sai.length} saí. / ${b.data.prod.length} prod.</span><button class="btn btn-o btn-sm" onclick="restoreBackup(${total-1-i})">Restaurar</button></div>`).join('');
 }
 function restoreBackup(idx){
   const bks=load(KEYS.bk);const b=bks[idx];if(!b)return;
@@ -764,7 +768,7 @@ function updateCounts(){document.getElementById('c-prod').textContent=DB.prod.le
 function renderAll(){renderDash();renderProdutos();renderMov('entrada');renderMov('saida');renderPlano();renderRelatorio();renderBackups();updateCounts();}
 document.getElementById('tabs').addEventListener('click',e=>{const b=e.target.closest('.tab');if(!b)return;document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));b.classList.add('active');document.getElementById('p-'+b.dataset.p).classList.add('active');});
 function activateTab(name){document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.p===name));document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p.id==='p-'+name));}
-function applyTheme(t){document.documentElement.setAttribute('data-theme',t);try{localStorage.setItem('g30_theme',t);}catch(e){}const dark=t==='dark';const hb=document.getElementById('themebtn');if(hb)hb.textContent=dark?'☀️':'🌙';const fi=document.getElementById('fabThemeIco');if(fi)fi.textContent=dark?'☀️':'🌙';const ft=document.getElementById('fabThemeTxt');if(ft)ft.textContent=dark?'Tema claro':'Tema escuro';}
+function applyTheme(t){document.documentElement.setAttribute('data-theme',t);try{localStorage.setItem('g30_theme',t);}catch(e){}const dark=t==='dark';const hb=document.getElementById('themebtn');if(hb)hb.innerHTML=dark?ICONS.sun:ICONS.moon;const fi=document.getElementById('fabThemeIco');if(fi)fi.innerHTML=dark?ICONS.sun:ICONS.moon;const ft=document.getElementById('fabThemeTxt');if(ft)ft.textContent=dark?'Tema claro':'Tema escuro';}
 function toggleTheme(){applyTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark');}
 function toggleFab(){document.getElementById('fabMenu').classList.toggle('show');document.getElementById('fabBtn').classList.toggle('open');}
 function closeFab(){document.getElementById('fabMenu').classList.remove('show');document.getElementById('fabBtn').classList.remove('open');}
