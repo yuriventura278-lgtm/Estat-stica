@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Grupo 30 — Gestão de Stock</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=DM+Mono:wght@500&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --nv:#0D1B3E;--bl:#1A56DB;--blt:#DBEAFE;--blxt:#EFF6FF;
+  --gr:#059669;--grt:#DCFCE7;--rd:#DC2626;--rdt:#FEF2F2;--am:#D97706;--amt:#FEF3C7;
+  --sf:#F4F7FF;--br:#E2E8F0;--br2:#CBD5E1;
+  --tx:#0F172A;--tx2:#334155;--tx3:#64748B;
+  --r:10px;--r2:16px;--r3:22px;
+  --mono:'DM Mono',ui-monospace,monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Inter',sans-serif;background:var(--sf);color:var(--tx);min-height:100vh;-webkit-font-smoothing:antialiased;padding-bottom:40px;}
+header{background:linear-gradient(135deg,#0B1730 0%,#162E6B 55%,#1A56DB 100%);padding:26px 20px 22px;text-align:center;position:relative;overflow:hidden;}
+header::after{content:'';position:absolute;left:0;bottom:0;width:100%;height:4px;background:linear-gradient(90deg,#34D399,#60A5FA);}
+header .badge{width:70px;height:70px;border-radius:18px;margin:0 auto 12px;background:linear-gradient(135deg,#34D399,#1A56DB);display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:800;color:#fff;box-shadow:0 8px 24px rgba(0,0,0,.28);letter-spacing:-.02em;}
+header .tag{font-size:.66rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#93C5FD;margin-bottom:6px;}
+header h1{font-size:1.5rem;font-weight:800;color:#fff;letter-spacing:-.02em;}
+header p{font-size:.8rem;color:rgba(255,255,255,.6);margin-top:6px;}
+.wrap{max-width:920px;margin:0 auto;padding:0 14px;}
+
+/* Tabs */
+.tabs{position:sticky;top:0;z-index:20;display:flex;gap:6px;overflow-x:auto;background:var(--sf);padding:12px 14px;margin:0 -14px 4px;border-bottom:1px solid var(--br);-webkit-overflow-scrolling:touch;}
+.tab{flex:0 0 auto;border:1px solid var(--br);background:#fff;color:var(--tx2);font-family:inherit;font-size:.78rem;font-weight:700;padding:9px 14px;border-radius:100px;cursor:pointer;white-space:nowrap;transition:.12s;display:flex;align-items:center;gap:6px;}
+.tab:hover{border-color:#BFDBFE;}
+.tab.active{background:var(--nv);color:#fff;border-color:var(--nv);}
+.tab .cnt{background:rgba(255,255,255,.18);border-radius:100px;padding:1px 7px;font-size:.66rem;}
+.tab:not(.active) .cnt{background:var(--blxt);color:var(--bl);}
+
+.panel{display:none;padding:18px 0 0;}
+.panel.active{display:block;animation:fade .18s ease;}
+@keyframes fade{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+
+.card{background:#fff;border:1px solid var(--br);border-radius:var(--r2);padding:18px;box-shadow:0 2px 8px rgba(13,27,62,.05);margin-bottom:16px;}
+.card h2{font-size:.95rem;font-weight:800;color:var(--nv);margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+.card h2 svg{color:var(--bl);}
+.hint{font-size:.72rem;color:var(--tx3);margin-bottom:14px;line-height:1.5;}
+
+/* Forms */
+.frow{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;}
+.field{display:flex;flex-direction:column;gap:5px;flex:1 1 140px;min-width:0;}
+.field label{font-size:.7rem;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.04em;}
+input,select{font-family:inherit;font-size:.86rem;color:var(--tx);padding:10px 11px;border:1px solid var(--br2);border-radius:var(--r);background:#fff;width:100%;transition:.12s;}
+input:focus,select:focus{outline:none;border-color:var(--bl);box-shadow:0 0 0 3px var(--blt);}
+.btn{font-family:inherit;font-size:.82rem;font-weight:700;padding:11px 18px;border-radius:var(--r);border:none;cursor:pointer;transition:.12s;display:inline-flex;align-items:center;gap:7px;justify-content:center;}
+.btn:active{transform:scale(.97);}
+.btn-p{background:var(--bl);color:#fff;}.btn-p:hover{background:#1648b8;}
+.btn-g{background:var(--gr);color:#fff;}.btn-g:hover{background:#047a55;}
+.btn-o{background:#fff;color:var(--tx2);border:1px solid var(--br2);}.btn-o:hover{border-color:var(--bl);color:var(--bl);}
+.btn-d{background:var(--rdt);color:var(--rd);}.btn-d:hover{background:#fde0e0;}
+.btn-sm{padding:6px 10px;font-size:.72rem;}
+
+/* Tables */
+.tblwrap{overflow-x:auto;border:1px solid var(--br);border-radius:var(--r);}
+table{width:100%;border-collapse:collapse;font-size:.8rem;min-width:520px;}
+th{background:var(--blxt);color:var(--nv);font-weight:700;text-align:left;padding:10px 12px;font-size:.72rem;text-transform:uppercase;letter-spacing:.03em;white-space:nowrap;border-bottom:1px solid var(--br);}
+td{padding:10px 12px;border-bottom:1px solid var(--br);color:var(--tx2);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tbody tr:hover{background:#FAFBFF;}
+.num{font-family:var(--mono);text-align:right;white-space:nowrap;}
+td.num,th.num{text-align:right;}
+.tag-ref{font-family:var(--mono);font-weight:600;background:var(--blxt);color:var(--bl);padding:2px 8px;border-radius:6px;font-size:.76rem;}
+.cat-A{color:#1E40AF;}.cat-O{color:#9A3412;}.cat-G{color:#166534;}
+.empty{text-align:center;color:var(--tx3);font-size:.8rem;padding:26px 10px;}
+
+/* KPI cards */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px;}
+.kpi{background:#fff;border:1px solid var(--br);border-radius:var(--r2);padding:14px 16px;position:relative;overflow:hidden;}
+.kpi::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--bl);}
+.kpi.k-in::before{background:var(--gr);}.kpi.k-out::before{background:var(--am);}.kpi.k-stk::before{background:var(--bl);}.kpi.k-bal::before{background:var(--nv);}
+.kpi .lab{font-size:.66rem;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;}
+.kpi .val{font-size:1.35rem;font-weight:800;color:var(--nv);margin-top:5px;font-family:var(--mono);}
+.kpi .sub{font-size:.68rem;color:var(--tx3);margin-top:3px;}
+
+.pill{display:inline-block;font-size:.68rem;font-weight:700;padding:3px 9px;border-radius:100px;}
+.pill-ok{background:var(--grt);color:#166534;}.pill-warn{background:var(--amt);color:#92400E;}.pill-bad{background:var(--rdt);color:var(--rd);}
+
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(80px);background:var(--nv);color:#fff;padding:12px 20px;border-radius:100px;font-size:.82rem;font-weight:600;box-shadow:0 10px 30px rgba(0,0,0,.3);z-index:99;opacity:0;transition:.28s;pointer-events:none;}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+.toast.err{background:var(--rd);}
+
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.toolbar .left{display:flex;flex-wrap:wrap;gap:8px;align-items:center;}
+.filterbar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;}
+.filterbar select,.filterbar input{max-width:200px;}
+.subttl{font-size:.82rem;font-weight:800;color:var(--nv);margin:22px 0 10px;padding-left:10px;border-left:3px solid var(--bl);}
+.rangebox{background:var(--blxt);border:1px solid #BFDBFE;border-radius:var(--r);padding:10px 14px;font-size:.78rem;color:var(--nv);margin-bottom:14px;display:flex;flex-wrap:wrap;gap:6px 16px;}
+.rangebox b{font-weight:800;}
+.note{font-size:.72rem;color:var(--tx3);margin-top:8px;}
+@media(max-width:560px){header h1{font-size:1.3rem;}.field{flex:1 1 100%;}}
+</style>
+</head>
+<body>
+<header>
+  <div class="badge">30</div>
+  <div class="tag">Grupo 30</div>
+  <h1>Gestão de Stock</h1>
+  <p>Produtos · Entradas · Saídas · Plano de Compra · Relatórios</p>
+</header>
+
+<div class="wrap">
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-p="produtos">📦 Produtos <span class="cnt" id="c-prod">0</span></button>
+    <button class="tab" data-p="entradas">⬇️ Entradas <span class="cnt" id="c-ent">0</span></button>
+    <button class="tab" data-p="saidas">⬆️ Saídas <span class="cnt" id="c-sai">0</span></button>
+    <button class="tab" data-p="plano">🛒 Plano de Compra <span class="cnt" id="c-pla">0</span></button>
+    <button class="tab" data-p="relatorios">📊 Relatórios</button>
+  </div>
+
+  <!-- ================= PRODUTOS ================= -->
+  <section class="panel active" id="p-produtos">
+    <div class="card">
+      <h2>📦 Registar produto</h2>
+      <p class="hint">Referências disponíveis: <b>A1 a A100</b>, <b>O1 a O100</b> e <b>G1 a G100</b> (300 no total). Escolha a referência e dê um nome/descrição ao produto.</p>
+      <div class="frow">
+        <div class="field" style="flex:1 1 130px;">
+          <label>Referência</label>
+          <select id="pr-ref"></select>
+        </div>
+        <div class="field" style="flex:2 1 220px;">
+          <label>Nome / Descrição</label>
+          <input id="pr-nome" placeholder="Ex.: Parafuso M6"/>
+        </div>
+        <div class="field" style="flex:1 1 130px;">
+          <label>Preço unitário (Kz)</label>
+          <input id="pr-preco" type="number" min="0" step="0.01" placeholder="0.00"/>
+        </div>
+        <div class="field" style="flex:0 0 auto;">
+          <label>&nbsp;</label>
+          <button class="btn btn-p" onclick="addProduto()">Guardar produto</button>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="toolbar">
+        <div class="left">
+          <h2 style="margin:0;">Produtos registados</h2>
+        </div>
+        <div class="left">
+          <select id="pf-cat" onchange="renderProdutos()" style="width:auto;">
+            <option value="">Todas as categorias</option>
+            <option value="A">Categoria A</option>
+            <option value="O">Categoria O</option>
+            <option value="G">Categoria G</option>
+          </select>
+          <input id="pf-q" placeholder="Procurar…" oninput="renderProdutos()" style="width:auto;"/>
+        </div>
+      </div>
+      <div class="tblwrap">
+        <table>
+          <thead><tr><th>Ref.</th><th>Nome</th><th class="num">Preço un. (Kz)</th><th class="num">Stock atual</th><th class="num">Valor stock</th><th></th></tr></thead>
+          <tbody id="tb-prod"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= ENTRADAS ================= -->
+  <section class="panel" id="p-entradas">
+    <div class="card">
+      <h2>⬇️ Registar entrada</h2>
+      <p class="hint">Registe a <b>referência</b>, a <b>quantidade</b> e a <b>data</b> de entrada. O custo unitário pré-preenche pelo preço do produto, mas pode ser alterado.</p>
+      <div class="frow">
+        <div class="field" style="flex:1 1 150px;">
+          <label>Referência</label>
+          <select id="en-ref" onchange="fillCusto('en')"></select>
+        </div>
+        <div class="field"><label>Quantidade</label><input id="en-qtd" type="number" min="1" step="1" placeholder="0"/></div>
+        <div class="field"><label>Custo unitário (Kz)</label><input id="en-custo" type="number" min="0" step="0.01" placeholder="0.00"/></div>
+        <div class="field"><label>Data</label><input id="en-data" type="date"/></div>
+        <div class="field" style="flex:0 0 auto;"><label>&nbsp;</label><button class="btn btn-g" onclick="addMov('entrada')">Registar entrada</button></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="toolbar"><div class="left"><h2 style="margin:0;">Histórico de entradas</h2></div>
+        <div class="left"><input id="ef-q" placeholder="Filtrar por ref…" oninput="renderMov('entrada')" style="width:auto;"/></div></div>
+      <div class="tblwrap">
+        <table>
+          <thead><tr><th>Data</th><th>Ref.</th><th>Produto</th><th class="num">Qtd</th><th class="num">Custo un.</th><th class="num">Total (Kz)</th><th></th></tr></thead>
+          <tbody id="tb-ent"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= SAÍDAS ================= -->
+  <section class="panel" id="p-saidas">
+    <div class="card">
+      <h2>⬆️ Registar saída</h2>
+      <p class="hint">Registe a <b>referência</b>, a <b>quantidade</b> e a <b>data</b> de saída. O sistema avisa se não houver stock suficiente.</p>
+      <div class="frow">
+        <div class="field" style="flex:1 1 150px;">
+          <label>Referência</label>
+          <select id="sa-ref" onchange="fillCusto('sa')"></select>
+        </div>
+        <div class="field"><label>Quantidade</label><input id="sa-qtd" type="number" min="1" step="1" placeholder="0"/></div>
+        <div class="field"><label>Preço unitário (Kz)</label><input id="sa-custo" type="number" min="0" step="0.01" placeholder="0.00"/></div>
+        <div class="field"><label>Data</label><input id="sa-data" type="date"/></div>
+        <div class="field" style="flex:0 0 auto;"><label>&nbsp;</label><button class="btn btn-p" onclick="addMov('saida')">Registar saída</button></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="toolbar"><div class="left"><h2 style="margin:0;">Histórico de saídas</h2></div>
+        <div class="left"><input id="sf-q" placeholder="Filtrar por ref…" oninput="renderMov('saida')" style="width:auto;"/></div></div>
+      <div class="tblwrap">
+        <table>
+          <thead><tr><th>Data</th><th>Ref.</th><th>Produto</th><th class="num">Qtd</th><th class="num">Preço un.</th><th class="num">Total (Kz)</th><th></th></tr></thead>
+          <tbody id="tb-sai"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= PLANO DE COMPRA ================= -->
+  <section class="panel" id="p-plano">
+    <div class="card">
+      <h2>🛒 Plano de compra</h2>
+      <p class="hint">Planeie as compras futuras. Compare a quantidade planeada com o stock atual para decidir o que comprar.</p>
+      <div class="frow">
+        <div class="field" style="flex:1 1 150px;"><label>Referência</label><select id="pl-ref" onchange="fillCusto('pl')"></select></div>
+        <div class="field"><label>Qtd a comprar</label><input id="pl-qtd" type="number" min="1" step="1" placeholder="0"/></div>
+        <div class="field"><label>Custo estimado un. (Kz)</label><input id="pl-custo" type="number" min="0" step="0.01" placeholder="0.00"/></div>
+        <div class="field"><label>Data prevista</label><input id="pl-data" type="date"/></div>
+        <div class="field" style="flex:0 0 auto;"><label>&nbsp;</label><button class="btn btn-p" onclick="addPlano()">Adicionar ao plano</button></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2 style="margin-bottom:14px;">Plano atual</h2>
+      <div class="tblwrap">
+        <table>
+          <thead><tr><th>Data prevista</th><th>Ref.</th><th>Produto</th><th class="num">Stock atual</th><th class="num">Qtd planeada</th><th class="num">Custo estimado (Kz)</th><th>Estado</th><th></th></tr></thead>
+          <tbody id="tb-pla"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= RELATÓRIOS ================= -->
+  <section class="panel" id="p-relatorios">
+    <div class="card">
+      <h2>📊 Gerar relatório</h2>
+      <div class="filterbar">
+        <div class="field" style="flex:0 0 auto;">
+          <label>Período</label>
+          <select id="rp-tipo" onchange="renderRelatorio()">
+            <option value="semanal">Semanal</option>
+            <option value="mensal" selected>Mensal</option>
+            <option value="trimestral">Trimestral</option>
+            <option value="semestral">Semestral</option>
+            <option value="anual">Anual</option>
+          </select>
+        </div>
+        <div class="field" style="flex:0 0 auto;">
+          <label>Data de referência</label>
+          <input id="rp-data" type="date" onchange="renderRelatorio()"/>
+        </div>
+        <div class="field" style="flex:0 0 auto;">
+          <label>Categoria</label>
+          <select id="rp-cat" onchange="renderRelatorio()">
+            <option value="">Todas</option><option value="A">A</option><option value="O">O</option><option value="G">G</option>
+          </select>
+        </div>
+        <div class="field" style="flex:0 0 auto;"><label>&nbsp;</label><button class="btn btn-o btn-sm" onclick="window.print()">🖨️ Imprimir</button></div>
+      </div>
+      <div class="rangebox" id="rp-range"></div>
+    </div>
+    <div id="rp-out"></div>
+  </section>
+
+  <div class="card" style="margin-top:6px;">
+    <div class="toolbar">
+      <div class="left"><b style="font-size:.82rem;color:var(--nv);">Dados</b><span class="note" style="margin:0;">Guardados neste dispositivo (localStorage).</span></div>
+      <div class="left">
+        <button class="btn btn-o btn-sm" onclick="exportJSON()">⬇️ Exportar cópia</button>
+        <label class="btn btn-o btn-sm" style="cursor:pointer;">⬆️ Importar<input type="file" accept="application/json" style="display:none;" onchange="importJSON(event)"></label>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ---------- Estado ---------- */
+const KEYS={prod:'g30_produtos',ent:'g30_entradas',sai:'g30_saidas',pla:'g30_plano'};
+const money=n=>new Intl.NumberFormat('pt-PT',{minimumFractionDigits:2,maximumFractionDigits:2}).format(n||0);
+const int=n=>new Intl.NumberFormat('pt-PT').format(n||0);
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+function load(k){try{return JSON.parse(localStorage.getItem(k))||[]}catch(e){return[]}}
+function save(k,v){localStorage.setItem(k,JSON.stringify(v));}
+let DB={prod:load(KEYS.prod),ent:load(KEYS.ent),sai:load(KEYS.sai),pla:load(KEYS.pla)};
+function persist(){save(KEYS.prod,DB.prod);save(KEYS.ent,DB.ent);save(KEYS.sai,DB.sai);save(KEYS.pla,DB.pla);}
+
+/* ---------- Referências ---------- */
+const REFS=[];
+['A','O','G'].forEach(c=>{for(let i=1;i<=100;i++)REFS.push(c+i);});
+function catOf(ref){return ref[0];}
+function prodByRef(ref){return DB.prod.find(p=>p.ref===ref);}
+function nomeOf(ref){const p=prodByRef(ref);return p?p.nome:'—';}
+
+/* ---------- Toast ---------- */
+let tT;
+function toast(msg,err){const t=document.getElementById('toast');t.textContent=msg;t.className='toast show'+(err?' err':'');clearTimeout(tT);tT=setTimeout(()=>t.className='toast',2200);}
+
+/* ---------- Stock ---------- */
+function stock(ref){
+  let s=0;
+  DB.ent.forEach(e=>{if(e.ref===ref)s+=e.qtd;});
+  DB.sai.forEach(e=>{if(e.ref===ref)s-=e.qtd;});
+  return s;
+}
+/* preço médio de compra da referência (para valorizar stock) */
+function precoMedio(ref){
+  let q=0,v=0;
+  DB.ent.forEach(e=>{if(e.ref===ref){q+=e.qtd;v+=e.qtd*e.custo;}});
+  if(q>0)return v/q;
+  const p=prodByRef(ref);return p?(p.preco||0):0;
+}
+
+/* ---------- Selects de referência ---------- */
+function refOptions(sel,onlyProdutos){
+  const list=onlyProdutos?DB.prod.map(p=>p.ref):REFS;
+  const seen=new Set();
+  let html='<option value="">— escolher —</option>';
+  list.forEach(ref=>{
+    if(seen.has(ref))return;seen.add(ref);
+    const nm=nomeOf(ref);
+    html+=`<option value="${ref}">${ref}${nm!=='—'?' · '+nm:''}</option>`;
+  });
+  sel.innerHTML=html;
+}
+function refreshRefSelects(){
+  refOptions(document.getElementById('pr-ref'),false);
+  ['en-ref','sa-ref','pl-ref'].forEach(id=>refOptions(document.getElementById(id),true));
+}
+function fillCusto(pre){
+  const ref=document.getElementById(pre+'-ref').value;
+  const inp=document.getElementById(pre+'-custo');
+  if(ref&&!inp.value){const p=prodByRef(ref);if(p&&p.preco)inp.value=p.preco;}
+}
+
+/* ---------- Produtos ---------- */
+function addProduto(){
+  const ref=document.getElementById('pr-ref').value;
+  const nome=document.getElementById('pr-nome').value.trim();
+  const preco=parseFloat(document.getElementById('pr-preco').value)||0;
+  if(!ref){toast('Escolha uma referência.',1);return;}
+  if(!nome){toast('Indique o nome do produto.',1);return;}
+  const ex=prodByRef(ref);
+  if(ex){ex.nome=nome;ex.preco=preco;toast('Produto atualizado.');}
+  else{DB.prod.push({ref,nome,preco});toast('Produto registado.');}
+  persist();document.getElementById('pr-nome').value='';document.getElementById('pr-preco').value='';
+  refreshRefSelects();renderAll();
+}
+function delProduto(ref){
+  if(DB.ent.some(e=>e.ref===ref)||DB.sai.some(e=>e.ref===ref)){
+    if(!confirm('Existem movimentos com esta referência. Apagar apenas o cadastro do produto (os movimentos mantêm-se)?'))return;
+  }
+  DB.prod=DB.prod.filter(p=>p.ref!==ref);persist();refreshRefSelects();renderAll();toast('Produto removido.');
+}
+function renderProdutos(){
+  const cat=document.getElementById('pf-cat').value;
+  const q=document.getElementById('pf-q').value.trim().toLowerCase();
+  let rows=DB.prod.slice().sort((a,b)=>a.ref.localeCompare(b.ref,undefined,{numeric:true}));
+  if(cat)rows=rows.filter(p=>catOf(p.ref)===cat);
+  if(q)rows=rows.filter(p=>p.ref.toLowerCase().includes(q)||p.nome.toLowerCase().includes(q));
+  const tb=document.getElementById('tb-prod');
+  if(!rows.length){tb.innerHTML='<tr><td colspan="6" class="empty">Sem produtos. Registe o primeiro acima.</td></tr>';return;}
+  tb.innerHTML=rows.map(p=>{const s=stock(p.ref);const vs=s*precoMedio(p.ref);
+    return `<tr>
+      <td><span class="tag-ref cat-${catOf(p.ref)}">${p.ref}</span></td>
+      <td>${esc(p.nome)}</td>
+      <td class="num">${money(p.preco)}</td>
+      <td class="num" style="font-weight:700;color:${s<0?'var(--rd)':'var(--nv)'}">${int(s)}</td>
+      <td class="num">${money(vs)}</td>
+      <td class="num"><button class="btn btn-d btn-sm" onclick="delProduto('${p.ref}')">Apagar</button></td>
+    </tr>`;}).join('');
+}
+
+/* ---------- Movimentos (entradas / saídas) ---------- */
+function addMov(tipo){
+  const pre=tipo==='entrada'?'en':'sa';
+  const ref=document.getElementById(pre+'-ref').value;
+  const qtd=parseInt(document.getElementById(pre+'-qtd').value,10);
+  const custo=parseFloat(document.getElementById(pre+'-custo').value)||0;
+  const data=document.getElementById(pre+'-data').value;
+  if(!ref){toast('Escolha uma referência.',1);return;}
+  if(!prodByRef(ref)){toast('Registe primeiro o produto no separador Produtos.',1);return;}
+  if(!qtd||qtd<=0){toast('Quantidade inválida.',1);return;}
+  if(!data){toast('Indique a data.',1);return;}
+  if(tipo==='saida'){const s=stock(ref);if(qtd>s){if(!confirm(`Stock atual de ${ref} é ${s}. Registar saída de ${qtd} mesmo assim (stock ficará negativo)?`))return;}}
+  const arr=tipo==='entrada'?DB.ent:DB.sai;
+  arr.push({id:uid(),ref,qtd,custo,data});
+  persist();
+  document.getElementById(pre+'-qtd').value='';document.getElementById(pre+'-custo').value='';
+  toast(tipo==='entrada'?'Entrada registada.':'Saída registada.');
+  renderAll();
+}
+function delMov(tipo,id){
+  if(tipo==='entrada')DB.ent=DB.ent.filter(e=>e.id!==id);else DB.sai=DB.sai.filter(e=>e.id!==id);
+  persist();renderAll();toast('Movimento removido.');
+}
+function renderMov(tipo){
+  const isEnt=tipo==='entrada';
+  const arr=isEnt?DB.ent:DB.sai;
+  const q=document.getElementById(isEnt?'ef-q':'sf-q').value.trim().toLowerCase();
+  let rows=arr.slice().sort((a,b)=>b.data.localeCompare(a.data));
+  if(q)rows=rows.filter(e=>e.ref.toLowerCase().includes(q));
+  const tb=document.getElementById(isEnt?'tb-ent':'tb-sai');
+  if(!rows.length){tb.innerHTML=`<tr><td colspan="7" class="empty">Sem ${isEnt?'entradas':'saídas'} registadas.</td></tr>`;return;}
+  tb.innerHTML=rows.map(e=>`<tr>
+    <td class="num">${fmtD(e.data)}</td>
+    <td><span class="tag-ref cat-${catOf(e.ref)}">${e.ref}</span></td>
+    <td>${esc(nomeOf(e.ref))}</td>
+    <td class="num" style="font-weight:700;">${int(e.qtd)}</td>
+    <td class="num">${money(e.custo)}</td>
+    <td class="num">${money(e.qtd*e.custo)}</td>
+    <td class="num"><button class="btn btn-d btn-sm" onclick="delMov('${tipo}','${e.id}')">✕</button></td>
+  </tr>`).join('');
+}
+
+/* ---------- Plano de compra ---------- */
+function addPlano(){
+  const ref=document.getElementById('pl-ref').value;
+  const qtd=parseInt(document.getElementById('pl-qtd').value,10);
+  const custo=parseFloat(document.getElementById('pl-custo').value)||0;
+  const data=document.getElementById('pl-data').value;
+  if(!ref){toast('Escolha uma referência.',1);return;}
+  if(!qtd||qtd<=0){toast('Quantidade inválida.',1);return;}
+  DB.pla.push({id:uid(),ref,qtd,custo,data});persist();
+  document.getElementById('pl-qtd').value='';document.getElementById('pl-custo').value='';
+  toast('Adicionado ao plano.');renderPlano();updateCounts();
+}
+function delPlano(id){DB.pla=DB.pla.filter(p=>p.id!==id);persist();renderPlano();updateCounts();toast('Removido do plano.');}
+function renderPlano(){
+  const rows=DB.pla.slice().sort((a,b)=>(a.data||'').localeCompare(b.data||''));
+  const tb=document.getElementById('tb-pla');
+  if(!rows.length){tb.innerHTML='<tr><td colspan="8" class="empty">Sem compras planeadas.</td></tr>';return;}
+  tb.innerHTML=rows.map(p=>{const s=stock(p.ref);
+    let estado='<span class="pill pill-ok">Stock ok</span>';
+    if(s<=0)estado='<span class="pill pill-bad">Rutura</span>';
+    else if(s<p.qtd)estado='<span class="pill pill-warn">Abaixo do plano</span>';
+    return `<tr>
+      <td class="num">${p.data?fmtD(p.data):'—'}</td>
+      <td><span class="tag-ref cat-${catOf(p.ref)}">${p.ref}</span></td>
+      <td>${esc(nomeOf(p.ref))}</td>
+      <td class="num">${int(s)}</td>
+      <td class="num" style="font-weight:700;">${int(p.qtd)}</td>
+      <td class="num">${money(p.qtd*p.custo)}</td>
+      <td>${estado}</td>
+      <td class="num"><button class="btn btn-d btn-sm" onclick="delPlano('${p.id}')">✕</button></td>
+    </tr>`;}).join('');
+}
+
+/* ---------- Períodos para relatório ---------- */
+function periodo(tipo,dateStr){
+  const d=dateStr?new Date(dateStr+'T00:00:00'):new Date();
+  let ini,fim,label;
+  const Y=d.getFullYear();
+  if(tipo==='semanal'){
+    const day=(d.getDay()+6)%7; // 0 = segunda
+    ini=new Date(d);ini.setDate(d.getDate()-day);
+    fim=new Date(ini);fim.setDate(ini.getDate()+6);
+    label='Semana de '+fmtD(iso(ini))+' a '+fmtD(iso(fim));
+  }else if(tipo==='mensal'){
+    ini=new Date(Y,d.getMonth(),1);fim=new Date(Y,d.getMonth()+1,0);
+    label=ini.toLocaleDateString('pt-PT',{month:'long',year:'numeric'});
+  }else if(tipo==='trimestral'){
+    const q=Math.floor(d.getMonth()/3);ini=new Date(Y,q*3,1);fim=new Date(Y,q*3+3,0);
+    label=(q+1)+'.º Trimestre de '+Y;
+  }else if(tipo==='semestral'){
+    const h=d.getMonth()<6?0:1;ini=new Date(Y,h*6,1);fim=new Date(Y,h*6+6,0);
+    label=(h+1)+'.º Semestre de '+Y;
+  }else{ini=new Date(Y,0,1);fim=new Date(Y,11,31);label='Ano de '+Y;}
+  return {ini:iso(ini),fim:iso(fim),label};
+}
+function iso(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function inRange(dt,ini,fim){return dt>=ini&&dt<=fim;}
+
+/* ---------- Relatório ---------- */
+function renderRelatorio(){
+  const tipo=document.getElementById('rp-tipo').value;
+  const dataRef=document.getElementById('rp-data').value;
+  const cat=document.getElementById('rp-cat').value;
+  const per=periodo(tipo,dataRef);
+  document.getElementById('rp-range').innerHTML=
+    `<span>📅 <b>${cap(per.label)}</b></span><span>Intervalo: <b>${fmtD(per.ini)}</b> — <b>${fmtD(per.fim)}</b></span><span>Categoria: <b>${cat||'Todas'}</b></span>`;
+
+  const ent=DB.ent.filter(e=>inRange(e.data,per.ini,per.fim)&&(!cat||catOf(e.ref)===cat));
+  const sai=DB.sai.filter(e=>inRange(e.data,per.ini,per.fim)&&(!cat||catOf(e.ref)===cat));
+
+  // Agregação por referência
+  const refs={};
+  function ensure(ref){if(!refs[ref])refs[ref]={ref,qIn:0,vIn:0,datasIn:[],qOut:0,vOut:0,datasOut:[]};return refs[ref];}
+  ent.forEach(e=>{const r=ensure(e.ref);r.qIn+=e.qtd;r.vIn+=e.qtd*e.custo;r.datasIn.push(e.data);});
+  sai.forEach(e=>{const r=ensure(e.ref);r.qOut+=e.qtd;r.vOut+=e.qtd*e.custo;r.datasOut.push(e.data);});
+
+  const lista=Object.values(refs).sort((a,b)=>a.ref.localeCompare(b.ref,undefined,{numeric:true}));
+
+  // Totais
+  const tot={qIn:0,vIn:0,qOut:0,vOut:0};
+  lista.forEach(r=>{tot.qIn+=r.qIn;tot.vIn+=r.vIn;tot.qOut+=r.qOut;tot.vOut+=r.vOut;});
+  const refsComEntrada=lista.filter(r=>r.qIn>0).length;
+  const refsComSaida=lista.filter(r=>r.qOut>0).length;
+  const stkQtd=tot.qIn-tot.qOut;           // variação de stock no período (qtd)
+  const stkVal=tot.vIn-tot.vOut;           // diferença de valor (compras - saídas) no período
+
+  // Datas do período (min/max efetivas)
+  const todasDatas=[...ent,...sai].map(e=>e.data).sort();
+  const intervaloReal=todasDatas.length?fmtD(todasDatas[0])+' — '+fmtD(todasDatas[todasDatas.length-1]):'sem movimentos';
+
+  let html='';
+  // KPIs
+  html+='<div class="kpis">';
+  html+=kpi('k-in','Entradas',int(tot.qIn)+' un.',money(tot.vIn)+' Kz · '+refsComEntrada+' ref.');
+  html+=kpi('k-out','Saídas',int(tot.qOut)+' un.',money(tot.vOut)+' Kz · '+refsComSaida+' ref.');
+  html+=kpi('k-stk','Variação de stock',int(stkQtd)+' un.','Entrou − Saiu no período');
+  html+=kpi('k-bal','Balanço financeiro',money(stkVal)+' Kz','Compras − Saídas');
+  html+='</div>';
+
+  // Quadro de conferência (comparação pedida)
+  const eqQtd=stkQtd===0, saldoStr=stkQtd>0?'Ficou em stock':'Saiu mais do que entrou';
+  html+='<div class="card"><div class="subttl" style="margin-top:0;">Conferência: entrou × saiu × stock</div>';
+  html+='<div class="tblwrap"><table><thead><tr><th>Indicador</th><th class="num">Entradas</th><th class="num">Saídas</th><th class="num">Diferença (ficou em stock)</th><th>Situação</th></tr></thead><tbody>';
+  html+=`<tr><td><b>Quantidade (un.)</b></td><td class="num">${int(tot.qIn)}</td><td class="num">${int(tot.qOut)}</td><td class="num" style="font-weight:700;color:${stkQtd<0?'var(--rd)':'var(--nv)'}">${int(stkQtd)}</td><td>${eqQtd?'<span class="pill pill-ok">Entrou = Saiu</span>':'<span class="pill '+(stkQtd>0?'pill-warn':'pill-bad')+'">'+saldoStr+'</span>'}</td></tr>`;
+  html+=`<tr><td><b>Dinheiro (Kz)</b></td><td class="num">${money(tot.vIn)}</td><td class="num">${money(tot.vOut)}</td><td class="num" style="font-weight:700;color:${stkVal<0?'var(--rd)':'var(--nv)'}">${money(stkVal)}</td><td>${stkVal===0?'<span class="pill pill-ok">Igual</span>':'<span class="pill '+(stkVal>0?'pill-warn':'pill-bad')+'">'+(stkVal>0?'Gastou mais em compras':'Recebeu mais em saídas')+'</span>'}</td></tr>`;
+  html+='</tbody></table></div>';
+  html+=`<p class="note">Total de referências movimentadas: <b>${lista.length}</b> · Intervalo real dos movimentos: <b>${intervaloReal}</b> · O valor "ficou em stock" (quantidade) é o que entrou menos o que saiu neste período.</p></div>`;
+
+  // Detalhe por referência
+  html+='<div class="card"><div class="subttl" style="margin-top:0;">Detalhe por referência</div>';
+  if(!lista.length){html+='<p class="empty">Sem movimentos neste período/categoria.</p>';}
+  else{
+    html+='<div class="tblwrap"><table><thead><tr><th>Ref.</th><th>Produto</th><th class="num">Qtd entrada</th><th class="num">Valor entrada</th><th>Datas entrada</th><th class="num">Qtd saída</th><th class="num">Valor saída</th><th>Datas saída</th><th class="num">Ficou (un.)</th><th class="num">Stock atual</th></tr></thead><tbody>';
+    lista.forEach(r=>{const dif=r.qIn-r.qOut;
+      html+=`<tr>
+        <td><span class="tag-ref cat-${catOf(r.ref)}">${r.ref}</span></td>
+        <td>${esc(nomeOf(r.ref))}</td>
+        <td class="num" style="font-weight:700;color:var(--gr)">${int(r.qIn)}</td>
+        <td class="num">${money(r.vIn)}</td>
+        <td style="font-size:.72rem;">${datasFmt(r.datasIn)}</td>
+        <td class="num" style="font-weight:700;color:var(--am)">${int(r.qOut)}</td>
+        <td class="num">${money(r.vOut)}</td>
+        <td style="font-size:.72rem;">${datasFmt(r.datasOut)}</td>
+        <td class="num" style="font-weight:700;color:${dif<0?'var(--rd)':'var(--nv)'}">${int(dif)}</td>
+        <td class="num">${int(stock(r.ref))}</td>
+      </tr>`;});
+    html+=`<tr style="background:var(--blxt);font-weight:800;">
+      <td colspan="2">TOTAL (${lista.length} ref.)</td>
+      <td class="num">${int(tot.qIn)}</td><td class="num">${money(tot.vIn)}</td><td></td>
+      <td class="num">${int(tot.qOut)}</td><td class="num">${money(tot.vOut)}</td><td></td>
+      <td class="num">${int(stkQtd)}</td><td class="num"></td></tr>`;
+    html+='</tbody></table></div></div>';
+  }
+  document.getElementById('rp-out').innerHTML=html;
+}
+function kpi(cls,lab,val,sub){return `<div class="kpi ${cls}"><div class="lab">${lab}</div><div class="val">${val}</div><div class="sub">${sub}</div></div>`;}
+function datasFmt(arr){
+  if(!arr.length)return '<span style="color:var(--tx3)">—</span>';
+  const u=[...new Set(arr)].sort();
+  const short=u.slice(0,4).map(fmtD).join(', ');
+  return short+(u.length>4?` <span style="color:var(--tx3)">(+${u.length-4})</span>`:'');
+}
+
+/* ---------- Utils ---------- */
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function fmtD(s){if(!s)return '—';const [y,m,d]=s.split('-');return `${d}/${m}/${y}`;}
+function cap(s){return s.charAt(0).toUpperCase()+s.slice(1);}
+
+/* ---------- Exportar / Importar ---------- */
+function exportJSON(){
+  const blob=new Blob([JSON.stringify(DB,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='grupo30_stock_'+iso(new Date())+'.json';a.click();URL.revokeObjectURL(a.href);
+  toast('Cópia exportada.');
+}
+function importJSON(ev){
+  const f=ev.target.files[0];if(!f)return;const r=new FileReader();
+  r.onload=()=>{try{const o=JSON.parse(r.result);
+    DB={prod:o.prod||[],ent:o.ent||[],sai:o.sai||[],pla:o.pla||[]};
+    persist();refreshRefSelects();renderAll();toast('Dados importados.');
+  }catch(e){toast('Ficheiro inválido.',1);}};
+  r.readAsText(f);ev.target.value='';
+}
+
+/* ---------- Render / Tabs ---------- */
+function updateCounts(){
+  document.getElementById('c-prod').textContent=DB.prod.length;
+  document.getElementById('c-ent').textContent=DB.ent.length;
+  document.getElementById('c-sai').textContent=DB.sai.length;
+  document.getElementById('c-pla').textContent=DB.pla.length;
+}
+function renderAll(){renderProdutos();renderMov('entrada');renderMov('saida');renderPlano();renderRelatorio();updateCounts();}
+document.getElementById('tabs').addEventListener('click',e=>{
+  const b=e.target.closest('.tab');if(!b)return;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  b.classList.add('active');document.getElementById('p-'+b.dataset.p).classList.add('active');
+});
+
+/* ---------- Init ---------- */
+(function init(){
+  const hoje=iso(new Date());
+  ['en-data','sa-data','rp-data'].forEach(id=>document.getElementById(id).value=hoje);
+  refreshRefSelects();renderAll();
+})();
+</script>
+</body>
+</html>
