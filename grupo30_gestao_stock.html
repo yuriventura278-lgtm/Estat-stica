@@ -150,7 +150,7 @@ body,.card,.kpi,.tab,.crow,input,select,.chtrack{transition:background .2s,borde
 .fab-item{display:flex;align-items:center;gap:9px;background:var(--card);color:var(--tx);border:1px solid var(--br);border-radius:100px;padding:9px 15px;font-family:inherit;font-size:.8rem;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(13,27,62,.22);white-space:nowrap;transition:.12s;}
 .fab-item:hover{border-color:var(--bl);color:var(--bl);}
 .fab-item span{font-size:1rem;}
-.finfo{margin-top:12px;padding-top:12px;border-top:1px dashed var(--br);font-size:.76rem;color:var(--tx3);display:flex;flex-wrap:wrap;gap:6px 16px;}.finfo:empty{display:none;}.finfo b{font-weight:700;}.invalid{border-color:var(--rd)!important;box-shadow:0 0 0 3px rgba(220,38,38,.18)!important;}.req{color:var(--rd);font-weight:800;margin-left:2px;}svg.ic{width:1.05em;height:1.05em;vertical-align:-.15em;stroke:currentColor;fill:none;flex:none;}
+.finfo{margin-top:12px;padding-top:12px;border-top:1px dashed var(--br);font-size:.76rem;color:var(--tx3);display:flex;flex-wrap:wrap;gap:6px 16px;}.finfo:empty{display:none;}.finfo b{font-weight:700;}.invalid{border-color:var(--rd)!important;box-shadow:0 0 0 3px rgba(220,38,38,.18)!important;}.req{color:var(--rd);font-weight:800;margin-left:2px;}.vchart{display:flex;align-items:flex-end;gap:9px;height:210px;padding:16px 4px 0;overflow-x:auto;}.vcol{flex:1 0 42px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:6px;}.vbar{width:62%;min-height:3px;background:linear-gradient(180deg,#60A5FA,var(--bl));border-radius:6px 6px 0 0;transition:height .3s;}.vbar.cur{background:linear-gradient(180deg,#34D399,var(--gr));}.vval{font-size:.62rem;font-family:var(--mono);color:var(--tx3);white-space:nowrap;}.vlab{font-size:.64rem;color:var(--tx2);white-space:nowrap;font-weight:600;}svg.ic{width:1.05em;height:1.05em;vertical-align:-.15em;stroke:currentColor;fill:none;flex:none;}
 .subttl svg.ic{margin-right:4px;}
 </style>
 </head>
@@ -171,6 +171,7 @@ body,.card,.kpi,.tab,.crow,input,select,.chtrack{transition:background .2s,borde
     <button class="tab" data-p="saidas"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="16 12 12 8 8 12"/><line x1="12" y1="16" x2="12" y2="8"/></svg> Saídas <span class="cnt" id="c-sai">0</span></button>
     <button class="tab" data-p="plano"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg> Plano <span class="cnt" id="c-pla">0</span></button>
     <button class="tab" data-p="relatorios"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> Relatórios</button>
+    <button class="tab" data-p="tendencias"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> Tendências</button>
   </div>
 
   <!-- ================= PAINEL ================= -->
@@ -350,6 +351,25 @@ body,.card,.kpi,.tab,.crow,input,select,.chtrack{transition:background .2s,borde
     <div id="rp-out"></div>
   </section>
 
+  <!-- ================= TENDÊNCIAS ================= -->
+  <section class="panel" id="p-tendencias">
+    <div class="card">
+      <h2><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> Tendências — comparação inteligente entre meses</h2>
+      <p class="hint">Compare a evolução mês a mês, identifique o melhor/pior mês, a média e a direção da tendência.</p>
+      <div class="filterbar">
+        <div class="field"><label>Métrica</label><select id="tr-met" onchange="TREND.metrica=this.value;renderTendencias()">
+          <option value="saidasV">Saídas (Kz)</option><option value="lucro">Lucro (Kz)</option><option value="entradasV">Entradas (Kz)</option><option value="saidasQ">Saídas (unidades)</option>
+        </select></div>
+        <div class="field"><label>Período</label><select id="tr-mes" onchange="TREND.meses=+this.value;renderTendencias()">
+          <option value="6">Últimos 6 meses</option><option value="12" selected>Últimos 12 meses</option><option value="24">Últimos 24 meses</option>
+        </select></div>
+        <div class="field"><label>Categoria</label><select id="tr-cat" onchange="TREND.cat=this.value;renderTendencias()"><option value="">Todas</option><option value="A">A</option><option value="O">O</option><option value="G">G</option></select></div>
+        <div class="field"><label>&nbsp;</label><button class="btn btn-o btn-sm" onclick="window.print()">Imprimir</button></div>
+      </div>
+    </div>
+    <div id="tr-out"></div>
+  </section>
+
   <!-- ================= CONTACTOS + DADOS ================= -->
   <div class="card contact">
     <h2>Grupo 30 — Comércio e Serviços</h2>
@@ -436,6 +456,7 @@ function afterPersist(){try{if(typeof scheduleFolderBackup==='function')schedule
 let editId={ent:null,sai:null,pla:null};
 let sortState={prod:{c:'ref',d:1},ent:{c:'data',d:-1},sai:{c:'data',d:-1}};
 let REL=null;
+let TREND={meses:12,metrica:'saidasV',cat:''};
 
 /* ---------- Referências ---------- */
 const REFS=[];['A','O','G'].forEach(c=>{for(let i=1;i<=100;i++)REFS.push(c+i);});
@@ -743,6 +764,42 @@ function exportRelCSV(){
 }
 
 /* ---------- Painel ---------- */
+function renderTendencias(){
+  const box=document.getElementById('tr-out');if(!box)return;
+  const n=TREND.meses,cat=TREND.cat;
+  const now=new Date();now.setDate(1);
+  const meses=[];for(let i=n-1;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth()-i,1);const ini=iso(new Date(d.getFullYear(),d.getMonth(),1));const fim=iso(new Date(d.getFullYear(),d.getMonth()+1,0));const tot=agregar(ini,fim,cat).tot;meses.push({d,label:cap(d.toLocaleDateString('pt-PT',{month:'short'}).replace('.',''))+'/'+String(d.getFullYear()).slice(2),tot});}
+  const MD={saidasV:{lab:'Saídas (Kz)',g:t=>t.vOut,m:true},lucro:{lab:'Lucro (Kz)',g:t=>t.lucro,m:true},entradasV:{lab:'Entradas (Kz)',g:t=>t.vIn,m:true},saidasQ:{lab:'Saídas (unidades)',g:t=>t.qOut,m:false}};
+  const md=MD[TREND.metrica]||MD.saidasV;
+  const vals=meses.map(x=>md.g(x.tot));
+  const mx=Math.max(1,...vals.map(v=>Math.abs(v)));
+  const fmt=v=>md.m?money(v)+' Kz':int(v)+' un.';
+  const last=vals[vals.length-1]||0,prev=vals[vals.length-2]||0;
+  const chg=prev!==0?((last-prev)/Math.abs(prev)*100):(last!==0?100:0);
+  let best=-Infinity,bi=0,worst=Infinity,wi=0,sum=0;vals.forEach((v,i)=>{if(v>best){best=v;bi=i;}if(v<worst){worst=v;wi=i;}sum+=v;});
+  const avg=vals.length?sum/vals.length:0;
+  const half=Math.floor(vals.length/2)||1;const a1=vals.slice(0,half),a2=vals.slice(-half);
+  const m1=a1.reduce((x,y)=>x+y,0)/(a1.length||1),m2=a2.reduce((x,y)=>x+y,0)/(a2.length||1);
+  const trend=m2>m1*1.02?'em subida':(m2<m1*0.98?'em descida':'estável');
+  const trCol=trend==='em subida'?'var(--gr)':(trend==='em descida'?'var(--rd)':'var(--tx3)');
+  const totS=meses.reduce((a,x)=>a+x.tot.vOut,0),totL=meses.reduce((a,x)=>a+x.tot.lucro,0),totE=meses.reduce((a,x)=>a+x.tot.vIn,0);
+  let h='';
+  h+='<div class="kpis">';
+  h+=kpi('k-out','Mês atual ('+meses[meses.length-1].label+')',fmt(last),'vs mês anterior: <b style="color:'+(chg>=0?'var(--gr)':'var(--rd)')+'">'+(chg>=0?'+':'')+chg.toFixed(1)+'%</b>');
+  h+=kpi('k-bal','Melhor mês',meses[bi].label,fmt(best));
+  h+=kpi('k-warn','Mês mais fraco',meses[wi].label,fmt(worst));
+  h+=kpi('k-stk','Média mensal',fmt(avg),'Tendência: <b style="color:'+trCol+'">'+trend+'</b>');
+  h+='</div>';
+  h+='<div class="card"><div class="subttl" style="margin-top:0;">Evolução mensal — '+md.lab+'</div>';
+  h+='<div class="vchart">'+meses.map((x,i)=>{const v=md.g(x.tot);const hp=Math.max(3,Math.abs(v)/mx*158);const neg=v<0;const cur=i===meses.length-1;return '<div class="vcol"><div class="vval">'+(md.m?money0(v):int(v))+'</div><div class="vbar'+(cur?' cur':'')+'" style="height:'+hp.toFixed(0)+'px;'+(neg?'background:linear-gradient(180deg,#F87171,var(--rd));':'')+'" title="'+x.label+': '+fmt(v)+'"></div><div class="vlab">'+x.label+'</div></div>';}).join('')+'</div></div>';
+  h+='<div class="card"><div class="subttl" style="margin-top:0;">Comparação mensal detalhada</div><div class="tblwrap"><table><thead><tr><th>Mês</th><th class="num">Entr. un.</th><th class="num">Valor entr.</th><th class="num">Saí. un.</th><th class="num">Valor saí.</th><th class="num">Lucro</th><th class="num">Δ Saídas</th></tr></thead><tbody>';
+  meses.forEach((x,i)=>{const t=x.tot;const pv=i>0?meses[i-1].tot.vOut:0;const dd=pv?((t.vOut-pv)/Math.abs(pv)*100):(t.vOut?100:0);const dcol=dd>=0?'var(--gr)':'var(--rd)';h+='<tr><td><b>'+x.label+'</b></td><td class="num" style="color:var(--gr)">'+int(t.qIn)+'</td><td class="num">'+money(t.vIn)+'</td><td class="num" style="color:var(--am)">'+int(t.qOut)+'</td><td class="num">'+money(t.vOut)+'</td><td class="num" style="font-weight:700;color:'+(t.lucro<0?'var(--rd)':'var(--gr)')+'">'+money(t.lucro)+'</td><td class="num" style="color:'+(i===0?'var(--tx3)':dcol)+'">'+(i===0?'—':(dd>=0?'+':'')+dd.toFixed(1)+'%')+'</td></tr>';});
+  h+='<tr style="background:var(--blxt);font-weight:800;"><td>TOTAL ('+n+'m)</td><td class="num"></td><td class="num">'+money(totE)+'</td><td class="num"></td><td class="num">'+money(totS)+'</td><td class="num">'+money(totL)+'</td><td class="num"></td></tr>';
+  h+='</tbody></table></div></div>';
+  h+='<div class="card"><div class="subttl" style="margin-top:0;">Relatório de tendência</div><p style="font-size:.84rem;line-height:1.8;color:var(--tx2)">Nos últimos <b>'+n+'</b> meses, as saídas totalizaram <b>'+money(totS)+' Kz</b>, as entradas <b>'+money(totE)+' Kz</b> e o lucro estimado <b>'+money(totL)+' Kz</b>. O melhor mês em '+md.lab.toLowerCase()+' foi <b>'+meses[bi].label+'</b> ('+fmt(best)+') e o mais fraco <b>'+meses[wi].label+'</b> ('+fmt(worst)+'), com média mensal de <b>'+fmt(avg)+'</b>. Face ao mês anterior, '+md.lab.toLowerCase()+' '+(chg>=0?'subiu':'desceu')+' <b style="color:'+(chg>=0?'var(--gr)':'var(--rd)')+'">'+Math.abs(chg).toFixed(1)+'%</b>. A tendência geral do período é <b style="color:'+trCol+'">'+trend+'</b>.</p></div>';
+  h+='<div class="card"><div class="sign"><div class="role">A Gestora</div><div class="nm">'+GESTORA+'</div><div class="fn">Grupo 30 — Comércio e Serviços · '+fmtD(iso(new Date()))+'</div></div></div>';
+  box.innerHTML=h;
+}
 function renderDash(){
   const valorStock=DB.prod.reduce((a,p)=>a+stock(p.ref)*precoMedio(p.ref),0);
   const rutura=DB.prod.filter(p=>stock(p.ref)<=0).length;
@@ -798,7 +855,7 @@ function updateArrows(){document.querySelectorAll('.ar').forEach(a=>a.textConten
 
 /* ---------- Render / Tabs ---------- */
 function updateCounts(){document.getElementById('c-prod').textContent=DB.prod.length;document.getElementById('c-ent').textContent=DB.ent.length;document.getElementById('c-sai').textContent=DB.sai.length;document.getElementById('c-pla').textContent=DB.pla.length;}
-function renderAll(){renderDash();renderProdutos();renderMov('entrada');renderMov('saida');renderPlano();renderRelatorio();renderBackups();updateCounts();}
+function renderAll(){renderDash();renderProdutos();renderMov('entrada');renderMov('saida');renderPlano();renderRelatorio();renderTendencias();renderBackups();updateCounts();}
 document.getElementById('tabs').addEventListener('click',e=>{const b=e.target.closest('.tab');if(!b)return;document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));b.classList.add('active');document.getElementById('p-'+b.dataset.p).classList.add('active');});
 function activateTab(name){document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.p===name));document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p.id==='p-'+name));}
 function applyTheme(t){document.documentElement.setAttribute('data-theme',t);try{localStorage.setItem('g30_theme',t);}catch(e){}const dark=t==='dark';const hb=document.getElementById('themebtn');if(hb)hb.innerHTML=dark?ICONS.sun:ICONS.moon;const fi=document.getElementById('fabThemeIco');if(fi)fi.innerHTML=dark?ICONS.sun:ICONS.moon;const ft=document.getElementById('fabThemeTxt');if(ft)ft.textContent=dark?'Tema claro':'Tema escuro';}
