@@ -4,6 +4,13 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>Grupo 30 — Gestão de Stock</title>
+<link rel="manifest" href="manifest.json"/>
+<meta name="theme-color" content="#0D1B3E"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="Grupo 30"/>
+<link rel="apple-touch-icon" href="icon-192.png"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=DM+Mono:wght@500&display=swap" rel="stylesheet"/>
 <style>
 :root{
@@ -425,6 +432,7 @@ body,.card,.kpi,.tab,.crow,input,select,.chtrack{transition:background .2s,borde
 
 <div class="fab-wrap">
   <div class="fab-menu" id="fabMenu">
+    <button class="fab-item" id="fabInstall" style="display:none" onclick="instalarApp()"><span><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></span>Instalar app</button>
     <button class="fab-item" onclick="goAdd('entradas')"><span><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="8 12 12 16 16 12"/><line x1="12" y1="8" x2="12" y2="16"/></svg></span>Nova entrada</button>
     <button class="fab-item" onclick="goAdd('saidas')"><span><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="16 12 12 8 8 12"/><line x1="12" y1="16" x2="12" y2="8"/></svg></span>Nova saída</button>
     <button class="fab-item" onclick="goAdd('produtos')"><span><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></span>Novo produto</button>
@@ -1035,6 +1043,11 @@ function goAdd(tab){activateTab(tab);closeFab();window.scrollTo({top:0,behavior:
   [['card-prod',()=>addProduto()],['card-ent',()=>addMov('entrada')],['card-sai',()=>addMov('saida')],['card-pla',()=>addPlano()]].forEach(([id,fn])=>{const c=document.getElementById(id);if(!c)return;c.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.matches('input,select')){e.preventDefault();fn();}else if(e.key==='Escape'){const k={'card-ent':'ent','card-sai':'sai','card-pla':'pla'}[id];if(k&&editId[k])cancelEdit(k);}});});
 })();
 if('serviceWorker' in navigator&&location.protocol.indexOf('http')===0){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});}
+var deferredPrompt=null;
+window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();deferredPrompt=e;var b=document.getElementById('fabInstall');if(b)b.style.display='';});
+window.addEventListener('appinstalled',function(){var b=document.getElementById('fabInstall');if(b)b.style.display='none';try{toast('App instalada!');}catch(e){}});
+function instalarApp(){if(deferredPrompt){deferredPrompt.prompt();deferredPrompt.userChoice.finally(function(){deferredPrompt=null;var b=document.getElementById('fabInstall');if(b)b.style.display='none';closeFab();});}else{alert('Para instalar como app:\n\niPhone (Safari): tocar em Partilhar e depois \"Adicionar ao ecrã principal\".\nAndroid/Chrome: menu do navegador e depois \"Instalar app\" / \"Adicionar ao ecrã inicial\".');closeFab();}}
+(function(){try{var iOS=/iphone|ipad|ipod/i.test(navigator.userAgent);var standalone=(window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)||navigator.standalone;if(iOS&&!standalone){var b=document.getElementById('fabInstall');if(b)b.style.display='';}}catch(e){}})();
 function hideSplash(){var s=document.getElementById('splash');if(s){s.classList.add('hide');setTimeout(function(){s.style.display='none';},520);}}
 (function(){var s=document.getElementById('splash');if(!s)return;var lg=document.getElementById('spLogo');if(lg)lg.src=LOGO;try{if(sessionStorage.getItem('g30_splash')){s.style.display='none';return;}sessionStorage.setItem('g30_splash','1');}catch(e){}var dur=7000,t0=Date.now(),fill=document.getElementById('spFill'),pct=document.getElementById('spPct'),msg=document.getElementById('spMsg');var MS=[[0,'A iniciar o sistema…'],[15,'A verificar permissões…'],[30,'A preparar o armazenamento local…'],[48,'A carregar informações locais…'],[66,'A preparar o painel e gráficos…'],[84,'A calcular relatórios e tendências…'],[96,'Quase pronto…']];var last='';var iv=setInterval(function(){var p=Math.min(100,(Date.now()-t0)/dur*100);if(fill)fill.style.width=p+'%';if(pct)pct.textContent=Math.round(p)+'%';if(msg){var m=MS[0][1];for(var k=0;k<MS.length;k++){if(p>=MS[k][0])m=MS[k][1];}if(m!==last){last=m;msg.textContent=m;}}if(p>=100){clearInterval(iv);hideSplash();}},70);})();
 </script>
