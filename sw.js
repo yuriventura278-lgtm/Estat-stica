@@ -5,8 +5,9 @@
      usa a cópia em cache quando está offline).
    - Restantes (fontes, etc.): cache-first com cache em tempo de execução.
 */
-const CACHE = 'grupo30-v1';
-const CORE = ['grupo30_gestao_stock.html', 'index.html'];
+const CACHE = 'grupo30-v2';
+const CORE = ['grupo30_gestao_stock.html', 'index.html', 'manifest.json',
+  'icon-192.png', 'icon-512.png', 'icon-maskable-512.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(
