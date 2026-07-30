@@ -402,9 +402,36 @@ const int=n=>new Intl.NumberFormat('pt-PT').format(n||0);
 const money0=n=>new Intl.NumberFormat('pt-PT',{maximumFractionDigits:0}).format(n||0);
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 function load(k){try{return JSON.parse(localStorage.getItem(k))||[]}catch(e){return[]}}
-function saveK(k,v){localStorage.setItem(k,JSON.stringify(v));}
-let DB={prod:load(KEYS.prod),ent:load(KEYS.ent),sai:load(KEYS.sai),pla:load(KEYS.pla)};
-function persist(){saveK(KEYS.prod,DB.prod);saveK(KEYS.ent,DB.ent);saveK(KEYS.sai,DB.sai);saveK(KEYS.pla,DB.pla);autoBackup();}
+function saveK(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
+let DB={prod:[],ent:[],sai:[],pla:[]};
+let BK=[];
+
+/* ===== IndexedDB (DatabaseManager) — base principal, offline-first ===== */
+const IDB_NAME='grupo30_db',IDB_VER=1;let _db=null,IDB_OK=false;
+const STORES={produtos:'ref',entradas:'id',saidas:'id',plano:'id',backups:'dia',meta:'k'};
+function idbOpen(){return new Promise((res,rej)=>{if(_db)return res(_db);let rq;try{rq=indexedDB.open(IDB_NAME,IDB_VER);}catch(e){return rej(e);}
+  rq.onupgradeneeded=e=>{const db=e.target.result;Object.entries(STORES).forEach(([s,kp])=>{if(!db.objectStoreNames.contains(s)){const os=db.createObjectStore(s,{keyPath:kp});if(s==='entradas'||s==='saidas'){os.createIndex('by_ref','ref',{unique:false});os.createIndex('by_data','data',{unique:false});}}});};
+  rq.onsuccess=e=>{_db=e.target.result;_db.onversionchange=()=>{try{_db.close();}catch(_){}_db=null;};IDB_OK=true;res(_db);};
+  rq.onerror=e=>rej(e.target.error);});}
+function idbAll(store){return new Promise((res,rej)=>{try{const r=_db.transaction(store,'readonly').objectStore(store).getAll();r.onsuccess=()=>res(r.result||[]);r.onerror=()=>rej(r.error);}catch(e){rej(e);}});}
+function idbPutAll(store,arr){return new Promise((res,rej)=>{try{const tx=_db.transaction(store,'readwrite');const os=tx.objectStore(store);os.clear();(arr||[]).forEach(o=>os.put(o));tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error);}catch(e){rej(e);}});}
+async function idbSaveAll(){if(!IDB_OK){saveK(KEYS.prod,DB.prod);saveK(KEYS.ent,DB.ent);saveK(KEYS.sai,DB.sai);saveK(KEYS.pla,DB.pla);return;}try{await Promise.all([idbPutAll('produtos',DB.prod),idbPutAll('entradas',DB.ent),idbPutAll('saidas',DB.sai),idbPutAll('plano',DB.pla)]);}catch(e){console.error('IDB save falhou, fallback localStorage',e);saveK(KEYS.prod,DB.prod);saveK(KEYS.ent,DB.ent);saveK(KEYS.sai,DB.sai);saveK(KEYS.pla,DB.pla);}}
+async function idbLoadAll(){DB.prod=await idbAll('produtos');DB.ent=await idbAll('entradas');DB.sai=await idbAll('saidas');DB.pla=await idbAll('plano');BK=(await idbAll('backups')).sort((a,b)=>a.dia.localeCompare(b.dia));}
+async function idbMigrate(){
+  const cur=await idbAll('produtos'),ce=await idbAll('entradas'),cs=await idbAll('saidas'),cp=await idbAll('plano');
+  if(!cur.length&&!ce.length&&!cs.length&&!cp.length){
+    const ls={prod:load(KEYS.prod),ent:load(KEYS.ent),sai:load(KEYS.sai),pla:load(KEYS.pla)};
+    if(ls.prod.length||ls.ent.length||ls.sai.length||ls.pla.length){
+      await idbPutAll('produtos',ls.prod);await idbPutAll('entradas',ls.ent);await idbPutAll('saidas',ls.sai);await idbPutAll('plano',ls.pla);
+      setTimeout(()=>toast('Dados migrados para IndexedDB.'),400);
+    }
+  }
+  if(!(await idbAll('backups')).length){const ob=load(KEYS.bk);if(ob.length)await idbPutAll('backups',ob);}
+}
+async function requestPersist(){try{if(navigator.storage&&navigator.storage.persist){const ok=await navigator.storage.persisted();if(!ok)await navigator.storage.persist();}}catch(e){}}
+async function storageInfo(){try{if(navigator.storage&&navigator.storage.estimate){const e=await navigator.storage.estimate();return e;}}catch(_){}return null;}
+function persist(){idbSaveAll();autoBackup();afterPersist();}
+function afterPersist(){try{if(typeof scheduleFolderBackup==='function')scheduleFolderBackup();if(typeof checkReminders==='function')checkReminders();}catch(e){}}
 
 let editId={ent:null,sai:null,pla:null};
 let sortState={prod:{c:'ref',d:1},ent:{c:'data',d:-1},sai:{c:'data',d:-1}};
@@ -740,23 +767,22 @@ function renderDash(){
 
 /* ---------- Backup automático ---------- */
 function autoBackup(){
-  let bks=load(KEYS.bk);const hoje=iso(new Date());const snap={prod:DB.prod,ent:DB.ent,sai:DB.sai,pla:DB.pla};
-  const ex=bks.find(b=>b.dia===hoje);
-  if(ex){ex.ts=new Date().toISOString();ex.data=snap;}else{bks.push({dia:hoje,ts:new Date().toISOString(),data:snap});}
-  bks=bks.slice(-5);saveK(KEYS.bk,bks);
+  const hoje=iso(new Date());const snap={prod:DB.prod,ent:DB.ent,sai:DB.sai,pla:DB.pla};
+  const ex=BK.find(b=>b.dia===hoje);
+  if(ex){ex.ts=new Date().toISOString();ex.data=snap;}else{BK.push({dia:hoje,ts:new Date().toISOString(),data:snap});}
+  BK=BK.slice(-7);if(IDB_OK)idbPutAll('backups',BK).catch(()=>{});else saveK(KEYS.bk,BK);
 }
 function renderBackups(){
-  const bks=load(KEYS.bk).slice().reverse();
-  document.getElementById('bk-info').textContent=bks.length?('Última cópia automática: '+new Date(bks[0].ts).toLocaleString('pt-PT')+'. Guardadas as últimas '+bks.length+' cópias locais (uma por dia).'):'Ainda sem cópias automáticas. Serão criadas ao registar dados.';
-  const total=load(KEYS.bk).length;
-  document.getElementById('bk-list').innerHTML=bks.map((b,i)=>`<div class="bkrow"><span>${ICONS.folder} ${fmtD(b.dia)} · ${b.data.ent.length} ent. / ${b.data.sai.length} saí. / ${b.data.prod.length} prod.</span><button class="btn btn-o btn-sm" onclick="restoreBackup(${total-1-i})">Restaurar</button></div>`).join('');
+  const bks=BK.slice().reverse();
+  const store=IDB_OK?'IndexedDB':'armazenamento local';
+  document.getElementById('bk-info').textContent=bks.length?('Última cópia automática: '+new Date(bks[0].ts).toLocaleString('pt-PT')+'. Guardadas as últimas '+bks.length+' cópias ('+store+').'):'Ainda sem cópias automáticas. Serão criadas ao registar dados.';
+  document.getElementById('bk-list').innerHTML=bks.map((b)=>`<div class="bkrow"><span>${ICONS.folder} ${fmtD(b.dia)} · ${b.data.ent.length} ent. / ${b.data.sai.length} saí. / ${b.data.prod.length} prod.</span><button class="btn btn-o btn-sm" onclick="restoreBackup('${b.dia}')">Restaurar</button></div>`).join('');
 }
-function restoreBackup(idx){
-  const bks=load(KEYS.bk);const b=bks[idx];if(!b)return;
+function restoreBackup(dia){
+  const b=BK.find(x=>x.dia===dia);if(!b)return;
   if(!confirm('Restaurar a cópia de '+fmtD(b.dia)+'? Os dados atuais serão substituídos.'))return;
   DB={prod:b.data.prod||[],ent:b.data.ent||[],sai:b.data.sai||[],pla:b.data.pla||[]};
-  saveK(KEYS.prod,DB.prod);saveK(KEYS.ent,DB.ent);saveK(KEYS.sai,DB.sai);saveK(KEYS.pla,DB.pla);
-  refreshRefSelects();renderAll();toast('Cópia restaurada.');
+  idbSaveAll();refreshRefSelects();renderAll();toast('Cópia restaurada.');
 }
 
 /* ---------- Exportar / Importar ---------- */
@@ -783,11 +809,16 @@ function scrollTopo(){closeFab();window.scrollTo({top:0,behavior:'smooth'});}
 function goAdd(tab){activateTab(tab);closeFab();window.scrollTo({top:0,behavior:'smooth'});const f={produtos:'pr-nome',entradas:'en-ref',saidas:'sa-ref',plano:'pl-ref'}[tab];setTimeout(()=>{const el=document.getElementById(f);if(el)el.focus();},260);}
 
 /* ---------- Init ---------- */
-(function init(){
+(async function init(){
   applyTheme((function(){try{return localStorage.getItem('g30_theme')}catch(e){return null}})()||'light');
   document.getElementById('logoImg').src=LOGO;
   const hoje=iso(new Date());['en-data','sa-data','rp-data'].forEach(id=>document.getElementById(id).value=hoje);
+  // 1) pinta já com o que houver localmente (nunca fica em branco, funciona offline)
+  DB={prod:load(KEYS.prod),ent:load(KEYS.ent),sai:load(KEYS.sai),pla:load(KEYS.pla)};BK=load(KEYS.bk);
   refreshRefSelects();renderAll();
+  // 2) IndexedDB como base principal: migra e recarrega
+  try{await idbOpen();await idbMigrate();await idbLoadAll();refreshRefSelects();renderAll();requestPersist();}
+  catch(e){console.error('IndexedDB indisponível, a usar localStorage',e);IDB_OK=false;setTimeout(()=>toast('IndexedDB indisponível — a usar armazenamento local.',1),400);}
   [['card-prod',()=>addProduto()],['card-ent',()=>addMov('entrada')],['card-sai',()=>addMov('saida')],['card-pla',()=>addPlano()]].forEach(([id,fn])=>{const c=document.getElementById(id);if(!c)return;c.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.matches('input,select')){e.preventDefault();fn();}else if(e.key==='Escape'){const k={'card-ent':'ent','card-sai':'sai','card-pla':'pla'}[id];if(k&&editId[k])cancelEdit(k);}});});
 })();
 </script>
