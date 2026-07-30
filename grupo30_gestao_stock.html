@@ -150,7 +150,7 @@ body,.card,.kpi,.tab,.crow,input,select,.chtrack{transition:background .2s,borde
 .fab-item{display:flex;align-items:center;gap:9px;background:var(--card);color:var(--tx);border:1px solid var(--br);border-radius:100px;padding:9px 15px;font-family:inherit;font-size:.8rem;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(13,27,62,.22);white-space:nowrap;transition:.12s;}
 .fab-item:hover{border-color:var(--bl);color:var(--bl);}
 .fab-item span{font-size:1rem;}
-svg.ic{width:1.05em;height:1.05em;vertical-align:-.15em;stroke:currentColor;fill:none;flex:none;}
+.finfo{margin-top:12px;padding-top:12px;border-top:1px dashed var(--br);font-size:.76rem;color:var(--tx3);display:flex;flex-wrap:wrap;gap:6px 16px;}.finfo:empty{display:none;}.finfo b{font-weight:700;}.invalid{border-color:var(--rd)!important;box-shadow:0 0 0 3px rgba(220,38,38,.18)!important;}.req{color:var(--rd);font-weight:800;margin-left:2px;}svg.ic{width:1.05em;height:1.05em;vertical-align:-.15em;stroke:currentColor;fill:none;flex:none;}
 .subttl svg.ic{margin-right:4px;}
 </style>
 </head>
@@ -198,7 +198,7 @@ svg.ic{width:1.05em;height:1.05em;vertical-align:-.15em;stroke:currentColor;fill
 
   <!-- ================= PRODUTOS ================= -->
   <section class="panel" id="p-produtos">
-    <div class="card">
+    <div class="card" id="card-prod">
       <h2><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg> Registar produto</h2>
       <p class="hint">Referências: <b>A1 a A100</b>, <b>O1 a O100</b> e <b>G1 a G100</b>. Defina o <b>stock mínimo</b> para receber alertas de compra.</p>
       <div class="frow">
@@ -238,14 +238,15 @@ svg.ic{width:1.05em;height:1.05em;vertical-align:-.15em;stroke:currentColor;fill
       <h2><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="8 12 12 16 16 12"/><line x1="12" y1="8" x2="12" y2="16"/></svg> Registar entrada <span class="editbadge" id="edit-ent">A editar</span></h2>
       <p class="hint">Referência, quantidade, custo unitário, data e (opcional) fornecedor.</p>
       <div class="frow">
-        <div class="field" style="flex:1 1 140px;"><label>Referência</label><select id="en-ref" onchange="fillCusto('en')"></select></div>
-        <div class="field" style="flex:0 1 90px;"><label>Quantidade</label><input id="en-qtd" type="number" min="1" step="1" placeholder="0"/></div>
-        <div class="field" style="flex:0 1 120px;"><label>Custo un. (Kz)</label><input id="en-custo" type="number" min="0" step="0.01" placeholder="0.00"/></div>
+        <div class="field" style="flex:1 1 140px;"><label>Referência</label><select id="en-ref" onchange="onRef('en')"></select></div>
+        <div class="field" style="flex:0 1 90px;"><label>Quantidade</label><input id="en-qtd" type="number" min="1" step="1" placeholder="0" oninput="updFinfo('en')"/></div>
+        <div class="field" style="flex:0 1 120px;"><label>Custo un. (Kz)</label><input id="en-custo" type="number" min="0" step="0.01" placeholder="0.00" oninput="updFinfo('en')"/></div>
         <div class="field" style="flex:0 1 150px;"><label>Data</label><input id="en-data" type="date"/></div>
         <div class="field" style="flex:1 1 150px;"><label>Fornecedor</label><input id="en-forn" placeholder="Opcional"/></div>
         <div class="field" style="flex:0 0 auto;"><label>&nbsp;</label><button class="btn btn-g" id="en-btn" onclick="addMov('entrada')">Registar</button></div>
         <div class="field" style="flex:0 0 auto;"><label>&nbsp;</label><button class="btn btn-o" id="en-cancel" style="display:none;" onclick="cancelEdit('ent')">Cancelar</button></div>
       </div>
+      <div class="finfo" id="en-info"></div>
     </div>
     <div class="card">
       <div class="toolbar"><div class="left"><h2 style="margin:0;">Histórico de entradas</h2></div></div>
@@ -275,14 +276,15 @@ svg.ic{width:1.05em;height:1.05em;vertical-align:-.15em;stroke:currentColor;fill
       <h2><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="16 12 12 8 8 12"/><line x1="12" y1="16" x2="12" y2="8"/></svg> Registar saída <span class="editbadge" id="edit-sai">A editar</span></h2>
       <p class="hint">Referência, quantidade, preço unitário, data e (opcional) cliente. Avisa se não houver stock.</p>
       <div class="frow">
-        <div class="field" style="flex:1 1 140px;"><label>Referência</label><select id="sa-ref" onchange="fillCusto('sa')"></select></div>
-        <div class="field" style="flex:0 1 90px;"><label>Quantidade</label><input id="sa-qtd" type="number" min="1" step="1" placeholder="0"/></div>
-        <div class="field" style="flex:0 1 120px;"><label>Preço un. (Kz)</label><input id="sa-custo" type="number" min="0" step="0.01" placeholder="0.00"/></div>
+        <div class="field" style="flex:1 1 140px;"><label>Referência</label><select id="sa-ref" onchange="onRef('sa')"></select></div>
+        <div class="field" style="flex:0 1 90px;"><label>Quantidade</label><input id="sa-qtd" type="number" min="1" step="1" placeholder="0" oninput="updFinfo('sa')"/></div>
+        <div class="field" style="flex:0 1 120px;"><label>Preço un. (Kz)</label><input id="sa-custo" type="number" min="0" step="0.01" placeholder="0.00" oninput="updFinfo('sa')"/></div>
         <div class="field" style="flex:0 1 150px;"><label>Data</label><input id="sa-data" type="date"/></div>
         <div class="field" style="flex:1 1 150px;"><label>Cliente</label><input id="sa-cli" placeholder="Opcional"/></div>
         <div class="field" style="flex:0 0 auto;"><label>&nbsp;</label><button class="btn btn-p" id="sa-btn" onclick="addMov('saida')">Registar</button></div>
         <div class="field" style="flex:0 0 auto;"><label>&nbsp;</label><button class="btn btn-o" id="sa-cancel" style="display:none;" onclick="cancelEdit('sai')">Cancelar</button></div>
       </div>
+      <div class="finfo" id="sa-info"></div>
     </div>
     <div class="card">
       <div class="toolbar"><div class="left"><h2 style="margin:0;">Histórico de saídas</h2></div></div>
@@ -312,13 +314,14 @@ svg.ic{width:1.05em;height:1.05em;vertical-align:-.15em;stroke:currentColor;fill
       <h2><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg> Plano de compra <span class="editbadge" id="edit-pla">A editar</span></h2>
       <p class="hint">Planeie compras futuras. O estado compara a quantidade planeada com o stock atual.</p>
       <div class="frow">
-        <div class="field" style="flex:1 1 140px;"><label>Referência</label><select id="pl-ref" onchange="fillCusto('pl')"></select></div>
-        <div class="field" style="flex:0 1 100px;"><label>Qtd a comprar</label><input id="pl-qtd" type="number" min="1" step="1" placeholder="0"/></div>
-        <div class="field" style="flex:0 1 130px;"><label>Custo est. un. (Kz)</label><input id="pl-custo" type="number" min="0" step="0.01" placeholder="0.00"/></div>
+        <div class="field" style="flex:1 1 140px;"><label>Referência</label><select id="pl-ref" onchange="onRef('pl')"></select></div>
+        <div class="field" style="flex:0 1 100px;"><label>Qtd a comprar</label><input id="pl-qtd" type="number" min="1" step="1" placeholder="0" oninput="updFinfo('pl')"/></div>
+        <div class="field" style="flex:0 1 130px;"><label>Custo est. un. (Kz)</label><input id="pl-custo" type="number" min="0" step="0.01" placeholder="0.00" oninput="updFinfo('pl')"/></div>
         <div class="field" style="flex:0 1 150px;"><label>Data prevista</label><input id="pl-data" type="date"/></div>
         <div class="field" style="flex:0 0 auto;"><label>&nbsp;</label><button class="btn btn-p" id="pl-btn" onclick="addPlano()">Adicionar</button></div>
         <div class="field" style="flex:0 0 auto;"><label>&nbsp;</label><button class="btn btn-o" id="pl-cancel" style="display:none;" onclick="cancelEdit('pla')">Cancelar</button></div>
       </div>
+      <div class="finfo" id="pl-info"></div>
     </div>
     <div class="card">
       <h2 style="margin-bottom:14px;">Plano atual</h2>
@@ -425,6 +428,9 @@ function estadoStock(ref){const s=stock(ref),m=(prodByRef(ref)||{}).min||0;if(s<
 function refOptions(sel,onlyProdutos){const list=onlyProdutos?DB.prod.map(p=>p.ref):REFS;const seen=new Set();let h='<option value="">— escolher —</option>';list.forEach(ref=>{if(seen.has(ref))return;seen.add(ref);const nm=nomeOf(ref);h+=`<option value="${ref}">${ref}${nm!=='—'?' · '+nm:''}</option>`;});sel.innerHTML=h;}
 function refreshRefSelects(){refOptions(document.getElementById('pr-ref'),false);['en-ref','sa-ref','pl-ref'].forEach(id=>refOptions(document.getElementById(id),true));}
 function fillCusto(pre){const ref=document.getElementById(pre+'-ref').value;const inp=document.getElementById(pre+'-custo');if(ref&&!inp.value){const p=prodByRef(ref);if(p&&p.preco)inp.value=p.preco;}}
+function onRef(pre){fillCusto(pre);updFinfo(pre);}
+function updFinfo(pre){const info=document.getElementById(pre+'-info');if(!info)return;const ref=document.getElementById(pre+'-ref').value;const qtd=parseInt(document.getElementById(pre+'-qtd').value,10)||0;const custo=parseFloat(document.getElementById(pre+'-custo').value)||0;let parts=[];if(ref){const s=stock(ref);const p=prodByRef(ref);parts.push('Stock atual: <b style="color:'+(s<=0?'var(--rd)':'var(--nv)')+'">'+int(s)+'</b>');if(p&&p.preco)parts.push('Pre\u00e7o tabela: <b>'+money(p.preco)+' Kz</b>');const pm=precoMedio(ref);if(pm)parts.push('Custo m\u00e9dio: <b>'+money(pm)+' Kz</b>');}if(qtd&&custo)parts.push('Total: <b style="color:var(--bl)">'+money(qtd*custo)+' Kz</b>');info.innerHTML=parts.map(x=>'<span>'+x+'</span>').join('');}
+function bad(id,msg){const el=document.getElementById(id);if(el){el.classList.add('invalid');el.focus();setTimeout(()=>el.classList.remove('invalid'),1600);}toast(msg,1);}
 
 /* ---------- Produtos ---------- */
 function addProduto(){
@@ -432,13 +438,13 @@ function addProduto(){
   const nome=document.getElementById('pr-nome').value.trim();
   const preco=parseFloat(document.getElementById('pr-preco').value)||0;
   const min=parseInt(document.getElementById('pr-min').value,10)||0;
-  if(!ref){toast('Escolha uma referência.',1);return;}
-  if(!nome){toast('Indique o nome do produto.',1);return;}
+  if(!ref){bad('pr-ref','Escolha uma referência.');return;}
+  if(!nome){bad('pr-nome','Indique o nome do produto.');return;}
   const ex=prodByRef(ref);
   if(ex){ex.nome=nome;ex.preco=preco;ex.min=min;toast('Produto atualizado.');}
   else{DB.prod.push({ref,nome,preco,min});toast('Produto registado.');}
   persist();document.getElementById('pr-nome').value='';document.getElementById('pr-preco').value='';document.getElementById('pr-min').value='';
-  refreshRefSelects();renderAll();
+  refreshRefSelects();renderAll();document.getElementById('pr-ref').focus();
 }
 function editProduto(ref){const p=prodByRef(ref);if(!p)return;document.getElementById('pr-ref').value=p.ref;document.getElementById('pr-nome').value=p.nome;document.getElementById('pr-preco').value=p.preco||'';document.getElementById('pr-min').value=p.min||'';document.getElementById('pr-nome').focus();toast('A editar '+ref+' — altere e Guardar.');}
 function delProduto(ref){if(DB.ent.some(e=>e.ref===ref)||DB.sai.some(e=>e.ref===ref)){if(!confirm('Existem movimentos com esta referência. Apagar apenas o cadastro do produto (os movimentos mantêm-se)?'))return;}DB.prod=DB.prod.filter(p=>p.ref!==ref);persist();refreshRefSelects();renderAll();toast('Produto removido.');}
@@ -473,16 +479,17 @@ function addMov(tipo){
   const custo=parseFloat(document.getElementById(pre+'-custo').value)||0;
   const data=document.getElementById(pre+'-data').value;
   const extra=(document.getElementById(pre+(tipo==='entrada'?'-forn':'-cli')).value||'').trim();
-  if(!ref){toast('Escolha uma referência.',1);return;}
-  if(!prodByRef(ref)){toast('Registe primeiro o produto.',1);return;}
-  if(!qtd||qtd<=0){toast('Quantidade inválida.',1);return;}
-  if(!data){toast('Indique a data.',1);return;}
+  if(!ref){bad(pre+'-ref','Escolha uma referência.');return;}
+  if(!prodByRef(ref)){bad(pre+'-ref','Registe primeiro o produto no separador Produtos.');return;}
+  if(!qtd||qtd<=0){bad(pre+'-qtd','Indique uma quantidade válida.');return;}
+  if(!data){bad(pre+'-data','Indique a data.');return;}
   if(tipo==='saida'){let disp=stock(ref);if(editId.sai){const o=DB.sai.find(m=>m.id===editId.sai);if(o)disp+=o.qtd;}if(qtd>disp){if(!confirm(`Stock disponível de ${ref} é ${disp}. Registar saída de ${qtd} mesmo assim (stock ficará negativo)?`))return;}}
   const arr=DB[key];
   if(editId[key]){const m=arr.find(x=>x.id===editId[key]);Object.assign(m,{ref,qtd,custo,data});if(tipo==='entrada')m.fornecedor=extra;else m.cliente=extra;toast('Movimento atualizado.');cancelEdit(key);}
   else{const o={id:uid(),ref,qtd,custo,data};if(tipo==='entrada')o.fornecedor=extra;else o.cliente=extra;arr.push(o);toast(tipo==='entrada'?'Entrada registada.':'Saída registada.');}
   persist();
   document.getElementById(pre+'-qtd').value='';document.getElementById(pre+'-custo').value='';document.getElementById(pre+(tipo==='entrada'?'-forn':'-cli')).value='';
+  updFinfo(pre);document.getElementById(pre+'-qtd').focus();
   renderAll();
 }
 function startEdit(key,id){
@@ -544,11 +551,11 @@ function addPlano(){
   const qtd=parseInt(document.getElementById('pl-qtd').value,10);
   const custo=parseFloat(document.getElementById('pl-custo').value)||0;
   const data=document.getElementById('pl-data').value;
-  if(!ref){toast('Escolha uma referência.',1);return;}
-  if(!qtd||qtd<=0){toast('Quantidade inválida.',1);return;}
+  if(!ref){bad('pl-ref','Escolha uma referência.');return;}
+  if(!qtd||qtd<=0){bad('pl-qtd','Indique uma quantidade válida.');return;}
   if(editId.pla){const m=DB.pla.find(x=>x.id===editId.pla);Object.assign(m,{ref,qtd,custo,data});toast('Plano atualizado.');cancelEdit('pla');}
   else{DB.pla.push({id:uid(),ref,qtd,custo,data});toast('Adicionado ao plano.');}
-  persist();document.getElementById('pl-qtd').value='';document.getElementById('pl-custo').value='';renderAll();
+  persist();document.getElementById('pl-qtd').value='';document.getElementById('pl-custo').value='';updFinfo('pl');document.getElementById('pl-qtd').focus();renderAll();
 }
 function editPlano(id){const m=DB.pla.find(x=>x.id===id);if(!m)return;editId.pla=id;document.getElementById('pl-ref').value=m.ref;document.getElementById('pl-qtd').value=m.qtd;document.getElementById('pl-custo').value=m.custo;document.getElementById('pl-data').value=m.data||'';document.getElementById('pl-btn').textContent='Guardar alteração';document.getElementById('pl-cancel').style.display='';document.getElementById('edit-pla').style.display='inline-block';document.getElementById('card-pla').classList.add('editing');}
 function delPlano(id){DB.pla=DB.pla.filter(p=>p.id!==id);persist();renderAll();toast('Removido do plano.');}
@@ -781,6 +788,7 @@ function goAdd(tab){activateTab(tab);closeFab();window.scrollTo({top:0,behavior:
   document.getElementById('logoImg').src=LOGO;
   const hoje=iso(new Date());['en-data','sa-data','rp-data'].forEach(id=>document.getElementById(id).value=hoje);
   refreshRefSelects();renderAll();
+  [['card-prod',()=>addProduto()],['card-ent',()=>addMov('entrada')],['card-sai',()=>addMov('saida')],['card-pla',()=>addPlano()]].forEach(([id,fn])=>{const c=document.getElementById(id);if(!c)return;c.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.matches('input,select')){e.preventDefault();fn();}else if(e.key==='Escape'){const k={'card-ent':'ent','card-sai':'sai','card-pla':'pla'}[id];if(k&&editId[k])cancelEdit(k);}});});
 })();
 </script>
 </body>
