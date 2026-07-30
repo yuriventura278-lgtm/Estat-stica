@@ -150,7 +150,7 @@ body,.card,.kpi,.tab,.crow,input,select,.chtrack{transition:background .2s,borde
 .fab-item{display:flex;align-items:center;gap:9px;background:var(--card);color:var(--tx);border:1px solid var(--br);border-radius:100px;padding:9px 15px;font-family:inherit;font-size:.8rem;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(13,27,62,.22);white-space:nowrap;transition:.12s;}
 .fab-item:hover{border-color:var(--bl);color:var(--bl);}
 .fab-item span{font-size:1rem;}
-.finfo{margin-top:12px;padding-top:12px;border-top:1px dashed var(--br);font-size:.76rem;color:var(--tx3);display:flex;flex-wrap:wrap;gap:6px 16px;}.finfo:empty{display:none;}.finfo b{font-weight:700;}.invalid{border-color:var(--rd)!important;box-shadow:0 0 0 3px rgba(220,38,38,.18)!important;}.req{color:var(--rd);font-weight:800;margin-left:2px;}.vchart{display:flex;align-items:flex-end;gap:9px;height:210px;padding:16px 4px 0;overflow-x:auto;}.vcol{flex:1 0 42px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:6px;}.vbar{width:62%;min-height:3px;background:linear-gradient(180deg,#60A5FA,var(--bl));border-radius:6px 6px 0 0;transition:height .3s;}.vbar.cur{background:linear-gradient(180deg,#34D399,var(--gr));}.vval{font-size:.62rem;font-family:var(--mono);color:var(--tx3);white-space:nowrap;}.vlab{font-size:.64rem;color:var(--tx2);white-space:nowrap;font-weight:600;}.setrow{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:11px 0;border-bottom:1px solid var(--br);}.setrow:last-of-type{border-bottom:none;}.setrow>div:first-child{min-width:180px;flex:1;}.setrow b{font-size:.84rem;color:var(--nv);}svg.ic{width:1.05em;height:1.05em;vertical-align:-.15em;stroke:currentColor;fill:none;flex:none;}
+.finfo{margin-top:12px;padding-top:12px;border-top:1px dashed var(--br);font-size:.76rem;color:var(--tx3);display:flex;flex-wrap:wrap;gap:6px 16px;}.finfo:empty{display:none;}.finfo b{font-weight:700;}.invalid{border-color:var(--rd)!important;box-shadow:0 0 0 3px rgba(220,38,38,.18)!important;}.req{color:var(--rd);font-weight:800;margin-left:2px;}.vchart{display:flex;align-items:flex-end;gap:9px;height:210px;padding:16px 4px 0;overflow-x:auto;}.vcol{flex:1 0 42px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:6px;}.vbar{width:62%;min-height:3px;background:linear-gradient(180deg,#60A5FA,var(--bl));border-radius:6px 6px 0 0;transition:height .3s;}.vbar.cur{background:linear-gradient(180deg,#34D399,var(--gr));}.vval{font-size:.62rem;font-family:var(--mono);color:var(--tx3);white-space:nowrap;}.vlab{font-size:.64rem;color:var(--tx2);white-space:nowrap;font-weight:600;}.setrow{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:11px 0;border-bottom:1px solid var(--br);}.setrow:last-of-type{border-bottom:none;}.setrow>div:first-child{min-width:180px;flex:1;}.setrow b{font-size:.84rem;color:var(--nv);}.appft{margin:26px 2px 6px;padding:18px 4px;border-top:2px solid var(--br);display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;align-items:center;font-size:.76rem;color:var(--tx3);}.appft .l{display:flex;align-items:center;gap:12px;}.appft .lg{width:46px;height:34px;object-fit:contain;background:#000;border-radius:8px;padding:3px;flex:none;}.appft b{color:var(--nv);font-weight:800;}.appft .nm{display:block;font-size:.82rem;margin-bottom:2px;}.appft .r{text-align:right;line-height:1.7;}svg.ic{width:1.05em;height:1.05em;vertical-align:-.15em;stroke:currentColor;fill:none;flex:none;}
 .subttl svg.ic{margin-right:4px;}
 </style>
 </head>
@@ -411,6 +411,11 @@ body,.card,.kpi,.tab,.crow,input,select,.chtrack{transition:background .2s,borde
     <p class="note" id="bk-info"></p>
     <div class="bklist" id="bk-list"></div>
   </div>
+
+  <footer class="appft">
+    <div class="l"><img class="lg" id="ftLogo" alt="Grupo 30"/><div><span class="nm"><b>Grupo 30 — Comércio e Serviços</b></span>Belas, Angola · Electrónicos e CCTV</div></div>
+    <div class="r"><div>Gestora: <b>Domingas Rodrigues Cuta</b></div><div id="ft-copy"></div></div>
+  </footer>
 </div>
 
 <div class="fab-wrap">
@@ -963,7 +968,7 @@ function goAdd(tab){activateTab(tab);closeFab();window.scrollTo({top:0,behavior:
 /* ---------- Init ---------- */
 (async function init(){
   applyTheme((function(){try{return localStorage.getItem('g30_theme')}catch(e){return null}})()||'light');
-  document.getElementById('logoImg').src=LOGO;
+  document.getElementById('logoImg').src=LOGO;var _fl=document.getElementById('ftLogo');if(_fl)_fl.src=LOGO;var _fc=document.getElementById('ft-copy');if(_fc)_fc.textContent='© '+new Date().getFullYear()+' · Gestão de Stock';
   const hoje=iso(new Date());['en-data','sa-data','rp-data'].forEach(id=>document.getElementById(id).value=hoje);
   // 1) pinta já com o que houver localmente (nunca fica em branco, funciona offline)
   DB={prod:load(KEYS.prod),ent:load(KEYS.ent),sai:load(KEYS.sai),pla:load(KEYS.pla)};BK=load(KEYS.bk);
