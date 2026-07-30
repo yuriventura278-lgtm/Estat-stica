@@ -343,6 +343,7 @@ body,.card,.kpi,.tab,.crow,input,select,.chtrack{transition:background .2s,borde
         </select></div>
         <div class="field"><label>Data de referência</label><input id="rp-data" type="date" onchange="renderRelatorio()"/></div>
         <div class="field"><label>Categoria</label><select id="rp-cat" onchange="renderRelatorio()"><option value="">Todas</option><option value="A">A</option><option value="O">O</option><option value="G">G</option></select></div>
+        <div class="field"><label>&nbsp;</label><button class="btn btn-p btn-sm" onclick="relatorioPDF()">PDF</button></div>
         <div class="field"><label>&nbsp;</label><button class="btn btn-o btn-sm" onclick="exportRelCSV()"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Excel/CSV</button></div>
         <div class="field"><label>&nbsp;</label><button class="btn btn-o btn-sm" onclick="window.print()"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Imprimir</button></div>
       </div>
@@ -655,6 +656,69 @@ function guia(id){
   </body></html>`;
   w.document.write(html);w.document.close();
 }
+
+function relatorioPDF(){
+  if(!REL||!REL.lista.length){toast('Gere um relatório com dados primeiro.',1);return;}
+  const R=REL,per=R.per,tot=R.tot;const dts=a=>[...new Set(a)].map(fmtD).join(', ')||'—';
+  const mxq=Math.max(1,...R.lista.map(r=>Math.max(r.qIn,r.qOut)));
+  const rows=R.lista.map(r=>{const dif=r.qIn-r.qOut;return '<tr><td class="ref">'+r.ref+'</td><td>'+esc(nomeOf(r.ref))+'</td><td class="r g">'+int(r.qIn)+'</td><td class="r">'+money(r.vIn)+'</td><td class="dt">'+dts(r.dIn)+'</td><td class="r a">'+int(r.qOut)+'</td><td class="r">'+money(r.vOut)+'</td><td class="dt">'+dts(r.dOut)+'</td><td class="r" style="font-weight:700;color:'+(r.lucro<0?'#b91c1c':'#047857')+'">'+money(r.lucro)+'</td><td class="r" style="font-weight:700">'+int(dif)+'</td><td class="r">'+int(stock(r.ref))+'</td></tr>';}).join('');
+  const chart=R.lista.slice().sort((a,b)=>(b.qIn+b.qOut)-(a.qIn+a.qOut)).slice(0,14).map(r=>'<div class="cb"><div class="cl">'+r.ref+' · '+esc(nomeOf(r.ref))+'</div><div class="cbars"><div class="cw"><span class="bin" style="width:'+(r.qIn/mxq*100).toFixed(1)+'%"></span><i>'+int(r.qIn)+'</i></div><div class="cw"><span class="bout" style="width:'+(r.qOut/mxq*100).toFixed(1)+'%"></span><i>'+int(r.qOut)+'</i></div></div></div>').join('');
+  const eqQ=R.stkQtd===0;
+  const w=window.open('','_blank','width=1000,height=1000');if(!w){toast('Permita janelas emergentes para abrir o PDF.',1);return;}
+  const html=`<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8"><title>Relatório ${cap(per.label)} — Grupo 30</title>
+  <style>
+  @page{size:A4 landscape;margin:12mm;}
+  *{box-sizing:border-box;} body{font-family:Arial,Helvetica,sans-serif;color:#0F172A;margin:0;padding:22px;font-size:12px;}
+  .hd{display:flex;align-items:center;gap:18px;border-bottom:4px solid #1A56DB;padding-bottom:14px;}
+  .hd .lg{width:96px;height:70px;object-fit:contain;background:#000;border-radius:10px;padding:6px;flex:none;}
+  .hd .co h1{font-size:19px;margin:0;color:#0D1B3E;} .hd .co .c{font-size:11px;color:#555;margin-top:5px;line-height:1.6;}
+  .hd .rt{margin-left:auto;text-align:right;} .hd .rt .t{font-size:13px;font-weight:800;color:#1A56DB;letter-spacing:.04em;}
+  .hd .rt .p{font-size:15px;font-weight:800;color:#0D1B3E;margin-top:3px;} .hd .rt .m{font-size:11px;color:#555;margin-top:3px;}
+  h2{font-size:13px;color:#1A56DB;margin:22px 0 8px;padding-bottom:5px;border-bottom:1px solid #e5e7eb;}
+  .kpis{display:flex;gap:12px;margin-top:16px;} .kpi{flex:1;border:1px solid #e5e7eb;border-radius:10px;padding:11px 13px;border-left:4px solid #1A56DB;}
+  .kpi.g{border-left-color:#059669;}.kpi.a{border-left-color:#D97706;}.kpi.n{border-left-color:#0D1B3E;}
+  .kpi .l{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:#64748B;font-weight:700;} .kpi .v{font-size:17px;font-weight:800;color:#0D1B3E;margin-top:4px;} .kpi .s{font-size:10px;color:#64748B;margin-top:2px;}
+  table{width:100%;border-collapse:collapse;margin-top:8px;font-size:11px;} th,td{border:1px solid #e5e7eb;padding:6px 8px;text-align:left;} th{background:#EFF6FF;color:#0D1B3E;font-size:10px;text-transform:uppercase;letter-spacing:.03em;}
+  td.r,th.r{text-align:right;white-space:nowrap;} td.ref{font-weight:700;color:#1A56DB;} td.g{color:#059669;font-weight:700;} td.a{color:#D97706;font-weight:700;} td.dt{font-size:9.5px;color:#64748B;}
+  tr.tot td{background:#EFF6FF;font-weight:800;}
+  .conf td.sit{font-weight:700;}
+  .cb{display:grid;grid-template-columns:180px 1fr;gap:10px;align-items:center;margin:7px 0;} .cl{font-size:10.5px;color:#334155;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .cw{display:flex;align-items:center;gap:7px;margin:2px 0;} .cw span{height:11px;border-radius:4px;display:inline-block;} .bin{background:#059669;} .bout{background:#D97706;} .cw i{font-style:normal;font-size:10px;color:#64748B;font-family:monospace;}
+  .leg{font-size:10.5px;color:#334155;margin:6px 0 2px;} .leg b{display:inline-block;width:10px;height:10px;border-radius:3px;vertical-align:-1px;margin-right:4px;}
+  .sign{margin-top:34px;display:flex;justify-content:space-between;align-items:flex-end;} .sign .role{font-size:11px;color:#64748B;} .sign .nm{margin-top:40px;border-top:1px solid #94a3b8;padding-top:6px;font-weight:800;font-size:13px;min-width:260px;text-align:center;}
+  .ft{margin-top:18px;border-top:1px solid #e5e7eb;padding-top:8px;font-size:10px;color:#94a3b8;display:flex;justify-content:space-between;}
+  .noprint{text-align:center;margin:22px 0;} .noprint button{padding:11px 24px;font-size:13px;font-weight:700;background:#1A56DB;color:#fff;border:none;border-radius:8px;cursor:pointer;margin:0 5px;}
+  @media print{.noprint{display:none;} body{padding:0;}}
+  </style></head><body>
+  <div class="hd">
+    <img class="lg" src="${LOGO}" alt="Grupo 30">
+    <div class="co"><h1>${EMP.nome}</h1><div class="c">${EMP.loc}<br>Tel: ${EMP.tel} · WhatsApp: ${EMP.wpp} · ${EMP.email}</div></div>
+    <div class="rt"><div class="t">RELATÓRIO DE STOCK</div><div class="p">${cap(per.label)}</div><div class="m">Intervalo: ${fmtD(per.ini)} — ${fmtD(per.fim)} · Categoria: ${R.cat||'Todas'}</div></div>
+  </div>
+  <div class="kpis">
+    <div class="kpi g"><div class="l">Entradas</div><div class="v">${int(tot.qIn)} un.</div><div class="s">${money(tot.vIn)} Kz</div></div>
+    <div class="kpi a"><div class="l">Saídas</div><div class="v">${int(tot.qOut)} un.</div><div class="s">${money(tot.vOut)} Kz</div></div>
+    <div class="kpi n"><div class="l">Lucro do período</div><div class="v">${money(tot.lucro)} Kz</div><div class="s">Saídas − custo médio</div></div>
+    <div class="kpi"><div class="l">Variação de stock</div><div class="v">${int(R.stkQtd)} un.</div><div class="s">Entrou − Saiu</div></div>
+  </div>
+  <h2>Conferência: entrou × saiu × ficou em stock</h2>
+  <table class="conf"><thead><tr><th>Indicador</th><th class="r">Entradas</th><th class="r">Saídas</th><th class="r">Diferença (ficou)</th><th>Situação</th></tr></thead><tbody>
+    <tr><td><b>Quantidade (un.)</b></td><td class="r">${int(tot.qIn)}</td><td class="r">${int(tot.qOut)}</td><td class="r">${int(R.stkQtd)}</td><td class="sit">${eqQ?'Entrou = Saiu':(R.stkQtd>0?'Ficou em stock':'Saiu mais do que entrou')}</td></tr>
+    <tr><td><b>Dinheiro (Kz)</b></td><td class="r">${money(tot.vIn)}</td><td class="r">${money(tot.vOut)}</td><td class="r">${money(R.stkVal)}</td><td class="sit">${R.stkVal===0?'Igual':(R.stkVal>0?'Gastou mais em compras':'Recebeu mais em saídas')}</td></tr>
+  </tbody></table>
+  <h2>Detalhe por referência (${R.lista.length} referências)</h2>
+  <table><thead><tr><th>Ref.</th><th>Produto</th><th class="r">Qtd ent.</th><th class="r">Valor ent.</th><th>Datas entrada</th><th class="r">Qtd saí.</th><th class="r">Valor saí.</th><th>Datas saída</th><th class="r">Lucro</th><th class="r">Ficou</th><th class="r">Stock</th></tr></thead>
+  <tbody>${rows}<tr class="tot"><td colspan="2">TOTAL</td><td class="r">${int(tot.qIn)}</td><td class="r">${money(tot.vIn)}</td><td></td><td class="r">${int(tot.qOut)}</td><td class="r">${money(tot.vOut)}</td><td></td><td class="r">${money(tot.lucro)}</td><td class="r">${int(R.stkQtd)}</td><td></td></tr></tbody></table>
+  <h2>Visualização — Entradas × Saídas por referência (quantidade)</h2>
+  <div class="leg"><span><b style="background:#059669"></b>Entradas</span> &nbsp; <span><b style="background:#D97706"></b>Saídas</span></div>
+  ${chart}
+  <div class="sign"><div><div class="role">Data: ${fmtD(iso(new Date()))}</div></div><div><div class="role" style="text-align:center">A Gestora</div><div class="nm">${GESTORA}</div></div></div>
+  <div class="ft"><span>${EMP.nome} · ${EMP.loc}</span><span>Documento gerado pelo Sistema de Gestão de Stock — Grupo 30</span></div>
+  <div class="noprint"><button onclick="window.print()">Imprimir / Guardar PDF</button><button onclick="window.close()" style="background:#64748b">Fechar</button></div>
+  </body></html>`;
+  w.document.write(html);w.document.close();
+}
+
 
 /* ---------- Períodos ---------- */
 function periodo(tipo,dateStr){
