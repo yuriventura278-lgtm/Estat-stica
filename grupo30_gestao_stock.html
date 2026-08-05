@@ -618,7 +618,7 @@ function addMov(tipo){
   if(editId[key]){const m=arr.find(x=>x.id===editId[key]);Object.assign(m,{ref,qtd,custo,data});if(tipo==='entrada')m.fornecedor=extra;else m.cliente=extra;toast('Movimento atualizado.');cancelEdit(key);}
   else{const o={id:uid(),ref,qtd,custo,data};if(tipo==='entrada')o.fornecedor=extra;else o.cliente=extra;arr.push(o);toast(tipo==='entrada'?'Entrada registada.':'Saída registada.');}
   persist();
-  document.getElementById(pre+'-qtd').value='';document.getElementById(pre+'-custo').value='';document.getElementById(pre+(tipo==='entrada'?'-forn':'-cli')).value='';
+  document.getElementById(pre+'-qtd').value='';document.getElementById(pre+'-custo').value='';document.getElementById(pre+(tipo==='entrada'?'-forn':'-cli')).value='';document.getElementById(pre+'-data').value=iso(new Date());
   updFinfo(pre);document.getElementById(pre+'-qtd').focus();
   renderAll();
 }
@@ -647,6 +647,7 @@ function cancelEdit(key){
   ['-qtd','-custo'].forEach(s=>{const el=document.getElementById(pre+s);if(el)el.value='';});
   if(key==='ent')document.getElementById('en-forn').value='';
   if(key==='sai')document.getElementById('sa-cli').value='';
+  if(key==='ent'||key==='sai')document.getElementById(pre+'-data').value=iso(new Date());
 }
 function delMov(key,id){if(!confirm('Apagar este movimento?'))return;DB[key]=DB[key].filter(e=>e.id!==id);persist();renderAll();toast('Movimento removido.');}
 function limparFiltro(pre){document.getElementById(pre+'-q').value='';document.getElementById(pre+'-de').value='';document.getElementById(pre+'-ate').value='';renderMov(pre==='ef'?'entrada':'saida');}
@@ -1076,7 +1077,7 @@ function toggleTheme(){applyTheme(document.documentElement.getAttribute('data-th
 function toggleFab(){document.getElementById('fabMenu').classList.toggle('show');document.getElementById('fabBtn').classList.toggle('open');}
 function closeFab(){document.getElementById('fabMenu').classList.remove('show');document.getElementById('fabBtn').classList.remove('open');}
 function scrollTopo(){closeFab();window.scrollTo({top:0,behavior:'smooth'});}
-function segRegisto(which){var re=document.getElementById("reg-ent"),rs=document.getElementById("reg-sai"),be=document.getElementById("seg-ent"),bs=document.getElementById("seg-sai");if(!re||!rs)return;var ent=which==="ent";re.style.display=ent?"":"none";rs.style.display=ent?"none":"";if(be)be.classList.toggle("active",ent);if(bs)bs.classList.toggle("active",!ent);var f=document.getElementById(ent?"en-ref":"sa-ref");if(f)setTimeout(function(){f.focus();},60);}
+function segRegisto(which){var re=document.getElementById("reg-ent"),rs=document.getElementById("reg-sai"),be=document.getElementById("seg-ent"),bs=document.getElementById("seg-sai");if(!re||!rs)return;var ent=which==="ent";re.style.display=ent?"":"none";rs.style.display=ent?"none":"";if(be)be.classList.toggle("active",ent);if(bs)bs.classList.toggle("active",!ent);if(!editId[which])document.getElementById(ent?"en-data":"sa-data").value=iso(new Date());var f=document.getElementById(ent?"en-ref":"sa-ref");if(f)setTimeout(function(){f.focus();},60);}
 function goAdd(tab){var _pt=(tab==='entradas'||tab==='saidas')?'registo':tab;activateTab(_pt);if(tab==='entradas')segRegisto('ent');if(tab==='saidas')segRegisto('sai');closeFab();window.scrollTo({top:0,behavior:'smooth'});const f={produtos:'pr-nome',entradas:'en-ref',saidas:'sa-ref',plano:'pl-ref'}[tab];setTimeout(()=>{const el=document.getElementById(f);if(el)el.focus();},260);}
 
 /* ---------- Init ---------- */
@@ -1098,6 +1099,7 @@ window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();def
 window.addEventListener('appinstalled',function(){var b=document.getElementById('fabInstall');if(b)b.style.display='none';try{toast('App instalada!');}catch(e){}});
 function instalarApp(){if(deferredPrompt){deferredPrompt.prompt();deferredPrompt.userChoice.finally(function(){deferredPrompt=null;var b=document.getElementById('fabInstall');if(b)b.style.display='none';closeFab();});}else{alert('Para instalar como app:\n\niPhone (Safari): tocar em Partilhar e depois \"Adicionar ao ecrã principal\".\nAndroid/Chrome: menu do navegador e depois \"Instalar app\" / \"Adicionar ao ecrã inicial\".');closeFab();}}
 (function(){try{var iOS=/iphone|ipad|ipod/i.test(navigator.userAgent);var standalone=(window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)||navigator.standalone;if(iOS&&!standalone){var b=document.getElementById('fabInstall');if(b)b.style.display='';}}catch(e){}})();
+document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible'){var t=iso(new Date());if(!editId.ent){var a=document.getElementById('en-data');if(a)a.value=t;}if(!editId.sai){var b=document.getElementById('sa-data');if(b)b.value=t;}}});
 function hideSplash(){var s=document.getElementById('splash');if(s){s.classList.add('hide');setTimeout(function(){s.style.display='none';},520);}}
 (function(){var s=document.getElementById('splash');if(!s)return;var lg=document.getElementById('spLogo');if(lg)lg.src=LOGO;try{if(sessionStorage.getItem('g30_splash')){s.style.display='none';return;}sessionStorage.setItem('g30_splash','1');}catch(e){}var dur=7000,t0=Date.now(),fill=document.getElementById('spFill'),pct=document.getElementById('spPct'),msg=document.getElementById('spMsg');var MS=[[0,'A iniciar o sistema…'],[15,'A verificar permissões…'],[30,'A preparar o armazenamento local…'],[48,'A carregar informações locais…'],[66,'A preparar o painel e gráficos…'],[84,'A calcular relatórios e tendências…'],[96,'Quase pronto…']];var last='';var iv=setInterval(function(){var p=Math.min(100,(Date.now()-t0)/dur*100);if(fill)fill.style.width=p+'%';if(pct)pct.textContent=Math.round(p)+'%';if(msg){var m=MS[0][1];for(var k=0;k<MS.length;k++){if(p>=MS[k][0])m=MS[k][1];}if(m!==last){last=m;msg.textContent=m;}}if(p>=100){clearInterval(iv);hideSplash();}},70);})();
 </script>
