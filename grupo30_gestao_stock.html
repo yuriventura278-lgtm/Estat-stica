@@ -135,6 +135,11 @@ td.num,th.num{text-align:right;}
 .crow .cv{font-size:.84rem;font-weight:600;color:var(--tx);}
 .spec{margin-top:14px;font-size:.76rem;color:var(--tx2);line-height:1.6;}.spec b{color:var(--nv);}
 .bklist{display:flex;flex-direction:column;gap:6px;margin-top:10px;}
+.dbstat{display:flex;align-items:center;gap:8px;font-size:.74rem;padding:9px 12px;border-radius:10px;margin-top:10px;line-height:1.35;}
+.dbstat .ic{width:16px;height:16px;flex:0 0 auto;}
+.dbstat.ok{background:rgba(16,185,129,.12);color:#0f7a5a;border:1px solid rgba(16,185,129,.35);}
+.dbstat.warn{background:rgba(245,158,11,.12);color:#9a6a00;border:1px solid rgba(245,158,11,.4);}
+[data-theme="dark"] .dbstat.ok{color:#4ade80;}[data-theme="dark"] .dbstat.warn{color:#fbbf24;}
 .bkrow{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:.76rem;padding:8px 10px;border:1px solid var(--br);border-radius:var(--r);}
 @media(max-width:560px){header h1{font-size:1.3rem;}.field{flex:1 1 100%;}.chbar{grid-template-columns:96px 1fr;}}
 
@@ -491,6 +496,7 @@ body,.card,.kpi,.tab,.crow,input,select,.chtrack{transition:background .2s,borde
         <label class="btn btn-o btn-sm" style="cursor:pointer;"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Importar<input type="file" accept="application/json" style="display:none;" onchange="importJSON(event)"></label>
       </div>
     </div>
+    <div class="dbstat" id="db-status">Base de dados: a verificar…</div>
     <p class="note" id="bk-info"></p>
     <div class="bklist" id="bk-list"></div>
   </div>
@@ -537,10 +543,17 @@ let BK=[];
 /* ===== IndexedDB (DatabaseManager) — base principal, offline-first ===== */
 const IDB_NAME='grupo30_db',IDB_VER=2;let _db=null,IDB_OK=false;
 const STORES={produtos:'ref',entradas:'id',saidas:'id',plano:'id',fornecedores:'id',backups:'dia',meta:'k'};
-function idbOpen(){return new Promise((res,rej)=>{if(_db)return res(_db);let rq;try{rq=indexedDB.open(IDB_NAME,IDB_VER);}catch(e){return rej(e);}
+function idbOpen(){return new Promise((res,rej)=>{if(_db)return res(_db);
+  if(!('indexedDB'in window)||!window.indexedDB)return rej(new Error('sem IndexedDB'));
+  let rq;try{rq=indexedDB.open(IDB_NAME,IDB_VER);}catch(e){return rej(e);}
   rq.onupgradeneeded=e=>{const db=e.target.result;Object.entries(STORES).forEach(([s,kp])=>{if(!db.objectStoreNames.contains(s)){const os=db.createObjectStore(s,{keyPath:kp});if(s==='entradas'||s==='saidas'){os.createIndex('by_ref','ref',{unique:false});os.createIndex('by_data','data',{unique:false});}}});};
+  rq.onblocked=()=>rej(new Error('IndexedDB bloqueado por outra aba aberta'));
   rq.onsuccess=e=>{_db=e.target.result;_db.onversionchange=()=>{try{_db.close();}catch(_){}_db=null;};IDB_OK=true;res(_db);};
-  rq.onerror=e=>rej(e.target.error);});}
+  rq.onerror=e=>rej(e.target.error||new Error('falha ao abrir IndexedDB'));});}
+async function idbOpenRetry(){try{return await idbOpen();}catch(e){await new Promise(r=>setTimeout(r,350));return await idbOpen();}}
+function setDbStatus(ok){var el=document.getElementById('db-status');if(!el)return;
+  if(ok){el.className='dbstat ok';el.innerHTML='<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Base de dados: <b>IndexedDB ativo</b> — dados guardados no dispositivo, offline.';}
+  else{el.className='dbstat warn';el.innerHTML='<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/></svg> Base de dados: <b>armazenamento local (reserva)</b> — IndexedDB indisponível neste contexto. Abra a app por http/https (ex.: GitHub Pages) para ativar o IndexedDB.';}}
 function idbAll(store){return new Promise((res,rej)=>{try{const r=_db.transaction(store,'readonly').objectStore(store).getAll();r.onsuccess=()=>res(r.result||[]);r.onerror=()=>rej(r.error);}catch(e){rej(e);}});}
 function idbPutAll(store,arr){return new Promise((res,rej)=>{try{const tx=_db.transaction(store,'readwrite');const os=tx.objectStore(store);os.clear();(arr||[]).forEach(o=>os.put(o));tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error);}catch(e){rej(e);}});}
 async function idbSaveAll(){if(!IDB_OK){saveK(KEYS.prod,DB.prod);saveK(KEYS.ent,DB.ent);saveK(KEYS.sai,DB.sai);saveK(KEYS.pla,DB.pla);saveK(KEYS.forn,DB.forn);return;}try{await Promise.all([idbPutAll('produtos',DB.prod),idbPutAll('entradas',DB.ent),idbPutAll('saidas',DB.sai),idbPutAll('plano',DB.pla),idbPutAll('fornecedores',DB.forn)]);}catch(e){console.error('IDB save falhou, fallback localStorage',e);saveK(KEYS.prod,DB.prod);saveK(KEYS.ent,DB.ent);saveK(KEYS.sai,DB.sai);saveK(KEYS.pla,DB.pla);saveK(KEYS.forn,DB.forn);}}
@@ -1133,8 +1146,8 @@ function goAdd(tab){var _pt=(tab==='entradas'||tab==='saidas')?'registo':tab;act
   DB={prod:load(KEYS.prod),ent:load(KEYS.ent),sai:load(KEYS.sai),pla:load(KEYS.pla),forn:load(KEYS.forn)};BK=load(KEYS.bk);
   loadSettings();refreshRefSelects();renderAll();renderSettings();if(typeof markDrawerActive==='function')markDrawerActive('painel');
   // 2) IndexedDB como base principal: migra e recarrega
-  try{await idbOpen();await idbMigrate();await idbLoadAll();await loadFolderHandle();refreshRefSelects();renderAll();renderSettings();requestPersist();checkLowStock(true);}
-  catch(e){console.error('IndexedDB indisponível, a usar localStorage',e);IDB_OK=false;setTimeout(()=>toast('IndexedDB indisponível — a usar armazenamento local.',1),400);}
+  try{await idbOpenRetry();await idbMigrate();await idbLoadAll();await loadFolderHandle();refreshRefSelects();renderAll();renderSettings();requestPersist();checkLowStock(true);setDbStatus(true);}
+  catch(e){console.error('IndexedDB indisponível, a usar localStorage',e);IDB_OK=false;setDbStatus(false);setTimeout(()=>toast('IndexedDB indisponível — a usar armazenamento local.',1),400);}
   [['card-prod',()=>addProduto()],['card-ent',()=>addMov('entrada')],['card-sai',()=>addMov('saida')],['card-pla',()=>addPlano()],['card-forn',()=>addFornecedor()]].forEach(([id,fn])=>{const c=document.getElementById(id);if(!c)return;c.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.matches('input,select')){e.preventDefault();fn();}else if(e.key==='Escape'){if(id==='card-forn'){if(editId.forn)cancelForn();}else{const k={'card-ent':'ent','card-sai':'sai','card-pla':'pla'}[id];if(k&&editId[k])cancelEdit(k);}}});});
 })();
 if('serviceWorker' in navigator&&location.protocol.indexOf('http')===0){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});}
